@@ -1,0 +1,208 @@
+local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/main/Redzhubui"))()
+
+local Window = redzlib:MakeWindow({
+    Title      = "XXMZ Hub",
+    SubTitle   = "by Tester",
+    SaveFolder = "testando | redz lib v5"
+})
+
+Window:AddMinimizeButton({
+    Button = { Image = "rbxassetid://71014873973869", BackgroundTransparency = 0 },
+    Corner = { CornerRadius = UDim.new(35, 1) },
+})
+
+local function getPlayerNames()
+    local t = {}
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        table.insert(t, p.Name)
+    end
+    return t
+end
+
+local selectedPlayer = nil
+
+local MainTab = Window:MakeTab({ "Main", "home" })
+MainTab:AddSection({ "Main Tab" })
+MainTab:AddParagraph({ "🔧 Update 0.59 (BETA) | vs Black Hole!", "" })
+MainTab:AddParagraph({ "Seja bem-vindo!", "" })
+MainTab:AddParagraph({ "Quebrar regras pode fazer você ficar na lista negra!", "" })
+
+local TrollTab = Window:MakeTab({ "Troll", "skull" })
+TrollTab:AddSection({ "Troll Tab" })
+
+TrollTab:AddButton({
+    "🌀 Black Hole",
+    function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-black-hole-18879"))()
+    end
+})
+
+TrollTab:AddParagraph({
+    "🔧 Black Hole Fix",
+    "Você coloca o nome de alguém ou seu e ativa o modo ON.\n+ Extra: Aperte Ctrl para esconder o Black Hole."
+})
+
+local playerDropdown = TrollTab:AddDropdown({
+    Name        = "Players",
+    Description = "Selecione um player",
+    Options     = getPlayerNames(),
+    Default     = getPlayerNames()[1] or "",
+    Callback    = function(val)
+        selectedPlayer = val
+    end
+})
+
+TrollTab:AddButton({
+    "🔄 Refresh Players",
+    function()
+        local success, err = pcall(function()
+            local newList = getPlayerNames()
+            if playerDropdown.Refresh then
+                playerDropdown:Refresh(newList)
+            elseif playerDropdown.UpdateOptions then
+                playerDropdown:UpdateOptions(newList)
+            else
+                playerDropdown.Container:Destroy()
+                playerDropdown = TrollTab:AddDropdown({
+                    Name        = "Players",
+                    Description = "Selecione um player",
+                    Options     = newList,
+                    Default     = newList[1] or "",
+                    Callback    = function(v) selectedPlayer = v end
+                })
+            end
+        end)
+        if not success then
+            warn("Falha ao atualizar lista de players: ", err)
+        end
+    end
+})
+
+TrollTab:AddToggle({
+    Name    = "👁️ View Player",
+    Default = false,
+    Callback = function(state)
+        local plr = game.Players.LocalPlayer
+        if state and selectedPlayer then
+            local target = game.Players:FindFirstChild(selectedPlayer)
+            if target and target.Character and target.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = target.Character.Humanoid
+            end
+        else
+            if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = plr.Character.Humanoid
+            end
+        end
+    end
+})
+
+TrollTab:AddButton({
+    "🚶‍♂️ Goto Player",
+    function()
+        local plr = game.Players.LocalPlayer
+        if selectedPlayer then
+            local target = game.Players:FindFirstChild(selectedPlayer)
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                plr.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+            end
+        end
+    end
+})
+
+TrollTab:AddButton({
+    "Void Player",
+    function()
+        local plr = game.Players.LocalPlayer
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local humanoid = char:WaitForChild("Humanoid")
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        hrp.CFrame = CFrame.new(-82.6200714, 19.3595161, -130.0331726)
+
+        humanoid.Sit = true
+        humanoid:GetPropertyChangedSignal("Sit"):Wait()
+
+        humanoid.Jump = true
+        local tool = plr.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
+        if tool then tool.Parent = char end
+
+        task.spawn(function()
+            while task.wait(0.2) do
+                if selectedPlayer then
+                    local victim = game.Players:FindFirstChild(selectedPlayer)
+                    if victim and victim.Character then
+                        local vHum = victim.Character:FindFirstChild("Humanoid")
+                        if vHum and vHum.Sit then
+                            hrp.CFrame = CFrame.new(0, -500, 0)
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+    end
+})
+
+local CasaTab = Window:MakeTab({ "Casa", "moon" })
+CasaTab:AddSection({ "Casa Tab" })
+
+local casaEnabled = false
+CasaTab:AddToggle({
+    Name    = "Casa RGB",
+    Default = false,
+    Callback = function(state)
+        casaEnabled = state
+        if state then
+            task.spawn(function()
+                local colors = {
+                    Color3.new(0, 0.05437755584716797, 1),
+                    Color3.new(1, 0, 0.8999319076538086),
+                    Color3.new(1, 0.12449586391448975, 0.13339930772781372)
+                }
+                local idx = 1
+                while casaEnabled do
+                    local args = { "ColorPickHouse", colors[idx] }
+                    game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Player1sHous1e"):FireServer(unpack(args))
+                    idx = idx % #colors + 1
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
+local PlayerTab = Window:MakeTab({ "Player", "user" })
+PlayerTab:AddSection({ "Player Tab" })
+PlayerTab:AddSlider({
+    Name     = "WalkSpeed",
+    Min      = 1,
+    Max      = 500,
+    Increase = 1,
+    Default  = 16,
+    Callback = function(v)
+        local h = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if h then h.WalkSpeed = v end
+    end
+})
+PlayerTab:AddSlider({
+    Name     = "JumpPower",
+    Min      = 1,
+    Max      = 300,
+    Increase = 1,
+    Default  = 50,
+    Callback = function(v)
+        local h = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if h then h.JumpPower = v end
+    end
+})
+
+local AdminTab = Window:MakeTab({ "Admin", "settings" })
+AdminTab:AddSection({ "Admin Tab" })
+AdminTab:AddButton({
+    "Infinite Yield",
+    function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end
+})
+
+Window:SelectTab(MainTab)

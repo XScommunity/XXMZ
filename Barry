@@ -1,0 +1,334 @@
+-- Carregar Fluent
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- Criar Janela
+local Window = Fluent:CreateWindow({
+    Title = "XXMZ HUB",
+    SubTitle = "Barry Prison",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(500, 300),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightControl
+})
+
+-- ABA MAIN
+local MainTab = Window:AddTab({ Title = "Main", Icon = "home" })
+
+-- Lista de jogadores
+local playersList = {}
+local function refreshPlayers()
+    playersList = {}
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            table.insert(playersList, player)
+        end
+    end
+end
+
+-- Função de ataque
+local function hitPlayer(position)
+    local args = {
+        "BasicBaton",
+        position,
+        {
+            BlockDamage = 15,
+            HasIdleVFX = false,
+            Damage = 10,
+            SwingSound = "rbxassetid://9113305619",
+            DefaultDamage = 10,
+            Force = 25,
+            ImpactSound = { "rbxassetid://6931263860" },
+            AnimationName = "WeaponAnimation",
+            PassiveAbility = false,
+            TargetSound = { "rbxassetid://9117969717" },
+            Name = "BasicBaton",
+            PassiveChance = 5,
+            SpecialBuildup = 12,
+            LoopSound = false
+        },
+        false, false, false, false
+    }
+
+    game:GetService("ReplicatedStorage")
+        :WaitForChild("ShopAssetsFolder")
+        :WaitForChild("AssetRemotes")
+        :WaitForChild("BatonRemotes")
+        :WaitForChild("HitRemote"):FireServer(unpack(args))
+end
+
+-- Toggle spam real
+local attacking = false
+MainTab:AddToggle("SpamHitToggle", {
+    Title = "Spam Hit XDD",
+    Default = false,
+    Callback = function(state)
+        attacking = state
+        if attacking then
+            task.spawn(function()
+                while attacking do
+                    for _, player in ipairs(playersList) do
+                        local char = player.Character
+                        if char and char:FindFirstChild("HumanoidRootPart") then
+                            local pos = char.HumanoidRootPart.Position
+                            -- Envia múltiplos hits por jogador
+                            for i = 1, 5 do
+                                hitPlayer(pos)
+                            end
+                        end
+                    end
+                    task.wait(0.05)
+                end
+            end)
+        end
+    end
+})
+
+-- Botão: Refresh Players
+MainTab:AddButton({
+    Title = "Refresh Players",
+    Description = "Atualiza a lista de jogadores",
+    Callback = function()
+        refreshPlayers()
+        Fluent:Notify({
+            Title = "Lista Atualizada",
+            Content = "Jogadores atualizados com sucesso!",
+            Duration = 2
+        })
+    end
+})
+
+-- Botão: Win game (teleporte)
+MainTab:AddButton({
+    Title = "Win game",
+    Description = "Teleporta para a posição de vitória",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(-3626, 1074, -447)
+            Fluent:Notify({
+                Title = "Teleporte",
+                Content = "Você foi teleportado para a posição de vitória!",
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Erro",
+                Content = "Personagem não encontrado para teleportar.",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- ABA DELETE
+local DeleteTab = Window:AddTab({ Title = "Delete", Icon = "trash" })
+
+-- Botão: Deletar Barry
+DeleteTab:AddButton({
+    Title = "Delete Barry XD",
+    Description = "Remove visualmente o modelo Barry",
+    Callback = function()
+        local barryModel = workspace:FindFirstChild("Barry1")
+        if barryModel and barryModel:FindFirstChild("Barry") then
+            barryModel.Barry:Destroy()
+            Fluent:Notify({
+                Title = "Sucesso",
+                Content = "Barry deletado!",
+                Duration = 2
+            })
+        else
+            Fluent:Notify({
+                Title = "Erro",
+                Content = "Barry não encontrado!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+DeleteTab:AddButton({
+    Title = "Delete Knight Barry XD",
+    Description = "Remove visualmente o modelo Knight Barry",
+    Callback = function()
+        local barryModel = workspace:FindFirstChild("KnightBarry")
+        if barryModel and barryModel:FindFirstChild("Barry") then
+            barryModel.Barry:Destroy()
+            Fluent:Notify({
+                Title = "Sucesso",
+                Content = "Knight Barry deletado!",
+                Duration = 2
+            })
+        else
+            Fluent:Notify({
+                Title = "Erro",
+                Content = "Knight Barry não encontrado!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+DeleteTab:AddButton({
+    Title = "Delete Garry The Chef XD",
+    Description = "Remove visualmente o modelo Garry The Chef",
+    Callback = function()
+        local barryModel = workspace:FindFirstChild("DinnerChef")
+        if barryModel and barryModel:FindFirstChild("Barry") then
+            barryModel.Barry:Destroy()
+            Fluent:Notify({
+                Title = "Sucesso",
+                Content = "Garry The Chef deletado!",
+                Duration = 2
+            })
+        else
+            Fluent:Notify({
+                Title = "Erro",
+                Content = "Garry The Chef não encontrado!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+DeleteTab:AddButton({
+    Title = "Delete Mech Boss XD",
+    Description = "Remove visualmente o modelo Mech Boss",
+    Callback = function()
+        local barryModel = workspace:FindFirstChild("MechBoss")
+        if barryModel and barryModel:FindFirstChild("Barry") then
+            barryModel.Barry:Destroy()
+            Fluent:Notify({
+                Title = "Sucesso",
+                Content = "Mech Boss deletado!",
+                Duration = 2
+            })
+        else
+            Fluent:Notify({
+                Title = "Erro",
+                Content = "Mech Boss não encontrado!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- ABA TOOLS
+local ToolsTab = Window:AddTab({ Title = "Tools", Icon = "hammer" })
+
+ToolsTab:AddButton({
+    Title = "FoodZooka",
+    Description = "Spawna a FoodZooka",
+    Callback = function()
+        local args = {
+            "FoodZooka",
+            true,
+            true
+        }
+
+        game:GetService("ReplicatedStorage")
+            :WaitForChild("ShopAssetsFolder")
+            :WaitForChild("AssetRemotes")
+            :WaitForChild("SendTool"):FireServer(unpack(args))
+
+        Fluent:Notify({
+            Title = "Tools",
+            Content = "FoodZooka spawnada com sucesso!",
+            Duration = 2
+        })
+    end
+})
+
+ToolsTab:AddButton({
+    Title = "Speed Cola",
+    Description = "Usa a Speed Cola",
+    Callback = function()
+        local args = { 1 }
+        game:GetService("ReplicatedStorage")
+            :WaitForChild("RemoteEventsFolder")
+            :WaitForChild("SpeedColaRemote"):FireServer(unpack(args))
+
+        Fluent:Notify({
+            Title = "Tools",
+            Content = "Speed Cola ativada!",
+            Duration = 2
+        })
+    end
+})
+
+
+-- ABA TELEPORT
+local TeleportTab = Window:AddTab({ Title = "Teleport", Icon = "mountain" })
+
+local function teleportTo(pos)
+    local player = game.Players.LocalPlayer
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+        Fluent:Notify({
+            Title = "Teleporte",
+            Content = "Você foi teleportado!",
+            Duration = 3
+        })
+    else
+        Fluent:Notify({
+            Title = "Erro",
+            Content = "Personagem não encontrado para teleportar.",
+            Duration = 3
+        })
+    end
+end
+
+-- Botões de teleport na aba Teleport
+TeleportTab:AddButton({
+    Title = "Cells",
+    Description = "Teleporta para Cells",
+    Callback = function()
+        teleportTo(Vector3.new(119, 103, -86))
+    end
+})
+
+TeleportTab:AddButton({
+    Title = "Bathroom",
+    Description = "Teleporta para Bathroom",
+    Callback = function()
+        teleportTo(Vector3.new(-32, 75, -41))
+    end
+})
+
+TeleportTab:AddButton({
+    Title = "Dungeon",
+    Description = "Teleporta para Dungeon",
+    Callback = function()
+        teleportTo(Vector3.new(-542, 12, -41))
+    end
+})
+
+TeleportTab:AddButton({
+    Title = "Phones",
+    Description = "Teleporta para Phones",
+    Callback = function()
+        teleportTo(Vector3.new(-1054, 67, -298))
+    end
+})
+
+TeleportTab:AddButton({
+    Title = "Desert",
+    Description = "Teleporta para Desert",
+    Callback = function()
+        teleportTo(Vector3.new(-3340, 953, -720))
+    end
+})
+
+-- Atualiza lista no início
+refreshPlayers()
+
+-- Configurações extras para interface e salvamento
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:BuildInterfaceSection(Window)
+SaveManager:BuildConfigSection(Window)
+SaveManager:LoadAutoloadConfig()

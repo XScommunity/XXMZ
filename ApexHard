@@ -1,0 +1,308 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local Window = Fluent:CreateWindow({
+    Title = "XXMZ",
+    SubTitle = "EB Apex Hard",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(600, 400),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightControl
+})
+
+local MainTab = Window:AddTab({ Title = "Main", Icon = "house" })
+
+local AntiArrestEnabled = false
+local AntiArrestToggle = MainTab:AddToggle("AntiArrestToggle", {
+    Title = "Anti Arrest",
+    Default = false
+})
+AntiArrestToggle:OnChanged(function(state)
+    AntiArrestEnabled = state
+end)
+
+task.spawn(function()
+    while true do
+        if AntiArrestEnabled then
+            for _, player in pairs(Players:GetPlayers()) do
+                local arrestObj = player:FindFirstChild("Arrested Function")
+                if arrestObj then
+                    arrestObj:Destroy()
+                    print("[Anti Arrest] Arrested Function removida de " .. player.Name)
+                end
+                if player.Backpack then
+                    local backpackArrest = player.Backpack:FindFirstChild("Arrested Function")
+                    if backpackArrest then
+                        backpackArrest:Destroy()
+                        print("[Anti Arrest] Arrested Function removida do Backpack de " .. player.Name)
+                    end
+                end
+                if player.Character then
+                    local charArrest = player.Character:FindFirstChild("Arrested Function")
+                    if charArrest then
+                        charArrest:Destroy()
+                        print("[Anti Arrest] Arrested Function removida do Character de " .. player.Name)
+                    end
+                end
+            end
+            local workspaceArrest = Workspace:FindFirstChild("Arrested Function")
+            if workspaceArrest then
+                workspaceArrest:Destroy()
+                print("[Anti Arrest] Arrested Function removida do Workspace")
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+MainTab:AddButton({
+    Title = "Verificar Caminhões",
+    Description = "Conta quantos caminhões existem na pasta Veiculos",
+    Callback = function()
+        local veiculosFolder = Workspace:FindFirstChild("Veiculos")
+        if not veiculosFolder then
+            Fluent:Notify({
+                Title = "Caminhões",
+                Content = "Erro: Reporte para o dono",
+                Duration = 5
+            })
+            return
+        end
+        local qt01Count = 0
+        for _, veiculo in pairs(veiculosFolder:GetChildren()) do
+            if veiculo.Name == "QT-01" then
+                qt01Count = qt01Count + 1
+            end
+        end
+        if qt01Count > 0 then
+            Fluent:Notify({
+                Title = "Caminhões Encontrados!",
+                Content = "Foram encontrados " .. qt01Count .. " caminhões nesse servidor.",
+                Duration = 5
+            })
+        else
+            Fluent:Notify({
+                Title = "Nenhum Caminhão",
+                Content = "Não foram encontrados caminhões nesse servidor.",
+                Duration = 5
+            })
+        end
+        print("[Verificar Caminhões] Encontrados " .. qt01Count .. " caminhões")
+    end
+})
+
+MainTab:AddButton({
+    Title = "Invadir Base",
+    Description = "Fique perto da base",
+    Callback = function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1824, 1, -308)
+        end
+    end
+})
+
+local TpToolEnabled = false
+local toolEquipped = false
+local tool = nil
+
+local TpToolToggle = MainTab:AddToggle("TpToolToggle", {
+    Title = "Tp Tool",
+    Description = "Ativa/desativa a ferramenta de teleporte",
+    Default = false
+})
+
+TpToolToggle:OnChanged(function(state)
+    TpToolEnabled = state
+    if TpToolEnabled then
+        tool = Instance.new("Tool")
+        tool.Name = "TpTool"
+        tool.RequiresHandle = false
+        tool.Parent = LocalPlayer.Backpack
+        tool.Equipped:Connect(function()
+            toolEquipped = true
+        end)
+        tool.Unequipped:Connect(function()
+            toolEquipped = false
+        end)
+        print("[Tp Tool] Ferramenta criada! Equipe para usar.")
+    else
+        if tool then
+            tool:Destroy()
+            tool = nil
+            toolEquipped = false
+            print("[Tp Tool] Ferramenta removida.")
+        end
+    end
+end)
+
+local mouse = LocalPlayer:GetMouse()
+mouse.Button1Down:Connect(function()
+    if TpToolEnabled and toolEquipped then
+        local targetPos = mouse.Hit.Position
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0,3,0))
+        end
+    end
+end)
+
+local AimbotTab = Window:AddTab({ Title = "Aimbot", Icon = "crosshair" })
+
+local AimbotEnabled = false
+local AimbotSpeed = 0.5
+local AimbotFOV = 100
+local ShowFOV = false
+local isHoldingRightMouse = false
+local camera = Workspace.CurrentCamera
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FOVGui"
+ScreenGui.Parent = game.CoreGui
+
+local FOVFrame = Instance.new("Frame")
+FOVFrame.Name = "FOVFrame"
+FOVFrame.Size = UDim2.new(0, 200, 0, 200)
+FOVFrame.Position = UDim2.new(0.5, -100, 0.5, -100)
+FOVFrame.BackgroundTransparency = 1
+FOVFrame.Parent = ScreenGui
+
+local FOVCircle = Instance.new("TextLabel")
+FOVCircle.Name = "FOVCircle"
+FOVCircle.Size = UDim2.new(1, 0, 1, 0)
+FOVCircle.Position = UDim2.new(0, 0, 0, 0)
+FOVCircle.BackgroundTransparency = 1
+FOVCircle.Text = "O"
+FOVCircle.TextColor3 = Color3.fromRGB(255, 255, 255)
+FOVCircle.TextScaled = true
+FOVCircle.TextStrokeTransparency = 0
+FOVCircle.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+FOVCircle.Font = Enum.Font.Code
+FOVCircle.Visible = false
+FOVCircle.Parent = FOVFrame
+
+AimbotTab:AddToggle("ToggleAimbot", {
+    Title = "Ativar Aimbot",
+    Default = false,
+}):OnChanged(function(state)
+    AimbotEnabled = state
+end)
+
+AimbotTab:AddSlider("AimbotSpeed", {
+    Title = "Velocidade do Aimbot",
+    Default = 0.5,
+    Min = 0.1,
+    Max = 10,
+    Rounding = 2,
+}):OnChanged(function(value)
+    AimbotSpeed = value
+end)
+
+AimbotTab:AddSlider("AimbotFOV", {
+    Title = "FOV do Aimbot",
+    Default = 100,
+    Min = 50,
+    Max = 500,
+    Rounding = 0,
+}):OnChanged(function(value)
+    AimbotFOV = value
+end)
+
+AimbotTab:AddToggle("ShowFOV", {
+    Title = "Mostrar FOV",
+    Default = false,
+}):OnChanged(function(state)
+    ShowFOV = state
+    FOVCircle.Visible = state
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isHoldingRightMouse = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isHoldingRightMouse = false
+    end
+end)
+
+local function GetClosestPlayerToCursor()
+    local mouseLocation = UserInputService:GetMouseLocation()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local headPos, onScreen = camera:WorldToViewportPoint(player.Character.Head.Position)
+            if onScreen then
+                local screenPos = Vector2.new(headPos.X, headPos.Y)
+                local distance = (screenPos - Vector2.new(mouseLocation.X, mouseLocation.Y)).Magnitude
+                if distance < AimbotFOV and distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+RunService.Heartbeat:Connect(function()
+    if ShowFOV and AimbotEnabled then
+        local mouseLocation = UserInputService:GetMouseLocation()
+        local fovSize = AimbotFOV * 2
+        FOVFrame.Size = UDim2.new(0, fovSize, 0, fovSize)
+        FOVFrame.Position = UDim2.new(0, mouseLocation.X - fovSize/2, 0, mouseLocation.Y - fovSize/2)
+        FOVCircle.Visible = true
+    else
+        FOVCircle.Visible = false
+    end
+end)
+
+local aimbotConnection
+aimbotConnection = RunService.Heartbeat:Connect(function()
+    if AimbotEnabled and isHoldingRightMouse and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local target = GetClosestPlayerToCursor()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local targetPos = target.Character.Head.Position
+            local currentCFrame = camera.CFrame
+            local direction = (targetPos - currentCFrame.Position).Unit
+            local newCFrame = CFrame.lookAt(currentCFrame.Position, targetPos)
+            camera.CFrame = currentCFrame:Lerp(newCFrame, AimbotSpeed * 0.02)
+        end
+    end
+end)
+
+local CreditTab = Window:AddTab({ Title = "Credits", Icon = "notebook" })
+
+CreditTab:AddButton({
+    Title = "Discord Server",
+    Description = "",
+    Callback = function()
+        setclipboard("https://discord.gg/3gWvqV8Frg")
+        Fluent:Notify({
+            Title = "Copiado!",
+            Content = "Servidor do Discord colocado na Área de Transferência",
+            SubContent = "Use Ctrl+V para colar.",
+            Duration = 5
+        })
+    end
+})
+
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:SetLibrary(Fluent)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "AntiArrestToggle", "TpToolToggle" })
+
+SaveManager:BuildConfigSection(Window)
+InterfaceManager:BuildInterfaceSection(Window)

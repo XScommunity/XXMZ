@@ -65,7 +65,7 @@ end)
 
 MainTab:AddButton({
     Title = "Verificar Caminhões",
-    Description = "Conta quantos caminhões existem na pasta Veiculos",
+    Description = "Conta quantos caminhões existem no servidor",
     Callback = function()
         local veiculosFolder = Workspace:FindFirstChild("Veiculos")
         if not veiculosFolder then

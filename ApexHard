@@ -298,6 +298,25 @@ CreditTab:AddButton({
     end
 })
 
+local OthersTab = Window:AddTab({ Title = "Others", Icon = "help-circle" })
+
+OthersTab:AddButton({
+    Title = "Auto JJ'S por ZV YZ",
+    Description = "",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/Zv-yz/AutoJJs/main/Main.lua'))()
+    end
+})
+
+OthersTab:AddButton({
+    Title = "Infinite Yield",
+    Description = "",
+    Callback = function()
+        loadstring(game:HttpGet(('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'),true))()
+    end
+})
+
+
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:SetLibrary(Fluent)
 

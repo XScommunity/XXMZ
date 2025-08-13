@@ -63,6 +63,205 @@ task.spawn(function()
     end
 end)
 
+-- Invadir Base com Cooperação Toggle
+local InvadirBaseEnabled = false
+
+local InvadirBaseToggle = MainTab:AddToggle("InvadirBaseToggle", {
+    Title = "Invadir Base com Cooperação",
+    Description = "ATENÇÃO: Você deve estar perto do Portão do VIP para funcionar!",
+    Default = false
+})
+
+InvadirBaseToggle:OnChanged(function(state)
+    InvadirBaseEnabled = state
+    if state then
+        print("[Invadir Base] Monitoramento ativado - fique perto do Portão do VIP!")
+    else
+        print("[Invadir Base] Monitoramento desativado")
+    end
+end)
+
+-- Função para encontrar o Portão do VIP
+local function findPortaoVIP()
+    local mapaEB = Workspace:FindFirstChild("MAPA DA EB")
+    if not mapaEB then
+        return nil
+    end
+    
+    -- Procurar em todas as pastas (incluindo com nomes invisíveis)
+    for _, folder in pairs(mapaEB:GetChildren()) do
+        if folder:IsA("Folder") or folder:IsA("Model") then
+            local portao = folder:FindFirstChild("Portão do VIP")
+            if portao then
+                return portao
+            end
+        end
+    end
+    
+    return nil
+end
+
+-- Loop para monitorar o Portão do VIP
+task.spawn(function()
+    local lastCanCollide = nil
+    
+    while true do
+        if InvadirBaseEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local portao = findPortaoVIP()
+            if portao then
+                -- Verificar se é uma Part ou procurar Parts dentro do modelo
+                local partToCheck = nil
+                if portao:IsA("Part") then
+                    partToCheck = portao
+                else
+                    -- Se for um modelo, procurar a primeira Part dentro dele
+                    for _, child in pairs(portao:GetChildren()) do
+                        if child:IsA("Part") then
+                            partToCheck = child
+                            break
+                        end
+                    end
+                end
+                
+                if partToCheck then
+                    local currentCanCollide = partToCheck.CanCollide
+                    
+                    -- Se mudou de true para false (perdeu colisão)
+                    if lastCanCollide == true and currentCanCollide == false then
+                        -- Teleportar imediatamente
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(2086, 1, -131)
+                        print("[Invadir Base] Portão sem colisão detectado! Teleportando...")
+                        
+                        Fluent:Notify({
+                            Title = "Invadir Base",
+                            Content = "Portão aberto! Invadindo base...",
+                            Duration = 3
+                        })
+                    end
+                    
+                    lastCanCollide = currentCanCollide
+                else
+                    print("[Invadir Base] Part do Portão do VIP não encontrada")
+                end
+            else
+                print("[Invadir Base] Portão do VIP não encontrado")
+            end
+        end
+        task.wait(0.1) -- Verificar a cada 0.1s para ser responsivo
+    end
+end)
+local AntiDetectorEnabled = false
+local savedDetector = nil
+local detectorParent = nil
+
+local AntiDetectorToggle = MainTab:AddToggle("AntiDetectorToggle", {
+    Title = "Anti Detector",
+    Description = "Remove o Detecto e restaura quando desativado",
+    Default = false
+})
+
+AntiDetectorToggle:OnChanged(function(state)
+    AntiDetectorEnabled = state
+    
+    if state then
+        -- Ativar Anti Detector
+        local mapaEB = Workspace:FindFirstChild("MAPA DA EB")
+        if mapaEB then
+            local deleteClient = mapaEB:FindFirstChild("DeleteClient")
+            if deleteClient then
+                local detecto = deleteClient:FindFirstChild("Detecto")
+                if detecto then
+                    savedDetector = detecto:Clone()
+                    detectorParent = deleteClient
+                    detecto:Destroy()
+                    print("[Anti Detector] Detecto removido!")
+                else
+                    print("[Anti Detector] Detecto não encontrado!")
+                end
+            else
+                print("[Anti Detector] DeleteClient não encontrado!")
+            end
+        else
+            print("[Anti Detector] MAPA DA EB não encontrado!")
+        end
+    else
+        -- Desativar Anti Detector (restaurar)
+        if savedDetector and detectorParent then
+            local newDetector = savedDetector:Clone()
+            newDetector.Parent = detectorParent
+            print("[Anti Detector] Detecto restaurado!")
+        end
+        savedDetector = nil
+        detectorParent = nil
+    end
+end)
+
+MainTab:AddButton({
+    Title = "Equipar Feijão",
+    Description = "Equipa o feijão automaticamente",
+    Callback = function()
+        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            Fluent:Notify({
+                Title = "Equipar Feijão",
+                Content = "Erro: Personagem não encontrado",
+                Duration = 3
+            })
+            return
+        end
+        
+        -- Teleportar rapidamente
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1649, 2, 627)
+        
+        -- Aguardar muito pouco e interagir
+        task.wait(0.01)
+        
+        local botFolder = Workspace:FindFirstChild("Bot")
+        if not botFolder then
+            Fluent:Notify({
+                Title = "Equipar Feijão",
+                Content = "Erro: Pasta 'Bot' não encontrada",
+                Duration = 3
+            })
+            return
+        end
+        
+        local foundProximity = false
+        
+        -- Procurar em todos os modelos sem nome na pasta Bot
+        for _, model in pairs(botFolder:GetChildren()) do
+            if model:IsA("Model") and model.Name == "" then
+                local head = model:FindFirstChild("Head")
+                if head then
+                    local botao = head:FindFirstChild("Botão")
+                    if botao then
+                        for _, part in pairs(botao:GetDescendants()) do
+                            if part:IsA("ProximityPrompt") then
+                                fireproximityprompt(part)
+                                foundProximity = true
+                                Fluent:Notify({
+                                    Title = "Equipar Feijão",
+                                    Content = "Feijão equipado!",
+                                    Duration = 3
+                                })
+                                print("[Equipar Feijão] Feijão equipado rapidamente!")
+                                return
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+        if not foundProximity then
+            Fluent:Notify({
+                Title = "Equipar Feijão",
+                Content = "Erro: ProximityPrompt não encontrado",
+                Duration = 3
+            })
+        end
+    end
+})
+
 MainTab:AddButton({
     Title = "Verificar Caminhões",
     Description = "Conta quantos caminhões existem no servidor",
@@ -316,12 +515,19 @@ OthersTab:AddButton({
     end
 })
 
+OthersTab:AddButton({
+    Title = "Aimbot Air",
+    Description = "",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/AirHub/main/AirHub.lua"))()
+    end
+})
 
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:SetLibrary(Fluent)
 
 SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({ "AntiArrestToggle", "TpToolToggle" })
+SaveManager:SetIgnoreIndexes({ "AntiArrestToggle", "TpToolToggle", "AntiDetectorToggle", "InvadirBaseToggle" })
 
 SaveManager:BuildConfigSection(Window)
 InterfaceManager:BuildInterfaceSection(Window)

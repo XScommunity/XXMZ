@@ -2,17 +2,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/TheWExploiter/Slap-Ba
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Pro666Pro/BypassAntiCheat/refs/heads/main/main.lua"))()
 
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/jensonhirst/Orion/main/source"))()
+local OrionLib = loadstring(game:HttpGet("https://pastebin.com/raw/6a4F5ENH", true))()
 
-local Window = OrionLib:MakeWindow({
-    Name = "XXMZ | Slap Battles",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "TeleportConfig",
-    IntroEnabled = true,
-    IntroText = "XXMZ Exploitz | Slap Battles",
-    CloseCallback = function() end
-})
+local Window = OrionLib:MakeWindow({Name = "XS Hub V3", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest"})
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -181,7 +173,7 @@ for name, link in pairs(trollScripts) do
     })
 end
 
-CreditsTab:AddParagraph("Made By : ImCatTrust! (TheEpicGamer16Yt)")
+CreditsTab:AddParagraph("Made By : Uma_pessoa29")
 CreditsTab:AddParagraph("Get Glove Scripts By : Nexer1234!")
 CreditsTab:AddParagraph("Some Scripts By : Celerity!")
 ChangeLogTab:AddParagraph("(Update V2.8)!              Added Jobid Join")

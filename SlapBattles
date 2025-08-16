@@ -389,7 +389,7 @@ CombatTab:AddToggle({
 HomeTab:AddButton({
     Name = "Copy Discord Invite",
     Callback = function()
-        setclipboard("https://discord.gg/6cVygU3NHU")
+        setclipboard("https://discord.gg/3gWvqV8Frg")
     end
 })
 

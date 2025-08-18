@@ -318,6 +318,49 @@ local TpToolToggle = MainTab:AddToggle("TpToolToggle", {
     Default = false
 })
 
+local AntiHitEnabled = false
+local AntiHitInterval = 1
+local AntiHitPos = Vector3.new(-125.9238510131836, -4030.166748046875, -3148.517578125)
+
+local AntiHitToggle = MainTab:AddToggle("AntiHitToggle", {
+    Title = "Anti Hit",
+    Default = false
+})
+
+AntiHitToggle:OnChanged(function(state)
+    AntiHitEnabled = state
+end)
+
+local AntiHitSlider = MainTab:AddSlider("AntiHitSlider", {
+    Title = "Intervalo (s)",
+    Default = 1,
+    Min = 0.1,
+    Max = 5,
+    Rounding = 1,
+})
+
+AntiHitSlider:OnChanged(function(value)
+    AntiHitInterval = value
+end)
+
+-- Salvar posição da câmera
+local camera = Workspace.CurrentCamera
+local camCF = camera.CFrame
+
+task.spawn(function()
+    while true do
+        task.wait(AntiHitInterval)
+        if AntiHitEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            -- Teleporta o jogador (HumanoidRootPart)
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(AntiHitPos)
+            
+            -- Reaplica a câmera original pra você não sentir o teleport
+            camera.CFrame = camCF
+        end
+    end
+end)
+
+
 TpToolToggle:OnChanged(function(state)
     TpToolEnabled = state
     if TpToolEnabled then
@@ -481,7 +524,573 @@ aimbotConnection = RunService.Heartbeat:Connect(function()
     end
 end)
 
-local CreditTab = Window:AddTab({ Title = "Credits", Icon = "notebook" })
+-- Toggle Esconder Nome
+local EsconderNomeEnabled = false
+local originalTransparency = nil
+
+local EsconderNomeToggle = MainTab:AddToggle("EsconderNomeToggle", {
+    Title = "Esconder Nome (Visual)",
+    Description = "Torna o nome do seu personagem invisível",
+    Default = false
+})
+
+EsconderNomeToggle:OnChanged(function(state)
+    EsconderNomeEnabled = state
+    
+    if LocalPlayer.Character then
+        local nomeFolder = LocalPlayer.Character:FindFirstChild("Nome")
+        if nomeFolder then
+            local nomeTexto = nomeFolder:FindFirstChild("NomeTexto")
+            if nomeTexto then
+                if state then
+                    -- Salvar transparência original antes de esconder
+                    if originalTransparency == nil then
+                        originalTransparency = nomeTexto.TextTransparency
+                    end
+                    nomeTexto.TextTransparency = 1 -- Torna invisível
+                    print("[Esconder Nome] Nome escondido!")
+                else
+                    -- Restaurar transparência original
+                    if originalTransparency ~= nil then
+                        nomeTexto.TextTransparency = originalTransparency
+                        originalTransparency = nil
+                    else
+                        nomeTexto.TextTransparency = 0 -- Valor padrão se não foi salvo
+                    end
+                    print("[Esconder Nome] Nome restaurado!")
+                end
+            else
+                print("[Esconder Nome] NomeTexto não encontrado!")
+            end
+        else
+            print("[Esconder Nome] Pasta Nome não encontrada!")
+        end
+    else
+        print("[Esconder Nome] Personagem não encontrado!")
+    end
+end)
+
+-- Monitorar quando o personagem respawnar para reaplicar o efeito
+Players.LocalPlayer.CharacterAdded:Connect(function(character)
+    if EsconderNomeEnabled then
+        -- Aguardar o nome aparecer
+        task.wait(1)
+        local nomeFolder = character:FindFirstChild("Nome")
+        if nomeFolder then
+            local nomeTexto = nomeFolder:FindFirstChild("NomeTexto")
+            if nomeTexto then
+                if originalTransparency == nil then
+                    originalTransparency = nomeTexto.TextTransparency
+                end
+                nomeTexto.TextTransparency = 1
+                print("[Esconder Nome] Nome escondido após respawn!")
+            end
+        end
+    end
+end)
+
+-- Input Visual Money
+local originalCashValue = nil
+
+local VisualMoneyInput = MainTab:AddInput("VisualMoneyInput", {
+    Title = "Visual Money",
+    Description = "Apenas números.",
+    Default = "",
+    Placeholder = "Max 1B",
+    Numeric = true, -- Aceita apenas números
+    Finished = false, -- Só executa quando pressionar Enter ou sair do campo
+    Callback = function(value)
+        local cashValue = tonumber(value)
+        if not cashValue then
+            Fluent:Notify({
+                Title = "Visual Money",
+                Content = "Por favor, digite apenas números!",
+                Duration = 3
+            })
+            return
+        end
+        
+        if LocalPlayer:FindFirstChild("Leaderboard") then
+            local cashStat = LocalPlayer.Leaderboard:FindFirstChild("Cash")
+            if cashStat then
+                -- Salvar valor original na primeira vez
+                if originalCashValue == nil then
+                    originalCashValue = cashStat.Value
+                end
+                
+                -- Alterar valor visual
+                cashStat.Value = cashValue
+                
+                Fluent:Notify({
+                    Title = "Visual Money",
+                    Content = "Dinheiro alterado para: $" .. cashValue,
+                    Duration = 3
+                })
+                print("[Visual Money] Valor alterado para: " .. cashValue)
+            else
+                Fluent:Notify({
+                    Title = "Visual Money",
+                    Content = "Erro: Cash não encontrado no Leaderboard",
+                    Duration = 3
+                })
+            end
+        else
+            Fluent:Notify({
+                Title = "Visual Money",
+                                    Content = "Erro: Leaderboard não encontrado",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- Botão para restaurar valor original
+MainTab:AddButton({
+    Title = "Restaurar Dinheiro Original",
+    Description = "Volta o dinheiro para o valor original",
+    Callback = function()
+        if originalCashValue ~= nil then
+            if LocalPlayer:FindFirstChild("Leaderboard") then
+                local cashStat = LocalPlayer.Leaderboard:FindFirstChild("Cash")
+                if cashStat then
+                    cashStat.Value = originalCashValue
+                    Fluent:Notify({
+                        Title = "Visual Money",
+                        Content = "Dinheiro restaurado para: $" .. originalCashValue,
+                        Duration = 3
+                    })
+                    print("[Visual Money] Valor restaurado para: " .. originalCashValue)
+                    originalCashValue = nil
+                end
+            end
+        else
+            Fluent:Notify({
+                Title = "Visual Money",
+                Content = "Nenhum valor original salvo!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- Aba Defesa Civil
+local DefesaCivilTab = Window:AddTab({ Title = "Defesa Civil", Icon = "shield" })
+
+-- Variáveis para controle
+local targetPlayerName = ""
+local targetPlayer = nil
+local EspiralEnabled = false
+local CopyPosEnabled = false
+local espiralConnection = nil
+local copyPosConnection = nil
+local angle = 0
+
+-- Input para nome do jogador
+local PlayerNameInput = DefesaCivilTab:AddInput("PlayerNameInput", {
+    Title = "Nome do Jogador",
+    Description = "Digite o nome do jogador alvo",
+    Default = "",
+    Placeholder = "Ex: PlayerName123",
+    Finished = false,
+    Callback = function(value)
+        targetPlayerName = value
+        
+        -- Procurar jogador
+        targetPlayer = nil
+        for _, player in pairs(Players:GetPlayers()) do
+            if string.lower(player.Name):find(string.lower(value)) or string.lower(player.DisplayName):find(string.lower(value)) then
+                targetPlayer = player
+                break
+            end
+        end
+        
+        if targetPlayer then
+            Fluent:Notify({
+                Title = "Defesa Civil",
+                Content = "Jogador encontrado: " .. targetPlayer.Name,
+                Duration = 3
+            })
+            print("[Defesa Civil] Alvo definido: " .. targetPlayer.Name)
+        else
+            Fluent:Notify({
+                Title = "Defesa Civil",
+                Content = "Jogador não encontrado: " .. value,
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- Toggle Espiral
+local EspiralToggle = DefesaCivilTab:AddToggle("EspiralToggle", {
+    Title = "Espiral",
+    Description = "Fica girando em espiral ao redor do jogador",
+    Default = false
+})
+
+EspiralToggle:OnChanged(function(state)
+    EspiralEnabled = state
+    
+    if state then
+        if not targetPlayer then
+            Fluent:Notify({
+                Title = "Defesa Civil - Espiral",
+                Content = "Por favor, defina um jogador alvo primeiro!",
+                Duration = 3
+            })
+            EspiralToggle:SetValue(false)
+            return
+        end
+        
+        angle = 0
+        espiralConnection = RunService.Heartbeat:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and 
+               targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                
+                angle = angle + 0.1 -- Velocidade da rotação
+                local radius = 10 -- Distância do centro
+                
+                local targetPos = targetPlayer.Character.HumanoidRootPart.Position
+                local x = targetPos.X + math.cos(angle) * radius
+                local z = targetPos.Z + math.sin(angle) * radius
+                local y = targetPos.Y
+                
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(x, y, z)
+            end
+        end)
+        
+        Fluent:Notify({
+            Title = "Defesa Civil - Espiral",
+            Content = "Espiral ativada em " .. targetPlayer.Name,
+            Duration = 3
+        })
+        print("[Defesa Civil] Espiral ativada")
+    else
+        if espiralConnection then
+            espiralConnection:Disconnect()
+            espiralConnection = nil
+        end
+        print("[Defesa Civil] Espiral desativada")
+    end
+end)
+
+-- Toggle Copy Pos
+local CopyPosToggle = DefesaCivilTab:AddToggle("CopyPosToggle", {
+    Title = "Copy Pos",
+    Description = "Fica dentro do corpo do jogador, copiando posição e rotação",
+    Default = false
+})
+
+CopyPosToggle:OnChanged(function(state)
+    CopyPosEnabled = state
+    
+    if state then
+        if not targetPlayer then
+            Fluent:Notify({
+                Title = "Defesa Civil - Copy Pos",
+                Content = "Por favor, defina um jogador alvo primeiro!",
+                Duration = 3
+            })
+            CopyPosToggle:SetValue(false)
+            return
+        end
+        
+        copyPosConnection = RunService.Heartbeat:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and 
+               targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                
+                -- Copia exatamente a posição e rotação do alvo
+                local targetCFrame = targetPlayer.Character.HumanoidRootPart.CFrame
+                LocalPlayer.Character.HumanoidRootPart.CFrame = targetCFrame
+            end
+        end)
+        
+        Fluent:Notify({
+            Title = "Defesa Civil - Copy Pos",
+            Content = "Copy Pos ativado em " .. targetPlayer.Name,
+            Duration = 3
+        })
+        print("[Defesa Civil] Copy Pos ativado")
+    else
+        if copyPosConnection then
+            copyPosConnection:Disconnect()
+            copyPosConnection = nil
+        end
+        print("[Defesa Civil] Copy Pos desativado")
+    end
+end)
+
+-- Botão para parar tudo
+DefesaCivilTab:AddButton({
+    Title = "Parar Todas Funções",
+    Description = "Desativa Espiral e Copy Pos",
+    Callback = function()
+        EspiralToggle:SetValue(false)
+        CopyPosToggle:SetValue(false)
+        
+        Fluent:Notify({
+            Title = "Defesa Civil",
+            Content = "Todas as funções foram desativadas",
+            Duration = 3
+        })
+    end
+})
+
+-- Monitorar se o jogador alvo sai do servidor
+Players.PlayerRemoving:Connect(function(player)
+    if targetPlayer == player then
+        EspiralToggle:SetValue(false)
+        CopyPosToggle:SetValue(false)
+        targetPlayer = nil
+        
+        Fluent:Notify({
+            Title = "Defesa Civil",
+            Content = "Jogador alvo saiu do servidor. Funções desativadas.",
+            Duration = 3
+        })
+    end
+end)
+
+-- Aba Recrutamento
+local RecrutamentoTab = Window:AddTab({ Title = "Recrutamento", Icon = "users" })
+
+-- Função para enviar mensagem no chat (novo sistema)
+local function sendChatMessage(message)
+    local TextChatService = game:GetService("TextChatService")
+    local textChannel = TextChatService.TextChannels.RBXGeneral
+    if textChannel then
+        textChannel:SendAsync(message)
+    end
+end
+
+-- Input para mensagem personalizada
+local CustomMessageInput = RecrutamentoTab:AddInput("CustomMessageInput", {
+    Title = "Mensagem Personalizada",
+    Description = "Digite sua própria mensagem para enviar no chat",
+    Default = "",
+    Placeholder = "Ex: Sim, Tenente.",
+    Finished = false,
+    Callback = function(value)
+        if value and value ~= "" then
+            sendChatMessage(value)
+            Fluent:Notify({
+                Title = "Recrutamento",
+                Content = "Mensagem enviada: " .. value,
+                Duration = 3
+            })
+            print("[Recrutamento] Mensagem personalizada enviada: " .. value)
+        else
+            Fluent:Notify({
+                Title = "Recrutamento",
+                Content = "Digite uma mensagem válida!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- Seção de respostas para Cabo
+RecrutamentoTab:AddParagraph({
+    Title = "Respostas para Cabo",
+    Content = "Clique nos botões abaixo para enviar as respostas no chat"
+})
+
+RecrutamentoTab:AddButton({
+    Title = "Sim, Cabo.",
+    Description = "Envia 'Sim, Cabo.' no chat",
+    Callback = function()
+        sendChatMessage("Sim, Cabo.")
+        Fluent:Notify({
+            Title = "Recrutamento",
+            Content = "Enviado: Sim, Cabo.",
+            Duration = 2
+        })
+        print("[Recrutamento] Enviado: Sim, Cabo.")
+    end
+})
+
+RecrutamentoTab:AddButton({
+    Title = "Não, Cabo.",
+    Description = "Envia 'Não, Cabo.' no chat",
+    Callback = function()
+        sendChatMessage("Não, Cabo.")
+        Fluent:Notify({
+            Title = "Recrutamento",
+            Content = "Enviado: Não, Cabo.",
+            Duration = 2
+        })
+        print("[Recrutamento] Enviado: Não, Cabo.")
+    end
+})
+
+-- Seção de respostas para Sargento
+RecrutamentoTab:AddParagraph({
+    Title = "Respostas para Sargento",
+    Content = ""
+})
+
+RecrutamentoTab:AddButton({
+    Title = "Sim, Sargento.",
+    Description = "Envia 'Sim, Sargento.' no chat",
+    Callback = function()
+        sendChatMessage("Sim, Sargento.")
+        Fluent:Notify({
+            Title = "Recrutamento",
+            Content = "Enviado: Sim, Sargento.",
+            Duration = 2
+        })
+        print("[Recrutamento] Enviado: Sim, Sargento.")
+    end
+})
+
+RecrutamentoTab:AddButton({
+    Title = "Não, Sargento.",
+    Description = "Envia 'Não, Sargento.' no chat",
+    Callback = function()
+        sendChatMessage("Não, Sargento.")
+        Fluent:Notify({
+            Title = "Recrutamento",
+            Content = "Enviado: Não, Sargento.",
+            Duration = 2
+        })
+        print("[Recrutamento] Enviado: Não, Sargento.")
+    end
+})
+
+-- Seção de respostas para Subtenente
+RecrutamentoTab:AddParagraph({
+    Title = "Respostas para Subtenente",
+    Content = ""
+})
+
+RecrutamentoTab:AddButton({
+    Title = "Sim, Subtenente.",
+    Description = "Envia 'Sim, Subtenente.' no chat",
+    Callback = function()
+        sendChatMessage("Sim, Subtenente.")
+        Fluent:Notify({
+            Title = "Recrutamento",
+            Content = "Enviado: Sim, Subtenente.",
+            Duration = 2
+        })
+        print("[Recrutamento] Enviado: Sim, Subtenente.")
+    end
+})
+
+RecrutamentoTab:AddButton({
+    Title = "Não, Subtenente.",
+    Description = "Envia 'Não, Subtenente.' no chat",
+    Callback = function()
+        sendChatMessage("Não, Subtenente.")
+        Fluent:Notify({
+            Title = "Recrutamento",
+            Content = "Enviado: Não, Subtenente.",
+            Duration = 2
+        })
+        print("[Recrutamento] Enviado: Não, Subtenente.")
+    end
+})
+
+-- Auto Torre (Pula no ar quando detecta queda livre)
+local AutoTorreEnabled = false
+local autoTorreConnection = nil
+local wasOnGround = true
+local hasJumpedInAir = false
+
+local AutoTorreToggle = RecrutamentoTab:AddToggle("AutoTorreToggle", {
+    Title = "Auto Torre",
+    Description = "Pula automaticamente no ar quando detecta queda livre",
+    Default = false
+})
+
+AutoTorreToggle:OnChanged(function(state)
+    AutoTorreEnabled = state
+    
+    if state then
+        autoTorreConnection = RunService.Heartbeat:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local humanoid = LocalPlayer.Character.Humanoid
+                local humanoidRootPart = LocalPlayer.Character.HumanoidRootPart
+                local humanoidState = humanoid:GetState()
+                
+                -- Verificar se está no chão
+                local isOnGround = (humanoidState == Enum.HumanoidStateType.Running or 
+                                  humanoidState == Enum.HumanoidStateType.RunningNoPhysics or
+                                  humanoidState == Enum.HumanoidStateType.Landed)
+                
+                -- Reset do pulo quando toca o chão
+                if isOnGround then
+                    hasJumpedInAir = false
+                end
+                
+                -- Se estava no chão e agora está caindo (queda livre detectada)
+                if wasOnGround and not isOnGround and not hasJumpedInAir then
+                    local velocity = humanoidRootPart.Velocity
+                    
+                    -- Se está caindo (velocidade Y negativa)
+                    if velocity.Y < -5 then
+                        -- PULAR NO AR! (forçar velocidade Y para cima)
+                        humanoidRootPart.Velocity = Vector3.new(
+                            velocity.X,
+                            50, -- Força do pulo no ar
+                            velocity.Z
+                        )
+                        
+                        hasJumpedInAir = true
+                        print("[Auto Torre] PULOU NO AR! Queda livre detectada.")
+                    end
+                end
+                
+                wasOnGround = isOnGround
+            end
+        end)
+        
+        Fluent:Notify({
+            Title = "Auto Torre",
+            Content = "Auto Torre ativado! Vai pular no ar em queda livre.",
+            Duration = 3
+        })
+        print("[Auto Torre] Ativado - Pulo automático no ar")
+    else
+        if autoTorreConnection then
+            autoTorreConnection:Disconnect()
+            autoTorreConnection = nil
+        end
+        wasOnGround = true
+        hasJumpedInAir = false
+        
+        Fluent:Notify({
+            Title = "Auto Torre",
+            Content = "Auto Torre desativado!",
+            Duration = 3
+        })
+        print("[Auto Torre] Desativado")
+    end
+end)
+
+-- Seção de ações rápidas
+RecrutamentoTab:AddParagraph({
+    Title = "Ações Rápidas",
+    Content = "Comandos úteis para recrutamento"
+})
+
+RecrutamentoTab:AddButton({
+    Title = "Limpar Chat",
+    Description = "Envia várias linhas em branco para limpar o chat",
+    Callback = function()
+        for i = 1, 10 do
+            sendChatMessage(" ")
+            task.wait(0.1)
+        end
+        Fluent:Notify({
+            Title = "Recrutamento",
+            Content = "Chat limpo!",
+            Duration = 2
+        })
+    end
+})
+
+local CreditTab = Window:AddTab({ Title = "Credits", Icon = "star" })
 
 CreditTab:AddButton({
     Title = "Discord Server",
@@ -522,6 +1131,8 @@ OthersTab:AddButton({
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/AirHub/main/AirHub.lua"))()
     end
 })
+
+
 
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:SetLibrary(Fluent)

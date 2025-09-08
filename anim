@@ -1,0 +1,71 @@
+-- Serviços do Roblox
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+-- Configuração do jogador e personagem
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- IDs das animações
+local idleAnimId = "rbxassetid://135419935358802"  -- ID da animação de parado
+local walkAnimId = "rbxassetid://109671225388655"  -- ID da animação de andar
+local runAnimId = "rbxassetid://109671225388655"   -- ID da animação de correr
+
+-- Criar instâncias de animação
+local idleAnim = Instance.new("Animation")
+idleAnim.AnimationId = idleAnimId
+local walkAnim = Instance.new("Animation")
+walkAnim.AnimationId = walkAnimId
+local runAnim = Instance.new("Animation")
+runAnim.AnimationId = runAnimId
+
+-- Carregar animações no humanoid
+local idleTrack = humanoid:LoadAnimation(idleAnim)
+local walkTrack = humanoid:LoadAnimation(walkAnim)
+local runTrack = humanoid:LoadAnimation(runAnim)
+
+-- Variáveis de controle de movimento
+local isMoving = false
+local isRunning = false
+
+-- Função para atualizar as animações com base no estado do movimento
+local function updateAnimations()
+    if isMoving then
+        if isRunning then
+            if not runTrack.IsPlaying then
+                idleTrack:Stop()
+                walkTrack:Stop()
+                runTrack:Play()  -- Toca a animação de correr
+            end
+        else
+            if not walkTrack.IsPlaying then
+                idleTrack:Stop()
+                runTrack:Stop()
+                walkTrack:Play()  -- Toca a animação de andar
+            end
+        end
+    else
+        if not idleTrack.IsPlaying then
+            walkTrack:Stop()
+            runTrack:Stop()
+            idleTrack:Play()  -- Toca a animação de parado
+        end
+    end
+end
+
+-- Função para verificar movimento e atualizar animações
+RunService.Heartbeat:Connect(function()
+    -- Verifica se o personagem está se movendo
+    local moveDirection = humanoid.MoveDirection
+    isMoving = moveDirection.Magnitude > 0
+
+    -- Verifica se está correndo (movendo + tecla Shift pressionada)
+    isRunning = isMoving and UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+
+    updateAnimations()  -- Atualiza as animações
+end)
+
+-- Inicia as animações
+updateAnimations()

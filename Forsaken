@@ -192,7 +192,70 @@ MainTab:CreateToggle({
    end,
 })
 
--- =================== ADICIONANDO AS NOVAS FUNÇÕES ===================
+-- =================== NOVO TOGGLE ANTI DEATH ===================
+local antiDeathToggle = false
+local antiDeathConnection = nil
+
+local function startAntiDeath()
+    local RunService = game:GetService("RunService")
+
+    antiDeathConnection = RunService.Heartbeat:Connect(function()
+        if antiDeathToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local hrp = character.HumanoidRootPart
+
+                local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+                if killersFolder then
+                    for _, killer in pairs(killersFolder:GetChildren()) do
+                        if killer:FindFirstChild("HumanoidRootPart") then
+                            local dist = (killer.HumanoidRootPart.Position - hrp.Position).Magnitude
+                            if dist <= 8 then
+                                hrp.CFrame = CFrame.new(-3560, 12, 255)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function stopAntiDeath()
+    if antiDeathConnection then
+        antiDeathConnection:Disconnect()
+        antiDeathConnection = nil
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "Anti Death",
+   CurrentValue = false,
+   Flag = "AntiDeathToggle",
+   Callback = function(Value)
+       antiDeathToggle = Value
+       if Value then
+           startAntiDeath()
+           Rayfield:Notify({
+               Title = "Anti Death",
+               Content = "Proteção contra killers ATIVADA!",
+               Duration = 3,
+               Image = 4483362458
+           })
+       else
+           stopAntiDeath()
+           Rayfield:Notify({
+               Title = "Anti Death",
+               Content = "Proteção contra killers DESATIVADA!",
+               Duration = 2,
+               Image = 4483362458
+           })
+       end
+   end,
+})
+-- ===============================================================
 
 -- Generator ESP Toggle
 MainTab:CreateToggle({
@@ -401,7 +464,7 @@ MainTab:CreateSection({
 
 MainTab:CreateParagraph({
     Title = "Posições",
-    Content = "Bring Items: X: -3549, Y: 18, Z: 254\nKill Carl: X: -3610, Y: 12, Z: 255\nKill Rager: X: -3646, Y: 12, Z: 255"
+    Content = "Bring Items: X: -3549, Y: 18, Z: 254\nKill Carl: X: -3610, Y: 12, Z: 255\nKill Rager: X: -3646, Y: 12, Z: 255\nAnti Death: X: -3560, Y: 12, Z: 255"
 })
 
 MainTab:CreateButton({

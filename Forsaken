@@ -368,7 +368,7 @@ MainTab:CreateToggle({
                         for _, killer in pairs(workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers") and workspace.Players.Killers:GetChildren() or {}) do
                             if killer:FindFirstChild("HumanoidRootPart") then
                                 local distance = (killer.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
-                                if distance <= 8 then
+                                if distance <= 18 then
                                     character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3560, 12, 255))
                                 end
                             end

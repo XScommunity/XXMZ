@@ -23,13 +23,48 @@ local Window = Rayfield:CreateWindow({
 })
 
 local MainTab = Window:CreateTab("Principal", 4483362458)
+local AnimationTab = Window:CreateTab("Animation", 4483362458)
 
--- Guest 666 Animation
-MainTab:CreateButton({
-   Name = "Guest 666 Animation",
-   Callback = function()
-       loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/anim"))()
-   end,
+-- =============================
+-- Show Chat Toggle
+-- =============================
+MainTab:CreateToggle({
+    Name = "Show Chat",
+    CurrentValue = false,
+    Flag = "ShowChatToggle",
+    Callback = function(value)
+        _G.showChat = value
+        if value then
+            task.spawn(function()
+                while _G.showChat and task.wait() do
+                    pcall(function()
+                        local textChatService = game:GetService("TextChatService")
+                        local chatConfig = textChatService:FindFirstChildOfClass("ChatWindowConfiguration")
+                        if chatConfig then
+                            chatConfig.Enabled = true
+                        end
+                    end)
+                end
+            end)
+            Rayfield:Notify({Title = "Show Chat", Content = "Chat sempre visível ATIVADO!", Duration = 3, Image = 4483362458})
+        else
+            _G.showChat = false
+            pcall(function()
+                -- Só desativa o chat se não estiver espectando
+                local localPlayer = game.Players.LocalPlayer
+                if workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Spectating") then
+                    if not workspace.Players.Spectating:FindFirstChild(localPlayer.Name) then
+                        local textChatService = game:GetService("TextChatService")
+                        local chatConfig = textChatService:FindFirstChildOfClass("ChatWindowConfiguration")
+                        if chatConfig then
+                            chatConfig.Enabled = false
+                        end
+                    end
+                end
+            end)
+            Rayfield:Notify({Title = "Show Chat", Content = "Show Chat DESATIVADO!", Duration = 2, Image = 4483362458})
+        end
+    end
 })
 
 -- =============================
@@ -309,7 +344,79 @@ MainTab:CreateToggle({
 })
 
 -- =============================
--- Hitbox Expander
+-- Items ESP
+-- =============================
+MainTab:CreateToggle({
+    Name = "Items ESP",
+    CurrentValue = false,
+    Flag = "ItemsESP",
+    Callback = function(bool)
+        _G.items = bool
+        task.spawn(function()
+            while task.wait() do
+                if _G.items == true then
+                    pcall(function()
+                        local gameMap = workspace:FindFirstChild("Map")
+                        if workspace:FindFirstChild("Map") and gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                            for _, v in pairs(gameMap.Ingame:GetChildren()) do
+                                if v:IsA("Tool") and not v:FindFirstChild("tool_esp") then
+                                    local hl = Instance.new("Highlight", v)
+                                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                    hl.Name = "tool_esp"
+                                    hl.FillColor = Color3.fromRGB(0, 255, 255)
+                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                    hl.FillTransparency = 0.3
+                                    hl.OutlineTransparency = 0
+                                elseif v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp.FillColor = Color3.fromRGB(0, 255, 255)
+                                    v.tool_esp.OutlineTransparency = 0
+                                    v.tool_esp.FillTransparency = 0.3
+                                    v.tool_esp.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                end
+                            end
+                            for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                if v:IsA("Tool") and not v:FindFirstChild("tool_esp") then
+                                    local hl = Instance.new("Highlight", v)
+                                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                    hl.Name = "tool_esp"
+                                    hl.FillColor = Color3.fromRGB(0, 255, 255)
+                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                    hl.FillTransparency = 0.3
+                                    hl.OutlineTransparency = 0
+                                elseif v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp.FillColor = Color3.fromRGB(0, 255, 255)
+                                    v.tool_esp.OutlineTransparency = 0
+                                    v.tool_esp.FillTransparency = 0.3
+                                    v.tool_esp.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        local gameMap = workspace:FindFirstChild("Map")
+                        if workspace:FindFirstChild("Map") and gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                            for _, v in pairs(gameMap.Ingame:GetChildren()) do
+                                if v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp:Destroy()
+                                end
+                            end
+                            for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                if v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp:Destroy()
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
+})
+
+-- =============================
+-- Reach Expander
 -- =============================
 local function getHitboxesFromPlayer()
     local hitboxes = workspace:FindFirstChild("Hitboxes")
@@ -324,31 +431,35 @@ local function getHitboxesFromPlayer()
 end
 
 MainTab:CreateToggle({
-   Name = "Hitbox Expander",
+   Name = "Reach Expander",
    CurrentValue = false,
    Flag = "HitboxExpander",
    Callback = function(bool)
        _G.hitboxExpander = bool
        if bool then
-           Rayfield:Notify({Title = "Hitbox Expander", Content = "Hitbox Expander ATIVADO!", Duration = 3, Image = 4483362458})
-           task.spawn(function()
-               while _G.hitboxExpander do
-                   if getHitboxesFromPlayer() then
-                       local player = game.Players.LocalPlayer
-                       local character = player.Character
-                       if character and character:FindFirstChild("HumanoidRootPart") then
-                           local hrp = character.HumanoidRootPart
-                           hrp.Size = Vector3.new(2.5, 6, 2.5) -- tamanho customizado
-                       end
-                   end
-                   task.wait(0.1)
-               end
-           end)
+           Rayfield:Notify({Title = "Reach Expander", Content = "Reach Expander ATIVADO!", Duration = 3, Image = 4483362458})
        else
-           Rayfield:Notify({Title = "Hitbox Expander", Content = "Hitbox Expander DESATIVADO!", Duration = 2, Image = 4483362458})
+           Rayfield:Notify({Title = "Reach Expander", Content = "Reach Expander DESATIVADO!", Duration = 2, Image = 4483362458})
        end
    end
 })
+
+-- Sistema do Reach Expander executando em loop separado
+task.spawn(function()
+    while true do
+        if _G.hitboxExpander and getHitboxesFromPlayer() then
+            local localPlayer = game.Players.LocalPlayer
+            local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local currentVelocity = hrp.Velocity
+                hrp.AssemblyLinearVelocity = hrp.CFrame.LookVector * 250
+                game:GetService("RunService").RenderStepped:Wait()
+                hrp.Velocity = currentVelocity 
+            end
+        end
+        task.wait()
+    end
+end)
 
 -- =============================
 -- Anti Death
@@ -365,16 +476,16 @@ MainTab:CreateToggle({
                     local player = game.Players.LocalPlayer
                     local character = player.Character
                     if character and character:FindFirstChild("HumanoidRootPart") then
-                        for _, killer in pairs(workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers") and workspace.Players.Killers:GetChildren() or {}) do
+                        for _, killer in pairs(workspace:FindFirstChild("Killers") and workspace.Killers:GetChildren() or {}) do
                             if killer:FindFirstChild("HumanoidRootPart") then
                                 local distance = (killer.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
                                 if distance <= 18 then
-                                    character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3560, 12, 255))
+                                    character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3560,12,255))
                                 end
                             end
                         end
                     end
-                    task.wait(0.1)
+                    task.wait(3)
                 end
             end)
         end
@@ -397,10 +508,10 @@ MainTab:CreateToggle({
                     local character = player.Character
                     if character and character:FindFirstChild("Humanoid") then
                         if character.Humanoid.JumpPower == 0 then
-                            character.Humanoid.JumpPower = 50 -- valor padrão
+                            character.Humanoid.JumpPower = 50
                         end
                     end
-                    task.wait(3) -- verificação a cada 3 segundos
+                    task.wait(3)
                 end
             end)
         end
@@ -452,20 +563,202 @@ MainTab:CreateToggle({
 })
 
 -- =============================
--- Informações e UI
+-- Invisibility
 -- =============================
-MainTab:CreateSection({Name = "Informações"})
+local loopRunning, loopThread, currentAnim, lastAnim
+local anim = Instance.new("Animation")
+anim.AnimationId = "rbxassetid://75804462760596"
 
-MainTab:CreateParagraph({
-    Title = "Posições",
-    Content = "Bring Items: X: -3549, Y: 18, Z: 254\nKill Carl: X: -3610, Y: 12, Z: 255\nKill Rager: X: -3646, Y: 12, Z: 255"
+local function enableNoclip()
+    local localPlayer = game.Players.LocalPlayer
+    if localPlayer.Character then
+        for _, v in pairs(localPlayer.Character:GetChildren()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "Invisible",
+    CurrentValue = false,
+    Flag = "InvisibilityToggle",
+    Callback = function(Value)
+        local localPlayer = game.Players.LocalPlayer
+        
+        if game.PlaceId ~= 18687417158 then
+            if Value then
+                Rayfield:Notify({Title = "Aviso", Content = "Use apenas no Forsaken real! Invisibilidade não funciona em outros jogos.", Duration = 8, Image = 4483362458})
+                return
+            end
+        end
+        
+        if Value then
+            Rayfield:Notify({Title = "Aviso", Content = "Você ainda pode ser visto com certas habilidades ou configurações de hitbox!", Duration = 6, Image = 4483362458})
+            loopRunning = true
+
+            loopThread = task.spawn(function()
+                while loopRunning do
+                    local hum = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") and localPlayer.Character:FindFirstChild("Humanoid")
+                    if hum then
+                        enableNoclip()
+                    end
+
+                    if hum then
+                        local loadedAnim = hum:LoadAnimation(anim)
+                        currentAnim = loadedAnim
+                        loadedAnim.Looped = false
+                        loadedAnim:Play()
+                        loadedAnim:AdjustSpeed(0)
+                        task.wait(0.1)
+                        if lastAnim then
+                            lastAnim:Stop()
+                            lastAnim:Destroy()
+                        end
+                        lastAnim = currentAnim
+                    else
+                        currentAnim = nil
+                    end
+                    task.wait()
+                end
+            end)
+        else
+            loopRunning = false
+
+            if loopThread then
+                loopRunning = false
+                task.cancel(loopThread)
+            end
+
+            if currentAnim then
+                currentAnim:Stop()
+                currentAnim = nil
+            end
+
+            local Humanoid = localPlayer.Character and (localPlayer.Character:FindFirstChildOfClass("Humanoid") or localPlayer.Character:FindFirstChildOfClass("AnimationController"))
+            if Humanoid then
+                for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
+                    v:AdjustSpeed(100000)
+                end
+                for _, v in pairs(localPlayer.Character:GetChildren()) do
+                    if v:IsA("BasePart") then
+                        v.CanCollide = true
+                    end
+                end
+            end
+
+            local animateScript = localPlayer.Character and localPlayer.Character:FindFirstChild("Animate")
+            if animateScript then
+                animateScript.Disabled = true
+                animateScript.Disabled = false
+            end
+            
+            Rayfield:Notify({Title = "Invisible", Content = "Invisibilidade DESATIVADA!", Duration = 2, Image = 4483362458})
+        end
+    end
 })
 
-MainTab:CreateButton({
-   Name = "Fechar UI",
+-- =============================
+-- Guest 666 Animation
+-- =============================
+AnimationTab:CreateButton({
+   Name = "Guest 666 Animation",
    Callback = function()
-       Rayfield:Destroy()
+       loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/anim"))()
    end,
 })
 
-Rayfield:Notify({Title = "Script Carregado", Content = "UI carregada com sucesso!", Duration = 5, Image = 4483362458})
+-- =============================
+-- Mafious Dance
+-- =============================
+AnimationTab:CreateButton({
+   Name = "Mafious Dance",
+   Callback = function()
+       local localPlayer = game.Players.LocalPlayer
+       local character = localPlayer.Character
+       
+       if character and character:FindFirstChild("Humanoid") then
+           local humanoid = character.Humanoid
+           
+           -- Para animações anteriores
+           for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+               track:Stop()
+           end
+           
+           -- Cria e carrega a animação
+           local anim = Instance.new("Animation")
+           anim.AnimationId = "rbxassetid://132946177664650"
+           
+           local animTrack = humanoid:LoadAnimation(anim)
+           animTrack.Looped = true
+           animTrack:Play()
+           
+           Rayfield:Notify({
+               Title = "Mafious Dance", 
+               Content = "Dança iniciada! Use novamente para parar.", 
+               Duration = 3, 
+               Image = 4483362458
+           })
+           
+           -- Guarda a referência da animação para poder parar depois
+           _G.mafiousDanceTrack = animTrack
+       else
+           Rayfield:Notify({
+               Title = "Erro", 
+               Content = "Personagem não encontrado!", 
+               Duration = 3, 
+               Image = 4483362458
+           })
+       end
+   end,
+})
+
+-- =============================
+-- Stop All Animations
+-- =============================
+AnimationTab:CreateButton({
+   Name = "Stop All Animations",
+   Callback = function()
+       local localPlayer = game.Players.LocalPlayer
+       local character = localPlayer.Character
+       
+       if character and character:FindFirstChild("Humanoid") then
+           local humanoid = character.Humanoid
+           
+           -- Para todas as animações
+           for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+               track:Stop()
+           end
+           
+           -- Limpa referências globais
+           _G.mafiousDanceTrack = nil
+           
+           -- Restaura animações padrão se estavam substituídas
+           if _G.noliAnimationEnabled then
+               _G.noliAnimationEnabled = false
+           end
+           
+           Rayfield:Notify({
+               Title = "Stop Animations", 
+               Content = "Todas as animações foram paradas!", 
+               Duration = 2, 
+               Image = 4483362458
+           })
+       else
+           Rayfield:Notify({
+               Title = "Erro", 
+               Content = "Personagem não encontrado!", 
+               Duration = 3, 
+               Image = 4483362458
+           })
+       end
+   end,
+})
+
+AnimationTab:CreateButton({
+   Name = "Noli Animation",
+   Callback = function()
+       loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/MAXZZ/refs/heads/main/noli"))()
+   end,
+})

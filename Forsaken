@@ -1,3 +1,7 @@
+-- Atualmente Open-Source!
+-- Permitido: Adotar algumas funções em seu script , verificar se é seguro
+-- Não permitido: Copiar o script totalmente , Recriar com KeySystem
+-- Aproveite :)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({

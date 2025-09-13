@@ -26,7 +26,7 @@ local MainTab = Window:CreateTab("Principal", 4483362458)
 local Button = MainTab:CreateButton({
    Name = "Guest 666 Animation",
    Callback = function()
-   loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/anim"))()
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/anim"))()
    end,
 })
 
@@ -36,7 +36,6 @@ local bringItemsConnection = nil
 
 local function startBringItems()
     local RunService = game:GetService("RunService")
-    
     bringItemsConnection = RunService.Heartbeat:Connect(function()
         if bringItemsToggle then
             local player = game.Players.LocalPlayer
@@ -90,7 +89,6 @@ local killCarlConnection = nil
 
 local function startKillCarl()
     local RunService = game:GetService("RunService")
-    
     killCarlConnection = RunService.Heartbeat:Connect(function()
         if killCarlToggle then
             local player = game.Players.LocalPlayer
@@ -144,7 +142,6 @@ local killRagerConnection = nil
 
 local function startKillRager()
     local RunService = game:GetService("RunService")
-    
     killRagerConnection = RunService.Heartbeat:Connect(function()
         if killRagerToggle then
             local player = game.Players.LocalPlayer
@@ -192,70 +189,7 @@ MainTab:CreateToggle({
    end,
 })
 
--- =================== NOVO TOGGLE ANTI DEATH ===================
-local antiDeathToggle = false
-local antiDeathConnection = nil
-
-local function startAntiDeath()
-    local RunService = game:GetService("RunService")
-
-    antiDeathConnection = RunService.Heartbeat:Connect(function()
-        if antiDeathToggle then
-            local player = game.Players.LocalPlayer
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local hrp = character.HumanoidRootPart
-
-                local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
-                if killersFolder then
-                    for _, killer in pairs(killersFolder:GetChildren()) do
-                        if killer:FindFirstChild("HumanoidRootPart") then
-                            local dist = (killer.HumanoidRootPart.Position - hrp.Position).Magnitude
-                            if dist <= 8 then
-                                hrp.CFrame = CFrame.new(-3560, 12, 255)
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function stopAntiDeath()
-    if antiDeathConnection then
-        antiDeathConnection:Disconnect()
-        antiDeathConnection = nil
-    end
-end
-
-MainTab:CreateToggle({
-   Name = "Anti Death",
-   CurrentValue = false,
-   Flag = "AntiDeathToggle",
-   Callback = function(Value)
-       antiDeathToggle = Value
-       if Value then
-           startAntiDeath()
-           Rayfield:Notify({
-               Title = "Anti Death",
-               Content = "Proteção contra killers ATIVADA!",
-               Duration = 3,
-               Image = 4483362458
-           })
-       else
-           stopAntiDeath()
-           Rayfield:Notify({
-               Title = "Anti Death",
-               Content = "Proteção contra killers DESATIVADA!",
-               Duration = 2,
-               Image = 4483362458
-           })
-       end
-   end,
-})
--- ===============================================================
+-- =================== NOVAS FUNÇÕES ===================
 
 -- Generator ESP Toggle
 MainTab:CreateToggle({
@@ -264,7 +198,6 @@ MainTab:CreateToggle({
    Flag = "GeneratorsESP", 
    Callback = function(bool)
         _G.generators = bool
-
         task.spawn(function()
             while task.wait() do
                 if _G.generators then
@@ -321,7 +254,6 @@ MainTab:CreateToggle({
    Flag = "GeneratorsNametags",
    Callback = function(bool)
         _G.generatorstag = bool
-
         task.spawn(function()
             while task.wait() do
                 if _G.generatorstag then
@@ -335,7 +267,6 @@ MainTab:CreateToggle({
                                         bb.Size = UDim2.new(4, 0, 1, 0)
                                         bb.AlwaysOnTop = true
                                         bb.Name = "nametag"
-
                                         local text = Instance.new("TextLabel", bb)
                                         text.TextStrokeTransparency = 0
                                         text.Text = "Generator (" .. (v:FindFirstChild("Progress") and v.Progress.Value or 0) .. "%)"
@@ -379,7 +310,6 @@ MainTab:CreateToggle({
    Flag = "AutoCompleteGenerator",
    Callback = function(bool)
         _G.instantGenerator = bool
-
         if bool then
             task.spawn(function()
                 while _G.instantGenerator do
@@ -420,7 +350,6 @@ MainTab:CreateToggle({
    Flag = "HitboxExpander",
    Callback = function(bool)
         _G.hitboxExpander = bool
-        
         if bool then
             Rayfield:Notify({
                 Title = "Hitbox Expander",
@@ -428,7 +357,6 @@ MainTab:CreateToggle({
                 Duration = 3,
                 Image = 4483362458
             })
-            
             task.spawn(function()
                 while _G.hitboxExpander do
                     if getHitboxesFromPlayer() then
@@ -437,7 +365,7 @@ MainTab:CreateToggle({
                         if character and character:FindFirstChild("HumanoidRootPart") then
                             local hrp = character.HumanoidRootPart
                             local currentVelocity = hrp.Velocity
-                            hrp.AssemblyLinearVelocity = hrp.CFrame.LookVector * 250
+                            hrp.AssemblyLinearVelocity = hrp.CFrame.LookVector * 100 -- diminuído para não dar kick
                             game:GetService("RunService").RenderStepped:Wait()
                             hrp.Velocity = currentVelocity 
                         end
@@ -453,7 +381,113 @@ MainTab:CreateToggle({
                 Image = 4483362458
             })
         end
+   end
+})
+
+-- =========================
+-- 🔹 Anti Death
+-- =========================
+local antiDeathToggle = false
+local antiDeathConnection = nil
+
+local function startAntiDeath()
+    local RunService = game:GetService("RunService")
+    antiDeathConnection = RunService.Heartbeat:Connect(function()
+        if antiDeathToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                for _, killer in pairs(workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers") or {}) do
+                    if killer:IsA("Model") and killer:FindFirstChild("HumanoidRootPart") then
+                        local distance = (killer.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
+                        if distance <= 8 then
+                            character.HumanoidRootPart.CFrame = CFrame.new(-3560, 12, 255)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function stopAntiDeath()
+    if antiDeathConnection then
+        antiDeathConnection:Disconnect()
+        antiDeathConnection = nil
     end
+end
+
+MainTab:CreateToggle({
+   Name = "Anti Death",
+   CurrentValue = false,
+   Flag = "AntiDeathToggle",
+   Callback = function(Value)
+       antiDeathToggle = Value
+       if Value then
+           startAntiDeath()
+           Rayfield:Notify({
+               Title = "Anti Death",
+               Content = "Proteção ativada!",
+               Duration = 3,
+               Image = 4483362458
+           })
+       else
+           stopAntiDeath()
+           Rayfield:Notify({
+               Title = "Anti Death",
+               Content = "Proteção desativada!",
+               Duration = 2,
+               Image = 4483362458
+           })
+       end
+   end
+})
+
+-- =========================
+-- 🔹 Allow Jump (checando a cada 3s)
+-- =========================
+local allowJumpToggle = false
+local normalJumpPower = 50
+
+local function startAllowJump()
+    task.spawn(function()
+        while allowJumpToggle do
+            local character = game.Players.LocalPlayer.Character
+            if character and character:FindFirstChild("Humanoid") then
+                local humanoid = character.Humanoid
+                if humanoid.JumpPower == 0 then
+                    humanoid.JumpPower = normalJumpPower
+                end
+            end
+            task.wait(3)
+        end
+    end)
+end
+
+MainTab:CreateToggle({
+   Name = "Allow Jump",
+   CurrentValue = false,
+   Flag = "AllowJumpToggle",
+   Callback = function(Value)
+       allowJumpToggle = Value
+       if Value then
+           startAllowJump()
+           Rayfield:Notify({
+               Title = "Allow Jump",
+               Content = "Proteção contra bloqueio de pulo ATIVADA!",
+               Duration = 3,
+               Image = 4483362458
+           })
+       else
+           allowJumpToggle = false
+           Rayfield:Notify({
+               Title = "Allow Jump",
+               Content = "Proteção contra bloqueio de pulo DESATIVADA!",
+               Duration = 2,
+               Image = 4483362458
+           })
+       end
+   end,
 })
 
 -- =================== RESTO DO CÓDIGO ORIGINAL ===================
@@ -464,7 +498,7 @@ MainTab:CreateSection({
 
 MainTab:CreateParagraph({
     Title = "Posições",
-    Content = "Bring Items: X: -3549, Y: 18, Z: 254\nKill Carl: X: -3610, Y: 12, Z: 255\nKill Rager: X: -3646, Y: 12, Z: 255\nAnti Death: X: -3560, Y: 12, Z: 255"
+    Content = "Bring Items: X: -3549, Y: 18, Z: 254\nKill Carl: X: -3610, Y: 12, Z: 255\nKill Rager: X: -3646, Y: 12, Z: 255"
 })
 
 MainTab:CreateButton({

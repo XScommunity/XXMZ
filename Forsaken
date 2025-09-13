@@ -1,0 +1,416 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "XXMZ HUB",
+   LoadingTitle = "Carregando Script...",
+   LoadingSubtitle = "XXMZ [FORSAKEN]",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "XXMZCONFIG",
+      FileName = "Config"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink",
+      RememberJoins = true
+   },
+   KeySystem = false
+})
+
+local MainTab = Window:CreateTab("Principal", 4483362458)
+
+local Button = MainTab:CreateButton({
+   Name = "Guest 666 Animation",
+   Callback = function()
+   loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/anim"))()
+   end,
+})
+
+-- Toggle Bring Items
+local bringItemsToggle = false
+local bringItemsConnection = nil
+
+local function startBringItems()
+    local RunService = game:GetService("RunService")
+    
+    bringItemsConnection = RunService.Heartbeat:Connect(function()
+        if bringItemsToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local humanoidRootPart = character.HumanoidRootPart
+                local targetPosition = Vector3.new(-3549, 18, 254)
+                humanoidRootPart.CFrame = CFrame.new(targetPosition)
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopBringItems()
+    if bringItemsConnection then
+        bringItemsConnection:Disconnect()
+        bringItemsConnection = nil
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "Bring Items",
+   CurrentValue = false,
+   Flag = "BringItemsToggle",
+   Callback = function(Value)
+       bringItemsToggle = Value
+       if Value then
+           startBringItems()
+           Rayfield:Notify({
+               Title = "Bring Items",
+               Content = "Teleporte contínuo ATIVADO! (0.05s)",
+               Duration = 3,
+               Image = 4483362458
+           })
+       else
+           stopBringItems()
+           Rayfield:Notify({
+               Title = "Bring Items",
+               Content = "Teleporte contínuo DESATIVADO!",
+               Duration = 2,
+               Image = 4483362458
+           })
+       end
+   end,
+})
+
+-- Toggle Kill Carl
+local killCarlToggle = false
+local killCarlConnection = nil
+
+local function startKillCarl()
+    local RunService = game:GetService("RunService")
+    
+    killCarlConnection = RunService.Heartbeat:Connect(function()
+        if killCarlToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local humanoidRootPart = character.HumanoidRootPart
+                local targetPosition = Vector3.new(-3610, 12, 255)
+                humanoidRootPart.CFrame = CFrame.new(targetPosition)
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopKillCarl()
+    if killCarlConnection then
+        killCarlConnection:Disconnect()
+        killCarlConnection = nil
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "Kill Carl",
+   CurrentValue = false,
+   Flag = "KillCarlToggle",
+   Callback = function(Value)
+       killCarlToggle = Value
+       if Value then
+           startKillCarl()
+           Rayfield:Notify({
+               Title = "Kill Carl",
+               Content = "Teleporte contínuo ATIVADO! (0.05s)",
+               Duration = 3,
+               Image = 4483362458
+           })
+       else
+           stopKillCarl()
+           Rayfield:Notify({
+               Title = "Kill Carl",
+               Content = "Teleporte contínuo DESATIVADO!",
+               Duration = 2,
+               Image = 4483362458
+           })
+       end
+   end,
+})
+
+-- Toggle Kill Rager
+local killRagerToggle = false
+local killRagerConnection = nil
+
+local function startKillRager()
+    local RunService = game:GetService("RunService")
+    
+    killRagerConnection = RunService.Heartbeat:Connect(function()
+        if killRagerToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local humanoidRootPart = character.HumanoidRootPart
+                local targetPosition = Vector3.new(-3646, 12, 255)
+                humanoidRootPart.CFrame = CFrame.new(targetPosition)
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopKillRager()
+    if killRagerConnection then
+        killRagerConnection:Disconnect()
+        killRagerConnection = nil
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "Kill Rager",
+   CurrentValue = false,
+   Flag = "KillRagerToggle",
+   Callback = function(Value)
+       killRagerToggle = Value
+       if Value then
+           startKillRager()
+           Rayfield:Notify({
+               Title = "Kill Rager",
+               Content = "Teleporte contínuo ATIVADO! (0.05s)",
+               Duration = 3,
+               Image = 4483362458
+           })
+       else
+           stopKillRager()
+           Rayfield:Notify({
+               Title = "Kill Rager",
+               Content = "Teleporte contínuo DESATIVADO!",
+               Duration = 2,
+               Image = 4483362458
+           })
+       end
+   end,
+})
+
+-- =================== ADICIONANDO AS NOVAS FUNÇÕES ===================
+
+-- Generator ESP Toggle
+MainTab:CreateToggle({
+   Name = "Generators ESP",
+   CurrentValue = false,
+   Flag = "GeneratorsESP", 
+   Callback = function(bool)
+        _G.generators = bool
+
+        task.spawn(function()
+            while task.wait() do
+                if _G.generators then
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and not v:FindFirstChild("gen_esp") then
+                                        local hl = Instance.new("Highlight", v)
+                                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                        hl.Name = "gen_esp"
+                                        hl.FillColor = Color3.fromRGB(255, 255, 51)
+                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                        hl.FillTransparency = 0.5
+                                        hl.OutlineTransparency = 0
+                                    elseif v:FindFirstChild("gen_esp") and v.Name == "Generator" then
+                                        if v:FindFirstChild("Progress") then
+                                            if v.Progress.Value >= 100 then
+                                                v.gen_esp.FillColor = Color3.fromRGB(0, 255, 0)
+                                            else
+                                                v.gen_esp.FillColor = Color3.fromRGB(255, 255, 51)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and v:FindFirstChild("gen_esp") then
+                                        v.gen_esp:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
+})
+
+-- Generator Nametags Toggle
+MainTab:CreateToggle({
+   Name = "Generators Nametags",
+   CurrentValue = false,
+   Flag = "GeneratorsNametags",
+   Callback = function(bool)
+        _G.generatorstag = bool
+
+        task.spawn(function()
+            while task.wait() do
+                if _G.generatorstag then
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and not v:FindFirstChild("nametag") then
+                                        local bb = Instance.new("BillboardGui", v)
+                                        bb.Size = UDim2.new(4, 0, 1, 0)
+                                        bb.AlwaysOnTop = true
+                                        bb.Name = "nametag"
+
+                                        local text = Instance.new("TextLabel", bb)
+                                        text.TextStrokeTransparency = 0
+                                        text.Text = "Generator (" .. (v:FindFirstChild("Progress") and v.Progress.Value or 0) .. "%)"
+                                        text.TextSize = 15
+                                        text.BackgroundTransparency = 1
+                                        text.Size = UDim2.new(1, 0, 1, 0)
+                                        text.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                    elseif v:FindFirstChild("nametag") and v.Name == "Generator" then
+                                        if v:FindFirstChild("Progress") then
+                                            v.nametag.TextLabel.Text = "Generator (" .. v.Progress.Value .. "%)"
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and v:FindFirstChild("nametag") then
+                                        v.nametag:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
+})
+
+-- Auto Complete Generator Toggle
+MainTab:CreateToggle({
+   Name = "Auto Complete Generator",
+   CurrentValue = false,
+   Flag = "AutoCompleteGenerator",
+   Callback = function(bool)
+        _G.instantGenerator = bool
+
+        if bool then
+            task.spawn(function()
+                while _G.instantGenerator do
+                    local map = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
+                    if map then
+                        for _, gen in pairs(map:GetChildren()) do
+                            if gen:IsA("Model") and gen.Name == "Generator" then
+                                local re = gen:FindFirstChild("Remotes") and gen.Remotes:FindFirstChild("RE")
+                                if re then
+                                    re:FireServer()
+                                end
+                            end
+                        end
+                    end
+                    task.wait(2.5)
+                end
+            end)
+        end
+    end
+})
+
+-- Hitbox Expander Toggle
+local function getHitboxesFromPlayer()
+    local hitboxes = workspace:FindFirstChild("Hitboxes")
+    if hitboxes then
+        for i, v in pairs(hitboxes:GetChildren()) do
+            if string.find(v.Name, game.Players.LocalPlayer.Name) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+MainTab:CreateToggle({
+   Name = "Hitbox Expander",
+   CurrentValue = false,
+   Flag = "HitboxExpander",
+   Callback = function(bool)
+        _G.hitboxExpander = bool
+        
+        if bool then
+            Rayfield:Notify({
+                Title = "Hitbox Expander",
+                Content = "Hitbox Expander ATIVADO!",
+                Duration = 3,
+                Image = 4483362458
+            })
+            
+            task.spawn(function()
+                while _G.hitboxExpander do
+                    if getHitboxesFromPlayer() then
+                        local player = game.Players.LocalPlayer
+                        local character = player.Character
+                        if character and character:FindFirstChild("HumanoidRootPart") then
+                            local hrp = character.HumanoidRootPart
+                            local currentVelocity = hrp.Velocity
+                            hrp.AssemblyLinearVelocity = hrp.CFrame.LookVector * 250
+                            game:GetService("RunService").RenderStepped:Wait()
+                            hrp.Velocity = currentVelocity 
+                        end
+                    end
+                    task.wait()
+                end
+            end)
+        else
+            Rayfield:Notify({
+                Title = "Hitbox Expander",
+                Content = "Hitbox Expander DESATIVADO!",
+                Duration = 2,
+                Image = 4483362458
+            })
+        end
+    end
+})
+
+-- =================== RESTO DO CÓDIGO ORIGINAL ===================
+
+MainTab:CreateSection({
+    Name = "Informações"
+})
+
+MainTab:CreateParagraph({
+    Title = "Posições",
+    Content = "Bring Items: X: -3549, Y: 18, Z: 254\nKill Carl: X: -3610, Y: 12, Z: 255\nKill Rager: X: -3646, Y: 12, Z: 255"
+})
+
+MainTab:CreateButton({
+   Name = "Fechar UI",
+   Callback = function()
+       Rayfield:Destroy()
+   end,
+})
+
+-- Notificação de carregamento
+Rayfield:Notify({
+    Title = "Script Carregado",
+    Content = "UI carregada com sucesso!",
+    Duration = 5,
+    Image = 4483362458
+})

@@ -1,0 +1,545 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+WindUI:Popup({
+    Title = "XXMZ v0.1",
+    Content = "Essa versão está incompleta, caso encontre erros entre em nosso discord e avise eu, 29.",
+    Buttons = {
+        {
+            Title = "Discord",
+            Callback = function()
+                setclipboard("https://discord.gg/YXJ2xaEwP2")
+                WindUI:Notify({
+                    Title = "Convite copiado",
+                    Content = "O convite foi copiado para sua área de transferência!",
+                    Duration = 3,
+                    Icon = "message-circle",
+                })
+            end
+        },
+        {
+            Title = "Fechar",
+            Callback = function()
+                print("Popup fechado")
+            end
+        }
+    }
+})
+
+
+local Window = WindUI:CreateWindow({
+    Title = "☑️ XXMZ | Building Boats",
+    Icon = "door-open", -- lucide icon
+    Author = "discord.gg/YXJ2xaEwP2",
+    Folder = "XXMZHUBKK",
+    
+    -- ↓ This all is Optional. You can remove it.
+    Size = UDim2.fromOffset(580, 460),
+    MinSize = Vector2.new(560, 350),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = false,
+    ScrollBarEnabled = false,
+    
+    User = {
+        Enabled = true,
+        Anonymous = false,
+        Callback = function()
+        end,
+    },
+
+    --       remove this all, 
+    -- !  ↓  if you DON'T need the key system
+    KeySystem = { 
+        -- ↓ Optional. You can remove it.
+        Key = { "xxmz25" },
+        
+        Note = "Resgate a key em nosso discord.",
+        
+        -- ↓ Optional. You can remove it.
+        Thumbnail = {
+            Image = "rbxassetid://89646996763231",
+            Title = "Thumbnail",
+        },
+        
+        -- ↓ Optional. You can remove it.
+        URL = "https://discord.gg/YXJ2xaEwP2",
+        
+        -- ↓ Optional. You can remove it.
+        SaveKey = false, -- automatically save and load the key.
+        
+        -- ↓ Optional. You can remove it.
+        -- API = {} ← Services. Read about it below ↓
+    },
+})
+
+local QUEZTTab = Window:Tab({
+    Title = "Quests",
+    Icon = "trophy", -- optional
+    Locked = false,
+})
+
+local Button = QUEZTTab:Button({
+    Title = "Void Quest",
+    Desc = "Requisitos: Nenhum",
+    Locked = false,
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local hrp = character:WaitForChild("HumanoidRootPart")
+
+        hrp.CFrame = CFrame.new(65, -495, -652)
+    end
+})
+
+local Button = QUEZTTab:Button({
+    Title = "Lifebuoy Quest",
+    Desc = "Requisitos: Item Lifebuoy",
+    Locked = false,
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+        -- 1. Resetar
+        if humanoid then
+            humanoid.Health = 0
+        end
+
+        -- 2. Quando renascer (apenas uma vez)
+        player.CharacterAdded:Once(function(char)
+            char:WaitForChild("HumanoidRootPart")
+            task.wait(1)
+
+            local hrp = char.HumanoidRootPart
+            -- Teleporta 60 blocos à frente
+            hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -60)
+
+            -- 3. Coloca bloco na posição do jogador
+            local pos = hrp.CFrame
+            local args = {
+                pos,
+                "Lifebuoy",
+                true
+            }
+            game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("PlaceBlock"):InvokeServer(unpack(args))
+
+            -- 4. Espera 2 segundos e ativa Sail
+            task.wait(2)
+            game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("Sail"):FireServer()
+
+            -- 5. Teleporta de ponta cabeça para (79, 17, -181)
+            local upsideDown = CFrame.new(79, 17, -181) * CFrame.Angles(math.rad(180), 0, 0)
+
+            local seat = char:FindFirstChildWhichIsA("Seat", true)
+            if seat and seat:IsDescendantOf(workspace) then
+                local vehicleModel = seat:FindFirstAncestorOfClass("Model")
+                if vehicleModel and vehicleModel.PrimaryPart then
+                    vehicleModel:SetPrimaryPartCFrame(upsideDown)
+                else
+                    hrp.CFrame = upsideDown
+                end
+            else
+                hrp.CFrame = upsideDown
+            end
+        end)
+    end
+})
+
+local TweenService = game:GetService("TweenService")
+
+local Button = QUEZTTab:Button({
+    Title = "Reaching The Sky Quest & Speed Demon",
+    Desc = "Requisitos: Nenhum",
+    Locked = false,
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        -- Configuração do tween
+        local goal = {}
+        goal.CFrame = CFrame.new(991, 16137, 487)
+
+        local tweenInfo = TweenInfo.new(0.01, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(hrp, tweenInfo, goal)
+
+        tween:Play()
+    end
+})
+
+local Button = QUEZTTab:Button({
+    Title = "Back before time had a name Quest",
+    Desc = "Requisitos: Nenhum",
+    Locked = false,
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+
+        if game.PlaceId == 138527313979150 then
+            -- Teleporta para o lugar específico e clica no botão
+            hrp.CFrame = CFrame.new(-25, 219, -325)
+
+            local button = workspace:WaitForChild("Cell"):WaitForChild("Main"):WaitForChild("TurnOnButton")
+            local clickDetector = button:FindFirstChildOfClass("ClickDetector")
+
+            if clickDetector then
+                task.wait(0.5) -- garante que o player esteja na posição
+                fireclickdetector(clickDetector)
+            else
+                warn("ClickDetector não encontrado em workspace.Cell.Main.TurnOnButton")
+            end
+        else
+            -- Teleporta normalmente para o Crystal
+            hrp.CFrame = CFrame.new(167, -840, -3589)
+
+            local crystal = workspace:WaitForChild("Map"):WaitForChild("Other"):WaitForChild("Crystal")
+            local clickDetector = crystal:FindFirstChildOfClass("ClickDetector")
+
+            if clickDetector then
+                fireclickdetector(clickDetector)
+            else
+                warn("ClickDetector não encontrado em workspace.Map.Other.Crystal")
+            end
+        end
+    end
+})
+
+local Button = QUEZTTab:Button({
+    Title = "Blocks can make you gullible too Quest",
+    Desc = "Requisitos: Nenhum",
+    Locked = false,
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        local targetPlaceId = 135120526287673
+
+        if game.PlaceId ~= targetPlaceId then
+            game:GetService("TeleportService"):Teleport(targetPlaceId, player)
+            return
+        end
+
+        -- Teleporta o jogador para a posição inicial do loop
+        hrp.CFrame = CFrame.new(239, 382, -17)
+
+        -- Cria loop para manter os mobs na frente do player
+        local mobsFolder = workspace:FindFirstChild("Mobs")
+        if mobsFolder then
+            spawn(function()
+                while true do
+                    task.wait(0.1) -- atualiza 10x por segundo
+                    for _, mob in ipairs(mobsFolder:GetChildren()) do
+                        if mob:IsA("Model") and mob.PrimaryPart then
+                            mob:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0, 0, -10))
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+local AUTOTab = Window:Tab({
+    Title = "Auto's",
+    Icon = "play", -- optional
+    Locked = false,
+})
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+
+local path = {
+    {pos = Vector3.new(50, 41, -845), type = "tp", waitTime = 4},
+    {pos = Vector3.new(52, 51, -1282), type = "slide", waitTime = 4},
+    {pos = Vector3.new(64, 54, -1684), type = "slide", waitTime = 4},
+    {pos = Vector3.new(59, 38, -2081), type = "slide", waitTime = 4},
+    {pos = Vector3.new(61, 47, -2495), type = "slide", waitTime = 4},
+    {pos = Vector3.new(64, 50, -2886), type = "slide", waitTime = 4},
+    {pos = Vector3.new(45, 46, -3148), type = "slide", waitTime = 4},
+    {pos = Vector3.new(59, -634, -3355), type = "slide", waitTime = 2},
+    {pos = Vector3.new(56, -848, -3594), type = "tp", waitTime = 6}, -- último ponto
+}
+
+-- Cria um part 1 stud abaixo do ponto da rota com decal (exceto último ponto)
+local function createPointPart(pointPos, index)
+    -- não cria part no último ponto
+    if index == #path then return end
+
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(6, 1, 6)
+    part.Anchored = true
+    part.CanCollide = true
+    part.Color = Color3.fromRGB(255, 255, 0) -- amarelo
+    part.CFrame = CFrame.new(pointPos - Vector3.new(0, 1, 0))
+    part.Name = "PointPart_"..index
+    part.Parent = workspace
+
+    -- adiciona a imagem no topo do part
+    local decal = Instance.new("Decal")
+    decal.Texture = "rbxassetid://"..89646996763231
+    decal.Face = Enum.NormalId.Top
+    decal.Parent = part
+end
+
+local farmEnabled = false
+local Toggle = AUTOTab:Toggle({
+    Title = "Gold Farm v1",
+    Desc = "Seila porra",
+    Icon = "play",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        farmEnabled = state
+        if state then
+            task.spawn(function()
+                while farmEnabled do
+                    for i, point in ipairs(path) do
+                        if not farmEnabled then break end
+
+                        local char = plr.Character or plr.CharacterAdded:Wait()
+                        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+
+                        -- Cria o part (exceto último ponto)
+                        createPointPart(point.pos, i)
+
+                        -- Teleporte ou deslize
+                        if point.type == "tp" and hrp then
+                            hrp.CFrame = CFrame.new(point.pos)
+                        elseif point.type == "slide" and hrp then
+                            local tween = TweenService:Create(hrp, TweenInfo.new(1, Enum.EasingStyle.Linear), {CFrame = CFrame.new(point.pos)})
+                            tween:Play()
+                            tween.Completed:Wait()
+                        end
+
+                        task.wait(point.waitTime)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+
+local path = {
+    {pos = Vector3.new(50, 41, -845), type = "tp", waitTime = 5},
+    {pos = Vector3.new(52, 51, -1282), type = "slide", waitTime = 5},
+    {pos = Vector3.new(64, 54, -1684), type = "slide", waitTime = 5},
+    {pos = Vector3.new(59, 38, -2081), type = "slide", waitTime = 5},
+    {pos = Vector3.new(61, 47, -2495), type = "slide", waitTime = 5},
+    {pos = Vector3.new(64, 50, -2886), type = "slide", waitTime = 5},
+    {pos = Vector3.new(45, 46, -3148), type = "slide", waitTime = 5},
+    {pos = Vector3.new(59, -634, -3355), type = "slide", waitTime = 3},
+    {pos = Vector3.new(56, -848, -3594), type = "tp", waitTime = 7}, -- último ponto
+}
+
+-- Cria um part 1 stud abaixo do ponto da rota com decal (exceto último ponto)
+local function createPointPart(pointPos, index)
+    -- não cria part no último ponto
+    if index == #path then return end
+
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(6, 1, 6)
+    part.Anchored = true
+    part.CanCollide = true
+    part.Color = Color3.fromRGB(255, 255, 0) -- amarelo
+    part.CFrame = CFrame.new(pointPos - Vector3.new(0, 1, 0))
+    part.Name = "PointPart_"..index
+    part.Parent = workspace
+
+    -- adiciona a imagem no topo do part
+    local decal = Instance.new("Decal")
+    decal.Texture = "rbxassetid://"..89646996763231
+    decal.Face = Enum.NormalId.Top
+    decal.Parent = part
+end
+
+local farmEnabled = false
+local Toggle = AUTOTab:Toggle({
+    Title = "Gold Farm v2 Fix",
+    Desc = "Se você estiver morrendo usando o v1, use esse",
+    Icon = "play",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        farmEnabled = state
+        if state then
+            task.spawn(function()
+                while farmEnabled do
+                    for i, point in ipairs(path) do
+                        if not farmEnabled then break end
+
+                        local char = plr.Character or plr.CharacterAdded:Wait()
+                        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+
+                        -- Cria o part (exceto último ponto)
+                        createPointPart(point.pos, i)
+
+                        -- Teleporte ou deslize
+                        if point.type == "tp" and hrp then
+                            hrp.CFrame = CFrame.new(point.pos)
+                        elseif point.type == "slide" and hrp then
+                            local tween = TweenService:Create(hrp, TweenInfo.new(1, Enum.EasingStyle.Linear), {CFrame = CFrame.new(point.pos)})
+                            tween:Play()
+                            tween.Completed:Wait()
+                        end
+
+                        task.wait(point.waitTime)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+
+-- Caminho do Gold Block Farm (3 primeiros + último)
+local goldPath = {
+    {pos = Vector3.new(50, 41, -845), type = "tp", waitTime = 4},
+    {pos = Vector3.new(52, 51, -1282), type = "slide", waitTime = 4},
+    {pos = Vector3.new(64, 54, -1684), type = "slide", waitTime = 4},
+    {pos = Vector3.new(56, -848, -3594), type = "tp", waitTime = 4}, -- último ponto
+}
+
+-- Criação do botão "Gold Block Farm"
+local goldFarmEnabled = false
+local GoldToggle = AUTOTab:Toggle({
+    Title = "Gold Block Farm v1",
+    Desc = "Em vez de ganhar muitas moedas vai ganhar poucas moedas e bastante blocos de ouro",
+    Icon = "play",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        goldFarmEnabled = state
+        if state then
+            task.spawn(function()
+                while goldFarmEnabled do
+                    for _, point in ipairs(goldPath) do
+                        if not goldFarmEnabled then break end
+
+                        local char = plr.Character or plr.CharacterAdded:Wait()
+                        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+
+                        if point.type == "tp" and hrp then
+                            hrp.CFrame = CFrame.new(point.pos)
+                        elseif point.type == "slide" and hrp then
+                            local tween = TweenService:Create(
+                                hrp,
+                                TweenInfo.new(1, Enum.EasingStyle.Linear),
+                                {CFrame = CFrame.new(point.pos)}
+                            )
+                            tween:Play()
+                            tween.Completed:Wait()
+                        end
+
+                        task.wait(point.waitTime)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+
+-- Caminho do Gold Block Farm (3 primeiros + último)
+local goldPath = {
+    {pos = Vector3.new(50, 41, -845), type = "tp", waitTime = 5},
+    {pos = Vector3.new(52, 51, -1282), type = "slide", waitTime = 5},
+    {pos = Vector3.new(64, 54, -1684), type = "slide", waitTime = 5},
+    {pos = Vector3.new(56, -848, -3594), type = "tp", waitTime = 7}, -- último ponto
+}
+
+-- Criação do botão "Gold Block Farm"
+local goldFarmEnabled = false
+local GoldToggle = AUTOTab:Toggle({
+    Title = "Gold Block Farm v2 Fix",
+    Desc = "Se tiver morreno no báu usa essa opção",
+    Icon = "play",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        goldFarmEnabled = state
+        if state then
+            task.spawn(function()
+                while goldFarmEnabled do
+                    for _, point in ipairs(goldPath) do
+                        if not goldFarmEnabled then break end
+
+                        local char = plr.Character or plr.CharacterAdded:Wait()
+                        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+
+                        if point.type == "tp" and hrp then
+                            hrp.CFrame = CFrame.new(point.pos)
+                        elseif point.type == "slide" and hrp then
+                            local tween = TweenService:Create(
+                                hrp,
+                                TweenInfo.new(1, Enum.EasingStyle.Linear),
+                                {CFrame = CFrame.new(point.pos)}
+                            )
+                            tween:Play()
+                            tween.Completed:Wait()
+                        end
+
+                        task.wait(point.waitTime)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+local PLAYETab = Window:Tab({
+    Title = "Player",
+    Icon = "user", -- optional
+    Locked = false,
+})
+
+local Button = PLAYETab:Button({
+    Title = "Anti Lockdown (visual)",
+    Desc = "Você consegue invadir time trancado",
+    Locked = false,
+    Callback = function()
+        print("Anti Lockdown ativado!")
+
+        -- Listagem das pastas que podem ter Barrier
+        local plotNames = {"Circle", "Diamond", "Hexagon", "Octagon", "Square", "Star", "Triangle"}
+
+        for _, name in ipairs(plotNames) do
+            local plot = workspace:FindFirstChild("Plots") and workspace.Plots:FindFirstChild(name)
+            if plot and plot:FindFirstChild("Barrier") then
+                plot.Barrier:Destroy()
+                print("Barrier removido de:", name)
+            end
+        end
+    end
+})
+
+
+local CONFIGTab = Window:Tab({
+    Title = "Configurações",
+    Icon = "settings", -- optional
+    Locked = false,
+})
+
+local Keybind = CONFIGTab:Keybind({
+    Title = "Keybind",
+    Desc = "Keybind para abrir a UI",
+    Value = "G",
+    Callback = function(v)
+        Window:SetToggleKey(Enum.KeyCode[v])
+    end
+})

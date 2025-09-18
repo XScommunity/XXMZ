@@ -3,35 +3,85 @@
 -- Não permitido: Copiar o script totalmente , Recriar com KeySystem
 -- Aproveite :)
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
-local Window = Rayfield:CreateWindow({
-   Name = "XXMZ HUB",
-   LoadingTitle = "Carregando Script...",
-   LoadingSubtitle = "XXMZ [FORSAKEN]",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "XXMZCONFIG",
-      FileName = "Config"
-   },
-   Discord = {
-      Enabled = false,
-      Invite = "noinvitelink",
-      RememberJoins = true
-   },
-   KeySystem = false
+WindUI:Popup({
+    Title = "XXMZ HUB v2.0",
+    Content = "Hub convertido para WindUI. Caso encontre erros, entre em nosso discord e avise.",
+    Buttons = {
+        {
+            Title = "Discord",
+            Callback = function()
+                setclipboard("https://discord.gg/YXJ2xaEwP2")
+                WindUI:Notify({
+                    Title = "Convite copiado",
+                    Content = "O convite foi copiado para sua área de transferência!",
+                    Duration = 3,
+                    Icon = "message-circle",
+                })
+            end
+        },
+        {
+            Title = "Fechar",
+            Callback = function()
+                print("Popup fechado")
+            end
+        }
+    }
 })
 
-local MainTab = Window:CreateTab("Principal", 4483362458)
-local AnimationTab = Window:CreateTab("Animation", 4483362458)
+local Window = WindUI:CreateWindow({
+    Title = "☑️ XXMZ HUB | Forsaken",
+    Icon = "door-open", -- lucide icon
+    Author = "discord.gg/YXJ2xaEwP2",
+    Folder = "XXMZHUBFORSAKEN",
+    
+    Size = UDim2.fromOffset(600, 480),
+    MinSize = Vector2.new(580, 370),
+    MaxSize = Vector2.new(900, 600),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = false,
+    ScrollBarEnabled = true,
+    
+    User = {
+        Enabled = true,
+        Anonymous = false,
+        Callback = function()
+        end,
+    },
+
+    KeySystem = { 
+        Key = { "xxmzforsaken" },
+        Note = "Resgate a key em nosso discord .gg/YXJ2xaEwP2",
+        Thumbnail = {
+            Image = "rbxassetid://89646996763231",
+            Title = "XXMZ Hub",
+        },
+        URL = "https://discord.gg/YXJ2xaEwP2",
+        SaveKey = true,
+    },
+})
 
 -- =============================
--- Show Chat Toggle
+-- MAIN TAB
 -- =============================
-MainTab:CreateToggle({
-    Name = "Show Chat",
-    CurrentValue = false,
-    Flag = "ShowChatToggle",
+local MainTab = Window:Tab({
+    Title = "Principal",
+    Icon = "house",
+    Locked = false,
+})
+
+-- Show Chat Toggle
+local Toggle = MainTab:Toggle({
+    Title = "Show Chat",
+    Desc = "Mantém o chat sempre visível",
+    Icon = "message-circle",
+    Type = "Checkbox",
+    Default = false,
     Callback = function(value)
         _G.showChat = value
         if value then
@@ -46,11 +96,15 @@ MainTab:CreateToggle({
                     end)
                 end
             end)
-            Rayfield:Notify({Title = "Show Chat", Content = "Chat sempre visível ATIVADO!", Duration = 3, Image = 4483362458})
+            WindUI:Notify({
+                Title = "Show Chat",
+                Content = "Chat sempre visível ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
         else
             _G.showChat = false
             pcall(function()
-                -- Só desativa o chat se não estiver espectando
                 local localPlayer = game.Players.LocalPlayer
                 if workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Spectating") then
                     if not workspace.Players.Spectating:FindFirstChild(localPlayer.Name) then
@@ -62,14 +116,17 @@ MainTab:CreateToggle({
                     end
                 end
             end)
-            Rayfield:Notify({Title = "Show Chat", Content = "Show Chat DESATIVADO!", Duration = 2, Image = 4483362458})
+            WindUI:Notify({
+                Title = "Show Chat",
+                Content = "Show Chat desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
         end
     end
 })
 
--- =============================
--- Bring Items
--- =============================
+-- Bring Items Toggle
 local bringItemsToggle = false
 local bringItemsConnection = nil
 
@@ -94,25 +151,35 @@ local function stopBringItems()
     end
 end
 
-MainTab:CreateToggle({
-   Name = "Bring Items",
-   CurrentValue = false,
-   Flag = "BringItemsToggle",
-   Callback = function(Value)
-       bringItemsToggle = Value
-       if Value then
-           startBringItems()
-           Rayfield:Notify({Title = "Bring Items", Content = "Teleporte contínuo ATIVADO! (0.05s)", Duration = 3, Image = 4483362458})
-       else
-           stopBringItems()
-           Rayfield:Notify({Title = "Bring Items", Content = "Teleporte contínuo DESATIVADO!", Duration = 2, Image = 4483362458})
-       end
-   end,
+local Toggle = MainTab:Toggle({
+    Title = "Bring Items",
+    Desc = "Teleporte contínuo para pegar itens",
+    Icon = "package",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        bringItemsToggle = value
+        if value then
+            startBringItems()
+            WindUI:Notify({
+                Title = "Bring Items",
+                Content = "Teleporte contínuo ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopBringItems()
+            WindUI:Notify({
+                Title = "Bring Items",
+                Content = "Teleporte contínuo desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
 })
 
--- =============================
--- Kill Carl
--- =============================
+-- Kill Carl Toggle
 local killCarlToggle = false
 local killCarlConnection = nil
 
@@ -137,25 +204,295 @@ local function stopKillCarl()
     end
 end
 
-MainTab:CreateToggle({
-   Name = "Kill Carl",
-   CurrentValue = false,
-   Flag = "KillCarlToggle",
-   Callback = function(Value)
-       killCarlToggle = Value
-       if Value then
-           startKillCarl()
-           Rayfield:Notify({Title = "Kill Carl", Content = "Teleporte contínuo ATIVADO! (0.05s)", Duration = 3, Image = 4483362458})
-       else
-           stopKillCarl()
-           Rayfield:Notify({Title = "Kill Carl", Content = "Teleporte contínuo DESATIVADO!", Duration = 2, Image = 4483362458})
-       end
-   end,
+local Toggle = MainTab:Toggle({
+    Title = "Kill Carl",
+    Desc = "Teleporte contínuo para matar Carl",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        killCarlToggle = value
+        if value then
+            startKillCarl()
+            WindUI:Notify({
+                Title = "Kill Carl",
+                Content = "Teleporte para Carl ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillCarl()
+            WindUI:Notify({
+                Title = "Kill Carl",
+                Content = "Kill Carl desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
 })
 
--- =============================
--- Kill Rager
--- =============================
+local killCarlToggle = false
+local killCarlConnection = nil
+
+local function startKillCarl()
+    local RunService = game:GetService("RunService")
+    killCarlConnection = RunService.Heartbeat:Connect(function()
+        if killCarlToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3527, 12, 278))
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopKillCarl()
+    if killCarlConnection then
+        killCarlConnection:Disconnect()
+        killCarlConnection = nil
+    end
+end
+
+local Toggle = MainTab:Toggle({
+    Title = "Kill Roland",
+    Desc = "Teleporte contínuo para matar Roland",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        killCarlToggle = value
+        if value then
+            startKillCarl()
+            WindUI:Notify({
+                Title = "Kill Carl",
+                Content = "Teleporte para Carl ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillCarl()
+            WindUI:Notify({
+                Title = "Kill Carl",
+                Content = "Kill Carl desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+local killCarlToggle = false
+local killCarlConnection = nil
+
+local function startKillCarl()
+    local RunService = game:GetService("RunService")
+    killCarlConnection = RunService.Heartbeat:Connect(function()
+        if killCarlToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3549, 12, 217))
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopKillCarl()
+    if killCarlConnection then
+        killCarlConnection:Disconnect()
+        killCarlConnection = nil
+    end
+end
+
+local Toggle = MainTab:Toggle({
+    Title = "Kill Brandon",
+    Desc = "Teleporte contínuo para matar Brandon",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        killCarlToggle = value
+        if value then
+            startKillCarl()
+            WindUI:Notify({
+                Title = "Kill Brandon",
+                Content = "Teleporte para Brandon ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillCarl()
+            WindUI:Notify({
+                Title = "Kill Carl",
+                Content = "Kill Carl desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+local killCarlToggle = false
+local killCarlConnection = nil
+
+local function startKillCarl()
+    local RunService = game:GetService("RunService")
+    killCarlConnection = RunService.Heartbeat:Connect(function()
+        if killCarlToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3613, 32, 229))
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopKillCarl()
+    if killCarlConnection then
+        killCarlConnection:Disconnect()
+        killCarlConnection = nil
+    end
+end
+
+local Toggle = MainTab:Toggle({
+    Title = "Kill TV GUY",
+    Desc = "Teleporte contínuo para matar Brandon",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        killCarlToggle = value
+        if value then
+            startKillCarl()
+            WindUI:Notify({
+                Title = "Kill TV GUY",
+                Content = "Teleporte para TV GUY ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillCarl()
+            WindUI:Notify({
+                Title = "Kill TV GUY",
+                Content = "Kill TV GUY desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+local killCarlToggle = false
+local killCarlConnection = nil
+
+local function startKillCarl()
+    local RunService = game:GetService("RunService")
+    killCarlConnection = RunService.Heartbeat:Connect(function()
+        if killCarlToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3650, 15, 219))
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopKillCarl()
+    if killCarlConnection then
+        killCarlConnection:Disconnect()
+        killCarlConnection = nil
+    end
+end
+
+local Toggle = MainTab:Toggle({
+    Title = "Kill TV GUY 2",
+    Desc = "Teleporte contínuo para matar Brandon",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        killCarlToggle = value
+        if value then
+            startKillCarl()
+            WindUI:Notify({
+                Title = "Kill TV GUY",
+                Content = "Teleporte para TV GUY ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillCarl()
+            WindUI:Notify({
+                Title = "Kill TV GUY 2",
+                Content = "Kill TV GUY 2 desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+local killCarlToggle = false
+local killCarlConnection = nil
+
+local function startKillCarl()
+    local RunService = game:GetService("RunService")
+    killCarlConnection = RunService.Heartbeat:Connect(function()
+        if killCarlToggle then
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3574, 13, 270))
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+local function stopKillCarl()
+    if killCarlConnection then
+        killCarlConnection:Disconnect()
+        killCarlConnection = nil
+    end
+end
+
+local Toggle = MainTab:Toggle({
+    Title = "Kill TV MAN",
+    Desc = "Teleporte contínuo para matar TV MAN",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        killCarlToggle = value
+        if value then
+            startKillCarl()
+            WindUI:Notify({
+                Title = "Kill TV MAN",
+                Content = "Teleporte para TV GUY ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillCarl()
+            WindUI:Notify({
+                Title = "Kill TV MAN",
+                Content = "Kill TV MAN desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+-- Kill Rager Toggle
 local killRagerToggle = false
 local killRagerConnection = nil
 
@@ -180,176 +517,188 @@ local function stopKillRager()
     end
 end
 
-MainTab:CreateToggle({
-   Name = "Kill Rager",
-   CurrentValue = false,
-   Flag = "KillRagerToggle",
-   Callback = function(Value)
-       killRagerToggle = Value
-       if Value then
-           startKillRager()
-           Rayfield:Notify({Title = "Kill Rager", Content = "Teleporte contínuo ATIVADO! (0.05s)", Duration = 3, Image = 4483362458})
-       else
-           stopKillRager()
-           Rayfield:Notify({Title = "Kill Rager", Content = "Teleporte contínuo DESATIVADO!", Duration = 2, Image = 4483362458})
-       end
-   end,
+local Toggle = MainTab:Toggle({
+    Title = "Kill Rager",
+    Desc = "Teleporte contínuo para matar Rager",
+    Icon = "zap",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+        killRagerToggle = value
+        if value then
+            startKillRager()
+            WindUI:Notify({
+                Title = "Kill Rager",
+                Content = "Teleporte para Rager ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillRager()
+            WindUI:Notify({
+                Title = "Kill Rager",
+                Content = "Kill Rager desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
 })
 
--- =============================
 -- Generators ESP
--- =============================
-MainTab:CreateToggle({
-   Name = "Generators ESP",
-   CurrentValue = false,
-   Flag = "GeneratorsESP",
-   Callback = function(bool)
-       _G.generators = bool
-       task.spawn(function()
-           while task.wait() do
-               if _G.generators then
-                   pcall(function()
-                       if workspace:FindFirstChild("Map") then
-                           local gameMap = workspace.Map
-                           if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                               for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                   if v.Name == "Generator" and not v:FindFirstChild("gen_esp") then
-                                       local hl = Instance.new("Highlight", v)
-                                       hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                                       hl.Name = "gen_esp"
-                                       hl.FillColor = Color3.fromRGB(255, 255, 51)
-                                       hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                       hl.FillTransparency = 0.5
-                                       hl.OutlineTransparency = 0
-                                   elseif v:FindFirstChild("gen_esp") and v.Name == "Generator" then
-                                       if v:FindFirstChild("Progress") then
-                                           if v.Progress.Value >= 100 then
-                                               v.gen_esp.FillColor = Color3.fromRGB(0, 255, 0)
-                                           else
-                                               v.gen_esp.FillColor = Color3.fromRGB(255, 255, 51)
-                                           end
-                                       end
-                                   end
-                               end
-                           end
-                       end
-                   end)
-               else
-                   pcall(function()
-                       if workspace:FindFirstChild("Map") then
-                           local gameMap = workspace.Map
-                           if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                               for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                   if v.Name == "Generator" and v:FindFirstChild("gen_esp") then
-                                       v.gen_esp:Destroy()
-                                   end
-                               end
-                           end
-                       end
-                   end)
-                   break
-               end
-           end
-       end)
-   end
+local Toggle = MainTab:Toggle({
+    Title = "Generators ESP",
+    Desc = "Destaca os geradores no mapa",
+    Icon = "eye",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(bool)
+        _G.generators = bool
+        task.spawn(function()
+            while task.wait() do
+                if _G.generators then
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and not v:FindFirstChild("gen_esp") then
+                                        local hl = Instance.new("Highlight", v)
+                                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                        hl.Name = "gen_esp"
+                                        hl.FillColor = Color3.fromRGB(255, 255, 51)
+                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                        hl.FillTransparency = 0.5
+                                        hl.OutlineTransparency = 0
+                                    elseif v:FindFirstChild("gen_esp") and v.Name == "Generator" then
+                                        if v:FindFirstChild("Progress") then
+                                            if v.Progress.Value >= 100 then
+                                                v.gen_esp.FillColor = Color3.fromRGB(0, 255, 0)
+                                            else
+                                                v.gen_esp.FillColor = Color3.fromRGB(255, 255, 51)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and v:FindFirstChild("gen_esp") then
+                                        v.gen_esp:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
 })
 
--- =============================
 -- Generators Nametags
--- =============================
-MainTab:CreateToggle({
-   Name = "Generators Nametags",
-   CurrentValue = false,
-   Flag = "GeneratorsNametags",
-   Callback = function(bool)
-       _G.generatorstag = bool
-       task.spawn(function()
-           while task.wait() do
-               if _G.generatorstag then
-                   pcall(function()
-                       if workspace:FindFirstChild("Map") then
-                           local gameMap = workspace.Map
-                           if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                               for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                   if v.Name == "Generator" and not v:FindFirstChild("nametag") then
-                                       local bb = Instance.new("BillboardGui", v)
-                                       bb.Size = UDim2.new(4, 0, 1, 0)
-                                       bb.AlwaysOnTop = true
-                                       bb.Name = "nametag"
+local Toggle = MainTab:Toggle({
+    Title = "Generators Nametags",
+    Desc = "Mostra o progresso dos geradores",
+    Icon = "tag",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(bool)
+        _G.generatorstag = bool
+        task.spawn(function()
+            while task.wait() do
+                if _G.generatorstag then
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and not v:FindFirstChild("nametag") then
+                                        local bb = Instance.new("BillboardGui", v)
+                                        bb.Size = UDim2.new(4, 0, 1, 0)
+                                        bb.AlwaysOnTop = true
+                                        bb.Name = "nametag"
 
-                                       local text = Instance.new("TextLabel", bb)
-                                       text.TextStrokeTransparency = 0
-                                       text.Text = "Generator (" .. (v:FindFirstChild("Progress") and v.Progress.Value or 0) .. "%)"
-                                       text.TextSize = 15
-                                       text.BackgroundTransparency = 1
-                                       text.Size = UDim2.new(1, 0, 1, 0)
-                                       text.TextColor3 = Color3.fromRGB(255, 255, 255)
-                                   elseif v:FindFirstChild("nametag") and v.Name == "Generator" then
-                                       if v:FindFirstChild("Progress") then
-                                           v.nametag.TextLabel.Text = "Generator (" .. v.Progress.Value .. "%)"
-                                       end
-                                   end
-                               end
-                           end
-                       end
-                   end)
-               else
-                   pcall(function()
-                       if workspace:FindFirstChild("Map") then
-                           local gameMap = workspace.Map
-                           if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                               for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                   if v.Name == "Generator" and v:FindFirstChild("nametag") then
-                                       v.nametag:Destroy()
-                                   end
-                               end
-                           end
-                       end
-                   end)
-                   break
-               end
-           end
-       end)
-   end
+                                        local text = Instance.new("TextLabel", bb)
+                                        text.TextStrokeTransparency = 0
+                                        text.Text = "Generator (" .. (v:FindFirstChild("Progress") and v.Progress.Value or 0) .. "%)"
+                                        text.TextSize = 15
+                                        text.BackgroundTransparency = 1
+                                        text.Size = UDim2.new(1, 0, 1, 0)
+                                        text.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                    elseif v:FindFirstChild("nametag") and v.Name == "Generator" then
+                                        if v:FindFirstChild("Progress") then
+                                            v.nametag.TextLabel.Text = "Generator (" .. v.Progress.Value .. "%)"
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and v:FindFirstChild("nametag") then
+                                        v.nametag:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
 })
 
--- =============================
 -- Auto Complete Generator
--- =============================
-MainTab:CreateToggle({
-   Name = "Auto Complete Generator",
-   CurrentValue = false,
-   Flag = "AutoCompleteGenerator",
-   Callback = function(bool)
-       _G.instantGenerator = bool
-       if bool then
-           task.spawn(function()
-               while _G.instantGenerator do
-                   local map = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
-                   if map then
-                       for _, gen in pairs(map:GetChildren()) do
-                           if gen:IsA("Model") and gen.Name == "Generator" then
-                               local re = gen:FindFirstChild("Remotes") and gen.Remotes:FindFirstChild("RE")
-                               if re then
-                                   re:FireServer()
-                               end
-                           end
-                       end
-                   end
-                   task.wait(2.5)
-               end
-           end)
-       end
-   end
+local Toggle = MainTab:Toggle({
+    Title = "Auto Complete Generator",
+    Desc = "Completa geradores automaticamente",
+    Icon = "zap",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(bool)
+        _G.instantGenerator = bool
+        if bool then
+            task.spawn(function()
+                while _G.instantGenerator do
+                    local map = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
+                    if map then
+                        for _, gen in pairs(map:GetChildren()) do
+                            if gen:IsA("Model") and gen.Name == "Generator" then
+                                local re = gen:FindFirstChild("Remotes") and gen.Remotes:FindFirstChild("RE")
+                                if re then
+                                    re:FireServer()
+                                end
+                            end
+                        end
+                    end
+                    task.wait(2.5)
+                end
+            end)
+        end
+    end
 })
 
--- =============================
 -- Items ESP
--- =============================
-MainTab:CreateToggle({
-    Name = "Items ESP",
-    CurrentValue = false,
-    Flag = "ItemsESP",
+local Toggle = MainTab:Toggle({
+    Title = "Items ESP",
+    Desc = "Destaca itens no mapa",
+    Icon = "package",
+    Type = "Checkbox",
+    Default = false,
     Callback = function(bool)
         _G.items = bool
         task.spawn(function()
@@ -415,9 +764,7 @@ MainTab:CreateToggle({
     end
 })
 
--- =============================
 -- Reach Expander
--- =============================
 local function getHitboxesFromPlayer()
     local hitboxes = workspace:FindFirstChild("Hitboxes")
     if hitboxes then
@@ -430,18 +777,30 @@ local function getHitboxesFromPlayer()
     return false
 end
 
-MainTab:CreateToggle({
-   Name = "Reach Expander",
-   CurrentValue = false,
-   Flag = "HitboxExpander",
-   Callback = function(bool)
-       _G.hitboxExpander = bool
-       if bool then
-           Rayfield:Notify({Title = "Reach Expander", Content = "Reach Expander ATIVADO!", Duration = 3, Image = 4483362458})
-       else
-           Rayfield:Notify({Title = "Reach Expander", Content = "Reach Expander DESATIVADO!", Duration = 2, Image = 4483362458})
-       end
-   end
+local Toggle = MainTab:Toggle({
+    Title = "Reach Expander",
+    Desc = "Aumenta seu alcance",
+    Icon = "maximize",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(bool)
+        _G.hitboxExpander = bool
+        if bool then
+            WindUI:Notify({
+                Title = "Reach Expander",
+                Content = "Reach Expander ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            WindUI:Notify({
+                Title = "Reach Expander",
+                Content = "Reach Expander desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
 })
 
 -- Sistema do Reach Expander executando em loop separado
@@ -461,13 +820,13 @@ task.spawn(function()
     end
 end)
 
--- =============================
 -- Anti Death
--- =============================
-MainTab:CreateToggle({
-    Name = "Anti Death",
-    CurrentValue = false,
-    Flag = "AntiDeathToggle",
+local Toggle = MainTab:Toggle({
+    Title = "Anti Death",
+    Desc = "Te teleporta quando killers estão próximos",
+    Icon = "shield",
+    Type = "Checkbox",
+    Default = false,
     Callback = function(val)
         _G.antiDeath = val
         if val then
@@ -492,13 +851,13 @@ MainTab:CreateToggle({
     end
 })
 
--- =============================
 -- Allow Jump
--- =============================
-MainTab:CreateToggle({
-    Name = "Allow Jump",
-    CurrentValue = false,
-    Flag = "AllowJumpToggle",
+local Toggle = MainTab:Toggle({
+    Title = "Allow Jump",
+    Desc = "Permite pular quando bloqueado",
+    Icon = "arrow-up",
+    Type = "Checkbox",
+    Default = false,
     Callback = function(val)
         _G.allowJump = val
         if val then
@@ -518,53 +877,66 @@ MainTab:CreateToggle({
     end
 })
 
--- =============================
 -- Infinite Stamina
--- =============================
 local infiniteStaminaToggle = false
 local oldStamina = nil
 
-MainTab:CreateToggle({
-   Name = "Infinite Stamina",
-   CurrentValue = false,
-   Flag = "InfiniteStaminaToggle",
-   Callback = function(Value)
-       infiniteStaminaToggle = Value
-       local success, sprintModule = pcall(function()
-           return require(game:GetService("ReplicatedStorage").Systems.Character.Game.Sprinting)
-       end)
+local Toggle = MainTab:Toggle({
+    Title = "Infinite Stamina",
+    Desc = "Stamina infinita",
+    Icon = "battery",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(Value)
+        infiniteStaminaToggle = Value
+        local success, sprintModule = pcall(function()
+            return require(game:GetService("ReplicatedStorage").Systems.Character.Game.Sprinting)
+        end)
 
-       if success and sprintModule then
-           if Value then
-               oldStamina = sprintModule.Stamina
-               task.spawn(function()
-                   while infiniteStaminaToggle do
-                       sprintModule.Stamina = sprintModule.MaxStamina
-                       if sprintModule.__staminaChangedEvent then
-                           sprintModule.__staminaChangedEvent:Fire()
-                       end
-                       task.wait()
-                   end
-               end)
-               Rayfield:Notify({Title = "Infinite Stamina", Content = "Stamina infinita ATIVADA!", Duration = 3, Image = 4483362458})
-           else
-               if oldStamina then
-                   sprintModule.Stamina = oldStamina
-                   if sprintModule.__staminaChangedEvent then
-                       sprintModule.__staminaChangedEvent:Fire()
-                   end
-               end
-               Rayfield:Notify({Title = "Infinite Stamina", Content = "Stamina infinita DESATIVADA!", Duration = 2, Image = 4483362458})
-           end
-       else
-           Rayfield:Notify({Title = "Erro", Content = "Não foi possível acessar o módulo de Sprint.", Duration = 3, Image = 4483362458})
-       end
-   end
+        if success and sprintModule then
+            if Value then
+                oldStamina = sprintModule.Stamina
+                task.spawn(function()
+                    while infiniteStaminaToggle do
+                        sprintModule.Stamina = sprintModule.MaxStamina
+                        if sprintModule.__staminaChangedEvent then
+                            sprintModule.__staminaChangedEvent:Fire()
+                        end
+                        task.wait()
+                    end
+                end)
+                WindUI:Notify({
+                    Title = "Infinite Stamina",
+                    Content = "Stamina infinita ativada!",
+                    Duration = 3,
+                    Icon = "check",
+                })
+            else
+                if oldStamina then
+                    sprintModule.Stamina = oldStamina
+                    if sprintModule.__staminaChangedEvent then
+                        sprintModule.__staminaChangedEvent:Fire()
+                    end
+                end
+                WindUI:Notify({
+                    Title = "Infinite Stamina",
+                    Content = "Stamina infinita desativada!",
+                    Duration = 2,
+                    Icon = "x",
+                })
+            end
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Não foi possível acessar o módulo de Sprint.",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+        end
+    end
 })
 
--- =============================
 -- Invisibility
--- =============================
 local loopRunning, loopThread, currentAnim, lastAnim
 local anim = Instance.new("Animation")
 anim.AnimationId = "rbxassetid://75804462760596"
@@ -580,22 +952,34 @@ local function enableNoclip()
     end
 end
 
-MainTab:CreateToggle({
-    Name = "Invisible",
-    CurrentValue = false,
-    Flag = "InvisibilityToggle",
+local Toggle = MainTab:Toggle({
+    Title = "Invisible",
+    Desc = "Torna você invisível (só funciona no Forsaken real)",
+    Icon = "eye-off",
+    Type = "Checkbox",
+    Default = false,
     Callback = function(Value)
         local localPlayer = game.Players.LocalPlayer
         
         if game.PlaceId ~= 18687417158 then
             if Value then
-                Rayfield:Notify({Title = "Aviso", Content = "Use apenas no Forsaken real! Invisibilidade não funciona em outros jogos.", Duration = 8, Image = 4483362458})
+                WindUI:Notify({
+                    Title = "Aviso",
+                    Content = "Use apenas no Forsaken real! Não funciona em outros jogos.",
+                    Duration = 8,
+                    Icon = "alert-triangle",
+                })
                 return
             end
         end
         
         if Value then
-            Rayfield:Notify({Title = "Aviso", Content = "Você ainda pode ser visto com certas habilidades ou configurações de hitbox!", Duration = 6, Image = 4483362458})
+            WindUI:Notify({
+                Title = "Aviso",
+                Content = "Você ainda pode ser visto com certas habilidades!",
+                Duration = 6,
+                Icon = "info",
+            })
             loopRunning = true
 
             loopThread = task.spawn(function()
@@ -654,111 +1038,164 @@ MainTab:CreateToggle({
                 animateScript.Disabled = false
             end
             
-            Rayfield:Notify({Title = "Invisible", Content = "Invisibilidade DESATIVADA!", Duration = 2, Image = 4483362458})
+            WindUI:Notify({
+                Title = "Invisible",
+                Content = "Invisibilidade desativada!",
+                Duration = 2,
+                Icon = "x",
+            })
         end
     end
 })
 
 -- =============================
+-- ANIMATIONS TAB
+-- =============================
+local AnimationTab = Window:Tab({
+    Title = "Animações",
+    Icon = "play",
+    Locked = false,
+})
+
 -- Guest 666 Animation
--- =============================
-AnimationTab:CreateButton({
-   Name = "Guest 666 Animation",
-   Callback = function()
-       loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/anim"))()
-   end,
+local Button = AnimationTab:Button({
+    Title = "Guest 666 Animation",
+    Desc = "Executa animação do Guest 666",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/anim"))()
+        WindUI:Notify({
+            Title = "Animação",
+            Content = "Guest 666 Animation executada!",
+            Duration = 3,
+            Icon = "play",
+        })
+    end
 })
 
--- =============================
 -- Mafious Dance
--- =============================
-AnimationTab:CreateButton({
-   Name = "Mafious Dance",
-   Callback = function()
-       local localPlayer = game.Players.LocalPlayer
-       local character = localPlayer.Character
-       
-       if character and character:FindFirstChild("Humanoid") then
-           local humanoid = character.Humanoid
-           
-           -- Para animações anteriores
-           for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-               track:Stop()
-           end
-           
-           -- Cria e carrega a animação
-           local anim = Instance.new("Animation")
-           anim.AnimationId = "rbxassetid://132946177664650"
-           
-           local animTrack = humanoid:LoadAnimation(anim)
-           animTrack.Looped = true
-           animTrack:Play()
-           
-           Rayfield:Notify({
-               Title = "Mafious Dance", 
-               Content = "Dança iniciada! Use novamente para parar.", 
-               Duration = 3, 
-               Image = 4483362458
-           })
-           
-           -- Guarda a referência da animação para poder parar depois
-           _G.mafiousDanceTrack = animTrack
-       else
-           Rayfield:Notify({
-               Title = "Erro", 
-               Content = "Personagem não encontrado!", 
-               Duration = 3, 
-               Image = 4483362458
-           })
-       end
-   end,
+local Button = AnimationTab:Button({
+    Title = "Mafious Dance",
+    Desc = "Inicia dança Mafious",
+    Locked = false,
+    Callback = function()
+        local localPlayer = game.Players.LocalPlayer
+        local character = localPlayer.Character
+        
+        if character and character:FindFirstChild("Humanoid") then
+            local humanoid = character.Humanoid
+            
+            -- Para animações anteriores
+            for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+                track:Stop()
+            end
+            
+            -- Cria e carrega a animação
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://132946177664650"
+            
+            local animTrack = humanoid:LoadAnimation(anim)
+            animTrack.Looped = true
+            animTrack:Play()
+            
+            WindUI:Notify({
+                Title = "Mafious Dance",
+                Content = "Dança iniciada! Use 'Stop All' para parar.",
+                Duration = 3,
+                Icon = "play",
+            })
+            
+            -- Guarda a referência da animação para poder parar depois
+            _G.mafiousDanceTrack = animTrack
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Personagem não encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+        end
+    end
 })
 
--- =============================
+-- Noli Animation
+local Button = AnimationTab:Button({
+    Title = "Noli Animation",
+    Desc = "Executa animação Noli",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/MAXZZ/refs/heads/main/noli"))()
+        WindUI:Notify({
+            Title = "Animação",
+            Content = "Noli Animation executada!",
+            Duration = 3,
+            Icon = "play",
+        })
+    end
+})
+
 -- Stop All Animations
--- =============================
-AnimationTab:CreateButton({
-   Name = "Stop All Animations",
-   Callback = function()
-       local localPlayer = game.Players.LocalPlayer
-       local character = localPlayer.Character
-       
-       if character and character:FindFirstChild("Humanoid") then
-           local humanoid = character.Humanoid
-           
-           -- Para todas as animações
-           for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-               track:Stop()
-           end
-           
-           -- Limpa referências globais
-           _G.mafiousDanceTrack = nil
-           
-           -- Restaura animações padrão se estavam substituídas
-           if _G.noliAnimationEnabled then
-               _G.noliAnimationEnabled = false
-           end
-           
-           Rayfield:Notify({
-               Title = "Stop Animations", 
-               Content = "Todas as animações foram paradas!", 
-               Duration = 2, 
-               Image = 4483362458
-           })
-       else
-           Rayfield:Notify({
-               Title = "Erro", 
-               Content = "Personagem não encontrado!", 
-               Duration = 3, 
-               Image = 4483362458
-           })
-       end
-   end,
+local Button = AnimationTab:Button({
+    Title = "Stop All Animations",
+    Desc = "Para todas as animações",
+    Locked = false,
+    Callback = function()
+        local localPlayer = game.Players.LocalPlayer
+        local character = localPlayer.Character
+        
+        if character and character:FindFirstChild("Humanoid") then
+            local humanoid = character.Humanoid
+            
+            -- Para todas as animações
+            for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+                track:Stop()
+            end
+            
+            -- Limpa referências globais
+            _G.mafiousDanceTrack = nil
+            
+            -- Restaura animações padrão se estavam substituídas
+            if _G.noliAnimationEnabled then
+                _G.noliAnimationEnabled = false
+            end
+            
+            WindUI:Notify({
+                Title = "Stop Animations",
+                Content = "Todas as animações foram paradas!",
+                Duration = 2,
+                Icon = "square",
+            })
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Personagem não encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+        end
+    end
 })
 
-AnimationTab:CreateButton({
-   Name = "Noli Animation",
-   Callback = function()
-       loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/MAXZZ/refs/heads/main/noli"))()
-   end,
+-- =============================
+-- CONFIGURAÇÕES TAB
+-- =============================
+local ConfigTab = Window:Tab({
+    Title = "Configurações",
+    Icon = "settings",
+    Locked = false,
+})
+
+local Keybind = ConfigTab:Keybind({
+    Title = "Keybind",
+    Desc = "Keybind para abrir/fechar a UI",
+    Value = "G",
+    Callback = function(v)
+        Window:SetToggleKey(Enum.KeyCode[v])
+        WindUI:Notify({
+            Title = "Keybind",
+            Content = "Keybind alterada para: " .. v,
+            Duration = 2,
+            Icon = "keyboard",
+        })
+    end
 })

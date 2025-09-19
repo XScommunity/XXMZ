@@ -55,7 +55,7 @@ local Window = WindUI:CreateWindow({
     },
 
     KeySystem = { 
-        Key = { "xxmzforsaken" },
+        Key = { "xxmz25" },
         Note = "Resgate a key em nosso discord .gg/YXJ2xaEwP2",
         Thumbnail = {
             Image = "rbxassetid://89646996763231",

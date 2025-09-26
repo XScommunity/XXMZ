@@ -79,6 +79,119 @@ local MainTab = Window:Tab({
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local killAllToggle = false
+local killAllConnection = nil
+
+local function getRandomSurvivor()
+    local survivorsFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Survivors")
+    if not survivorsFolder then
+        return nil
+    end
+    local survivors = survivorsFolder:GetChildren()
+    if #survivors == 0 then
+        return nil
+    end
+    return survivors[math.random(1, #survivors)]
+end
+
+local function startKillAll()
+    local RunService = game:GetService("RunService")
+    local currentSurvivor = getRandomSurvivor()
+    
+    killAllConnection = RunService.Heartbeat:Connect(function()
+        if not killAllToggle then return end
+        
+        -- Verifica se o Survivor atual é válido
+        if not currentSurvivor or not currentSurvivor.Parent or not currentSurvivor:FindFirstChild("HumanoidRootPart") then
+            currentSurvivor = getRandomSurvivor()
+            if not currentSurvivor then
+                WindUI:Notify({
+                    Title = "Kill All (Killer)",
+                    Content = "Nenhum Survivor encontrado!",
+                    Duration = 3,
+                    Icon = "alert-triangle",
+                })
+                return
+            end
+        end
+        
+        -- Teleporta atrás do Survivor
+        local character = LocalPlayer.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local survivorHRP = currentSurvivor:FindFirstChild("HumanoidRootPart")
+            if survivorHRP then
+                local offset = CFrame.new(-3, 0, 0) -- 3 studs atrás
+                character.HumanoidRootPart.CFrame = survivorHRP.CFrame * offset
+            end
+        end
+        
+        -- Spamma o RemoteEvent
+        local success, remoteEvent = pcall(function()
+            return ReplicatedStorage:WaitForChild("Modules", 5):WaitForChild("Network", 5):WaitForChild("RemoteEvent", 5)
+        end)
+        if success and remoteEvent then
+            local args = {
+                "UseActorAbility",
+                {
+                    "Slash"
+                }
+            }
+            remoteEvent:FireServer(unpack(args))
+        end
+    end)
+end
+
+local function stopKillAll()
+    if killAllConnection then
+        killAllConnection:Disconnect()
+        killAllConnection = nil
+    end
+end
+
+local Toggle = MainTab:Toggle({
+    Title = "Kill All (Killer)",
+    Desc = "Teleporta atrás de Survivors e spamma ataque",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        killAllToggle = state
+        if state then
+            local survivorsFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Survivors")
+            if not survivorsFolder or #survivorsFolder:GetChildren() == 0 then
+                WindUI:Notify({
+                    Title = "Kill All (Killer)",
+                    Content = "Nenhum Survivor encontrado!",
+                    Duration = 3,
+                    Icon = "alert-triangle",
+                })
+                killAllToggle = false
+                return
+            end
+            startKillAll()
+            WindUI:Notify({
+                Title = "Kill All (Killer)",
+                Content = "Kill All ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            stopKillAll()
+            WindUI:Notify({
+                Title = "Kill All (Killer)",
+                Content = "Kill All desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Função pra coletar emotes de Purchased.Emotes
@@ -1347,6 +1460,94 @@ local Toggle = ESPTab:Toggle({
                 end
             end
         end)
+    end
+})
+
+local Workspace = game:GetService("Workspace")
+
+-- Função para gerenciar ESP na pasta 1x1x1Zombie
+local function manageZombieESP(state)
+    local highlights = {}
+    local connectionAdded, connectionRemoved
+    
+    local function addESP(object)
+        if object:IsA("Model") then
+            local highlight = Instance.new("Highlight")
+            highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Verde
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Adornee = object
+            highlight.Parent = object
+            highlights[object] = highlight
+        end
+    end
+    
+    local function removeESP(object)
+        local highlight = highlights[object]
+        if highlight then
+            highlight:Destroy()
+            highlights[object] = nil
+        end
+    end
+    
+    local success, zombieFolder = pcall(function()
+        return Workspace:WaitForChild("Map", 5):WaitForChild("Ingame", 5):WaitForChild("1x1x1Zombie", 5)
+    end)
+    
+    if not success or not zombieFolder then
+        warn("Pasta 1x1x1Zombie não encontrada!")
+        WindUI:Notify({
+            Title = "Esp 1x1 Zombies",
+            Content = "Pasta 1x1x1Zombie não encontrada!",
+            Duration = 3,
+            Icon = "alert-triangle",
+        })
+        return
+    end
+    
+    if not state then
+        for object, highlight in pairs(highlights) do
+            if highlight then
+                highlight:Destroy()
+            end
+        end
+        table.clear(highlights)
+        if connectionAdded then connectionAdded:Disconnect() end
+        if connectionRemoved then connectionRemoved:Disconnect() end
+        return
+    end
+    
+    for _, object in pairs(zombieFolder:GetChildren()) do
+        addESP(object)
+    end
+    
+    connectionAdded = zombieFolder.ChildAdded:Connect(function(object)
+        if state then
+            addESP(object)
+        end
+    end)
+    
+    connectionRemoved = zombieFolder.ChildRemoved:Connect(function(object)
+        removeESP(object)
+    end)
+end
+
+-- Toggle para ESP 1x1 Zombies
+local ZombieToggle = ESPTab:Toggle({
+    Title = "Esp 1x1 Zombies",
+    Desc = "Destaca zombies em Workspace.Map.Ingame.1x1x1Zombie",
+    Icon = "eye",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        manageZombieESP(state)
+        WindUI:Notify({
+            Title = "Esp 1x1 Zombies",
+            Content = state and "ESP para zombies ativado!" or "ESP para zombies desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
     end
 })
 

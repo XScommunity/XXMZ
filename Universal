@@ -1,0 +1,178 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+WindUI:Popup({
+    Title = "XXMZ HUB",
+    Content = "Bem-vindo ao XXMZ HUB convertido para WindUI! Caso encontre erros, reporte no Discord.",
+    Buttons = {
+        {
+            Title = "Discord",
+            Callback = function()
+                setclipboard("https://discord.gg/3gWvqV8Frg")
+                WindUI:Notify({
+                    Title = "Convite Copiado",
+                    Content = "O convite do Discord foi copiado para a área de transferência!",
+                    Duration = 3,
+                    Icon = "message-circle"
+                })
+            end
+        },
+        {
+            Title = "Fechar",
+            Callback = function()
+                print("Popup fechado")
+            end
+        }
+    }
+})
+
+local Window = WindUI:CreateWindow({
+    Title = "XXMZ | ✨Universal",
+    Icon = "door-open", -- lucide icon
+    Author = "discord.gg/YXJ2xaEwP2",
+    Folder = "MySuperHub",
+    
+    -- ↓ This all is Optional. You can remove it.
+    Size = UDim2.fromOffset(580, 460),
+    MinSize = Vector2.new(560, 350),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = false,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = false,
+    ScrollBarEnabled = false,
+    
+    
+    -- ↓ Optional. You can remove it.
+    User = {
+        Enabled = true,
+        Anonymous = false,
+        Callback = function()
+            print("clicked")
+        end,
+    },
+    
+    --       remove this all, 
+    -- !  ↓  if you DON'T need the key system
+    KeySystem = { 
+        -- ↓ Optional. You can remove it.
+        Key = { "xxmz25" },
+        
+        Note = "Example Key System.",
+        
+        -- ↓ Optional. You can remove it.
+        Thumbnail = {
+            Image = "rbxassetid://89646996763231",
+            Title = "",
+        },
+        
+        -- ↓ Optional. You can remove it.
+        URL = "https://discord.gg/YXJ2xaEwP2",
+        
+        -- ↓ Optional. You can remove it.
+        SaveKey = false, -- automatically save and load the key.
+        
+        -- ↓ Optional. You can remove it.
+        -- API = {} ← Services. Read about it below ↓
+    },
+})
+
+local CONFIGSection = Window:Section({
+    Title = "XXMZ Hub",
+    Icon = "",
+    Opened = true,
+})
+
+local SABTab = Window:Tab({
+    Title = "Configurações",
+    Icon = "settings", -- optional
+    Locked = false,
+})
+
+local Keybind = SABTab:Keybind({
+    Title = "Keybind",
+    Desc = "Keybind para abrir o script (PC)",
+    Value = "K",
+    Callback = function(v)
+        Window:SetToggleKey(Enum.KeyCode[v])
+    end
+})
+
+local GAMESAASection = Window:Section({
+    Title = "Games",
+    Icon = "",
+    Opened = true,
+})
+
+local SABATab = Window:Tab({
+    Title = "Steal A Brainrot",
+    Icon = "scroll", -- optional
+    Locked = false,
+})
+
+local Button = SABATab:Button({
+    Title = "Cartola Hub",
+    Desc = "Muito OP,",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Davi999z/Cartola-Hub/refs/heads/main/StealABrainrot.lua",true))()
+    end
+})
+
+local Button = SABATab:Button({
+    Title = "Chilli Hub",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/tienkhanh1/spicy/main/Chilli.lua"))()
+    end
+})
+
+local Button = SABATab:Button({
+    Title = "Arbix Hub",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Youifpg/Steal-a-Brainrot-op/refs/heads/main/THXZ1N.lua"))()
+    end
+})
+
+local Button = SABATab:Button({
+    Title = "Lunafyer Hub",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://lunafyer.onrender.com/initialize"))()
+    end
+})
+
+local SAMTab = Window:Tab({
+    Title = "Steal A Meme",
+    Icon = "scroll", -- optional
+    Locked = false,
+})
+
+local Button = SAMTab:Button({
+    Title = "XXMZ Hub",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/StealAMeme"))()
+    end
+})
+
+local SBTab = Window:Tab({
+    Title = "Slap Battles",
+    Icon = "scroll", -- optional
+    Locked = false,
+})
+
+local Button = SBTab:Button({
+    Title = "XXMZ Hub",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/SlapBattles"))()
+    end
+})

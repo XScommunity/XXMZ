@@ -75,6 +75,88 @@ local MainTab = Window:Tab({
     Locked = false,
 })
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Função pra coletar emotes de Purchased.Emotes
+local function getEmoteList()
+    local playerData = LocalPlayer:WaitForChild("PlayerData")
+    local purchasedEmotes = playerData:WaitForChild("Purchased"):WaitForChild("Emotes")
+    local emoteList = {}
+    
+    for _, emote in pairs(purchasedEmotes:GetChildren()) do
+        table.insert(emoteList, emote.Name)
+    end
+    
+    return emoteList
+end
+
+-- Dropdown pra selecionar um único emote
+local Dropdown = MainTab:Dropdown({
+    Title = "Emote as Killer",
+    Values = getEmoteList(),
+    Value = nil, -- Começa sem seleção
+    Multi = false, -- Permite apenas um emote
+    AllowNone = true,
+    Callback = function(option)
+        print("Emote selecionado: " .. (option or "Nenhum"))
+    end
+})
+
+-- Botão pra começar a dança
+local DanceButton = MainTab:Button({
+    Title = "Dançar Emote",
+    Desc = "Toca o emote selecionado",
+    Locked = false,
+    Callback = function()
+        local selectedEmote = Dropdown.Value -- Pega o emote selecionado
+        if selectedEmote then
+            local args = {
+                "PlayEmote",
+                {
+                    buffer.fromstring("\"Animations\""),
+                    buffer.fromstring("\"" .. selectedEmote .. "\"")
+                }
+            }
+            local remoteEvent = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+            remoteEvent:FireServer(unpack(args))
+            print("Tocando emote: " .. selectedEmote)
+        else
+            warn("Nenhum emote selecionado!")
+        end
+    end
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Button = MainTab:Button({
+    Title = "Todos emotes equipados",
+    Desc = "Quebra o limite de minimo de emotes equipados",
+    Locked = false,
+    Callback = function()
+        local playerData = LocalPlayer:WaitForChild("PlayerData")
+        local purchasedEmotes = playerData:WaitForChild("Purchased"):WaitForChild("Emotes")
+        local equippedEmotes = playerData:WaitForChild("Equipped"):WaitForChild("Emotes")
+        
+        -- Junta todos os nomes dos emotes em uma string com "|"
+        local emoteList = {}
+        for _, emote in pairs(purchasedEmotes:GetChildren()) do
+            table.insert(emoteList, emote.Name)
+        end
+        local emoteString = table.concat(emoteList, "|")
+        
+        -- Modifica o StringValue "Emotes" em Equipped.Emotes
+        local emoteValue = equippedEmotes
+        if emoteValue and emoteValue:IsA("StringValue") and emoteValue.Name == "Emotes" then
+            emoteValue.Value = emoteString
+        else
+            warn("StringValue 'Emotes' não encontrado ou não é um StringValue em Equipped.Emotes!")
+        end
+    end
+})
+
 -- Show Chat Toggle
 local Toggle = MainTab:Toggle({
     Title = "Show Chat",
@@ -545,123 +627,6 @@ local Toggle = MainTab:Toggle({
     end
 })
 
--- Generators ESP
-local Toggle = MainTab:Toggle({
-    Title = "Generators ESP",
-    Desc = "Destaca os geradores no mapa",
-    Icon = "eye",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(bool)
-        _G.generators = bool
-        task.spawn(function()
-            while task.wait() do
-                if _G.generators then
-                    pcall(function()
-                        if workspace:FindFirstChild("Map") then
-                            local gameMap = workspace.Map
-                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                    if v.Name == "Generator" and not v:FindFirstChild("gen_esp") then
-                                        local hl = Instance.new("Highlight", v)
-                                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                                        hl.Name = "gen_esp"
-                                        hl.FillColor = Color3.fromRGB(255, 255, 51)
-                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                        hl.FillTransparency = 0.5
-                                        hl.OutlineTransparency = 0
-                                    elseif v:FindFirstChild("gen_esp") and v.Name == "Generator" then
-                                        if v:FindFirstChild("Progress") then
-                                            if v.Progress.Value >= 100 then
-                                                v.gen_esp.FillColor = Color3.fromRGB(0, 255, 0)
-                                            else
-                                                v.gen_esp.FillColor = Color3.fromRGB(255, 255, 51)
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                else
-                    pcall(function()
-                        if workspace:FindFirstChild("Map") then
-                            local gameMap = workspace.Map
-                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                    if v.Name == "Generator" and v:FindFirstChild("gen_esp") then
-                                        v.gen_esp:Destroy()
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                    break
-                end
-            end
-        end)
-    end
-})
-
--- Generators Nametags
-local Toggle = MainTab:Toggle({
-    Title = "Generators Nametags",
-    Desc = "Mostra o progresso dos geradores",
-    Icon = "tag",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(bool)
-        _G.generatorstag = bool
-        task.spawn(function()
-            while task.wait() do
-                if _G.generatorstag then
-                    pcall(function()
-                        if workspace:FindFirstChild("Map") then
-                            local gameMap = workspace.Map
-                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                    if v.Name == "Generator" and not v:FindFirstChild("nametag") then
-                                        local bb = Instance.new("BillboardGui", v)
-                                        bb.Size = UDim2.new(4, 0, 1, 0)
-                                        bb.AlwaysOnTop = true
-                                        bb.Name = "nametag"
-
-                                        local text = Instance.new("TextLabel", bb)
-                                        text.TextStrokeTransparency = 0
-                                        text.Text = "Generator (" .. (v:FindFirstChild("Progress") and v.Progress.Value or 0) .. "%)"
-                                        text.TextSize = 15
-                                        text.BackgroundTransparency = 1
-                                        text.Size = UDim2.new(1, 0, 1, 0)
-                                        text.TextColor3 = Color3.fromRGB(255, 255, 255)
-                                    elseif v:FindFirstChild("nametag") and v.Name == "Generator" then
-                                        if v:FindFirstChild("Progress") then
-                                            v.nametag.TextLabel.Text = "Generator (" .. v.Progress.Value .. "%)"
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                else
-                    pcall(function()
-                        if workspace:FindFirstChild("Map") then
-                            local gameMap = workspace.Map
-                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                    if v.Name == "Generator" and v:FindFirstChild("nametag") then
-                                        v.nametag:Destroy()
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                    break
-                end
-            end
-        end)
-    end
-})
-
 -- Auto Complete Generator
 local Toggle = MainTab:Toggle({
     Title = "Auto Complete Generator",
@@ -689,78 +654,6 @@ local Toggle = MainTab:Toggle({
                 end
             end)
         end
-    end
-})
-
--- Items ESP
-local Toggle = MainTab:Toggle({
-    Title = "Items ESP",
-    Desc = "Destaca itens no mapa",
-    Icon = "package",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(bool)
-        _G.items = bool
-        task.spawn(function()
-            while task.wait() do
-                if _G.items == true then
-                    pcall(function()
-                        local gameMap = workspace:FindFirstChild("Map")
-                        if workspace:FindFirstChild("Map") and gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                            for _, v in pairs(gameMap.Ingame:GetChildren()) do
-                                if v:IsA("Tool") and not v:FindFirstChild("tool_esp") then
-                                    local hl = Instance.new("Highlight", v)
-                                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                                    hl.Name = "tool_esp"
-                                    hl.FillColor = Color3.fromRGB(0, 255, 255)
-                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                    hl.FillTransparency = 0.3
-                                    hl.OutlineTransparency = 0
-                                elseif v:IsA("Tool") and v:FindFirstChild("tool_esp") then
-                                    v.tool_esp.FillColor = Color3.fromRGB(0, 255, 255)
-                                    v.tool_esp.OutlineTransparency = 0
-                                    v.tool_esp.FillTransparency = 0.3
-                                    v.tool_esp.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                end
-                            end
-                            for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                if v:IsA("Tool") and not v:FindFirstChild("tool_esp") then
-                                    local hl = Instance.new("Highlight", v)
-                                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                                    hl.Name = "tool_esp"
-                                    hl.FillColor = Color3.fromRGB(0, 255, 255)
-                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                    hl.FillTransparency = 0.3
-                                    hl.OutlineTransparency = 0
-                                elseif v:IsA("Tool") and v:FindFirstChild("tool_esp") then
-                                    v.tool_esp.FillColor = Color3.fromRGB(0, 255, 255)
-                                    v.tool_esp.OutlineTransparency = 0
-                                    v.tool_esp.FillTransparency = 0.3
-                                    v.tool_esp.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                end
-                            end
-                        end
-                    end)
-                else
-                    pcall(function()
-                        local gameMap = workspace:FindFirstChild("Map")
-                        if workspace:FindFirstChild("Map") and gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
-                            for _, v in pairs(gameMap.Ingame:GetChildren()) do
-                                if v:IsA("Tool") and v:FindFirstChild("tool_esp") then
-                                    v.tool_esp:Destroy()
-                                end
-                            end
-                            for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
-                                if v:IsA("Tool") and v:FindFirstChild("tool_esp") then
-                                    v.tool_esp:Destroy()
-                                end
-                            end
-                        end
-                    end)
-                    break
-                end
-            end
-        end)
     end
 })
 
@@ -1176,6 +1069,285 @@ local Button = AnimationTab:Button({
     end
 })
 
+local ESPTab = Window:Tab({
+    Title = "ESP",
+    Icon = "eye",
+    Locked = false,
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- Função para criar/remover ESP em uma pasta
+local function manageESP(folder, state, highlightColor)
+    local highlights = {} -- Tabela pra armazenar Highlights
+
+    -- Função para adicionar ESP a um objeto
+    local function addESP(object)
+        if object:IsA("Model") or object:IsA("BasePart") then
+            local highlight = Instance.new("Highlight")
+            highlight.FillColor = highlightColor
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Adornee = object
+            highlight.Parent = object
+            highlights[object] = highlight
+        end
+    end
+
+    -- Função para remover ESP de um objeto
+    local function removeESP(object)
+        local highlight = highlights[object]
+        if highlight then
+            highlight:Destroy()
+            highlights[object] = nil
+        end
+    end
+
+    -- Limpa todos os Highlights se o estado for false
+    if not state then
+        for object, highlight in pairs(highlights) do
+            if highlight then
+                highlight:Destroy()
+            end
+        end
+        table.clear(highlights)
+        return
+    end
+
+    -- Adiciona ESP a todos os objetos atuais na pasta
+    for _, object in pairs(folder:GetChildren()) do
+        addESP(object)
+    end
+
+    -- Monitora novos objetos adicionados
+    folder.ChildAdded:Connect(function(object)
+        if state then
+            addESP(object)
+        end
+    end)
+
+    -- Monitora objetos removidos
+    folder.ChildRemoved:Connect(function(object)
+        removeESP(object)
+    end)
+end
+
+-- Toggle para ESP Killer
+local KillerToggle = ESPTab:Toggle({
+    Title = "ESP Killer",
+    Desc = "",
+    Icon = "eye",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        local killersFolder = Workspace:WaitForChild("Players"):WaitForChild("Killers")
+        manageESP(killersFolder, state, Color3.fromRGB(255, 0, 0)) -- Vermelho pra Killers
+    end
+})
+
+-- Toggle para ESP Survivor
+local SurvivorToggle = ESPTab:Toggle({
+    Title = "ESP Survivor",
+    Desc = "",
+    Icon = "eye",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        local survivorsFolder = Workspace:WaitForChild("Players"):WaitForChild("Survivors")
+        manageESP(survivorsFolder, state, Color3.fromRGB(0, 255, 0)) -- Verde pra Survivors
+    end
+})
+
+local Toggle = ESPTab:Toggle({
+    Title = "Generators ESP",
+    Desc = "Destaca os geradores no mapa",
+    Icon = "eye",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(bool)
+        _G.generators = bool
+        task.spawn(function()
+            while task.wait() do
+                if _G.generators then
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and not v:FindFirstChild("gen_esp") then
+                                        local hl = Instance.new("Highlight", v)
+                                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                        hl.Name = "gen_esp"
+                                        hl.FillColor = Color3.fromRGB(255, 255, 51)
+                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                        hl.FillTransparency = 0.5
+                                        hl.OutlineTransparency = 0
+                                    elseif v:FindFirstChild("gen_esp") and v.Name == "Generator" then
+                                        if v:FindFirstChild("Progress") then
+                                            if v.Progress.Value >= 100 then
+                                                v.gen_esp.FillColor = Color3.fromRGB(0, 255, 0)
+                                            else
+                                                v.gen_esp.FillColor = Color3.fromRGB(255, 255, 51)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and v:FindFirstChild("gen_esp") then
+                                        v.gen_esp:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
+})
+
+-- Generators Nametags
+local Toggle = ESPTab:Toggle({
+    Title = "Generators Nametags",
+    Desc = "Mostra o progresso dos geradores",
+    Icon = "tag",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(bool)
+        _G.generatorstag = bool
+        task.spawn(function()
+            while task.wait() do
+                if _G.generatorstag then
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and not v:FindFirstChild("nametag") then
+                                        local bb = Instance.new("BillboardGui", v)
+                                        bb.Size = UDim2.new(4, 0, 1, 0)
+                                        bb.AlwaysOnTop = true
+                                        bb.Name = "nametag"
+
+                                        local text = Instance.new("TextLabel", bb)
+                                        text.TextStrokeTransparency = 0
+                                        text.Text = "Generator (" .. (v:FindFirstChild("Progress") and v.Progress.Value or 0) .. "%)"
+                                        text.TextSize = 15
+                                        text.BackgroundTransparency = 1
+                                        text.Size = UDim2.new(1, 0, 1, 0)
+                                        text.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                    elseif v:FindFirstChild("nametag") and v.Name == "Generator" then
+                                        if v:FindFirstChild("Progress") then
+                                            v.nametag.TextLabel.Text = "Generator (" .. v.Progress.Value .. "%)"
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        if workspace:FindFirstChild("Map") then
+                            local gameMap = workspace.Map
+                            if gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                                for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                    if v.Name == "Generator" and v:FindFirstChild("nametag") then
+                                        v.nametag:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
+})
+
+local Toggle = ESPTab:Toggle({
+    Title = "Items ESP",
+    Desc = "Destaca itens no mapa",
+    Icon = "package",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(bool)
+        _G.items = bool
+        task.spawn(function()
+            while task.wait() do
+                if _G.items == true then
+                    pcall(function()
+                        local gameMap = workspace:FindFirstChild("Map")
+                        if workspace:FindFirstChild("Map") and gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                            for _, v in pairs(gameMap.Ingame:GetChildren()) do
+                                if v:IsA("Tool") and not v:FindFirstChild("tool_esp") then
+                                    local hl = Instance.new("Highlight", v)
+                                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                    hl.Name = "tool_esp"
+                                    hl.FillColor = Color3.fromRGB(0, 255, 255)
+                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                    hl.FillTransparency = 0.3
+                                    hl.OutlineTransparency = 0
+                                elseif v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp.FillColor = Color3.fromRGB(0, 255, 255)
+                                    v.tool_esp.OutlineTransparency = 0
+                                    v.tool_esp.FillTransparency = 0.3
+                                    v.tool_esp.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                end
+                            end
+                            for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                if v:IsA("Tool") and not v:FindFirstChild("tool_esp") then
+                                    local hl = Instance.new("Highlight", v)
+                                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                    hl.Name = "tool_esp"
+                                    hl.FillColor = Color3.fromRGB(0, 255, 255)
+                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                    hl.FillTransparency = 0.3
+                                    hl.OutlineTransparency = 0
+                                elseif v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp.FillColor = Color3.fromRGB(0, 255, 255)
+                                    v.tool_esp.OutlineTransparency = 0
+                                    v.tool_esp.FillTransparency = 0.3
+                                    v.tool_esp.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                end
+                            end
+                        end
+                    end)
+                else
+                    pcall(function()
+                        local gameMap = workspace:FindFirstChild("Map")
+                        if workspace:FindFirstChild("Map") and gameMap:FindFirstChild("Ingame") and gameMap.Ingame:FindFirstChild("Map") then
+                            for _, v in pairs(gameMap.Ingame:GetChildren()) do
+                                if v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp:Destroy()
+                                end
+                            end
+                            for _, v in pairs(gameMap.Ingame.Map:GetChildren()) do
+                                if v:IsA("Tool") and v:FindFirstChild("tool_esp") then
+                                    v.tool_esp:Destroy()
+                                end
+                            end
+                        end
+                    end)
+                    break
+                end
+            end
+        end)
+    end
+})
+
 -- =============================
 -- CONFIGURAÇÕES TAB
 -- =============================
@@ -1188,7 +1360,7 @@ local ConfigTab = Window:Tab({
 local Keybind = ConfigTab:Keybind({
     Title = "Keybind",
     Desc = "Keybind para abrir/fechar a UI",
-    Value = "G",
+    Value = "K",
     Callback = function(v)
         Window:SetToggleKey(Enum.KeyCode[v])
         WindUI:Notify({
@@ -1197,5 +1369,71 @@ local Keybind = ConfigTab:Keybind({
             Duration = 2,
             Icon = "keyboard",
         })
+    end
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- Toggle para deletar ragdolls
+local RagdollToggle = ConfigTab:Toggle({
+    Title = "FPS Boost - Ragdolls",
+    Desc = "Deleta todos os ragdolls",
+    Icon = "zap",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        local ragdollFolder = Workspace:WaitForChild("Ragdolls")
+        
+        if state then
+            -- Deleta todos os ragdolls
+            for _, ragdoll in pairs(ragdollFolder:GetChildren()) do
+                ragdoll:Destroy()
+            end
+            -- Monitora novos ragdolls pra deletar enquanto ativado
+            local connection
+            connection = ragdollFolder.ChildAdded:Connect(function(ragdoll)
+                if state then
+                    ragdoll:Destroy()
+                else
+                    connection:Disconnect()
+                end
+            end)
+        end
+    end
+})
+
+-- Toggle para desativar efeitos visuais
+local EffectsToggle = ConfigTab:Toggle({
+    Title = "FPS Boost - Efeitos Visuais",
+    Desc = "Desativa efeitos",
+    Icon = "zap",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        local function toggleEffects(object)
+            if object:IsA("ParticleEmitter") or object:IsA("Smoke") or object:IsA("Fire") or object:IsA("Sparkles") then
+                object.Enabled = not state
+            end
+        end
+        
+        -- Percorre todos os objetos no workspace
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            toggleEffects(obj)
+        end
+        
+        -- Monitora novos objetos adicionados
+        local connection
+        connection = Workspace.DescendantAdded:Connect(function(obj)
+            if state then
+                toggleEffects(obj)
+            end
+        end)
+        
+        -- Desconecta monitoramento quando desativado
+        if not state then
+            connection:Disconnect()
+        end
     end
 })

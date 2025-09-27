@@ -1,0 +1,122 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+-- Configuração da Fluent UI
+local Window = Fluent:CreateWindow({
+    Title = "Forsaken Hub",
+    SubTitle = "Autofarm & Poll Spam",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({
+        Title = "Main",
+        Icon = "home"
+    })
+}
+
+-- Estado do toggle
+local spamPollToggle = false
+local spamPollConnection = nil
+
+-- Função pra executar a enquete
+local function executePoll()
+    local success, retrievePollData = pcall(function()
+        return ReplicatedStorage:WaitForChild("HDAdminClient", 5):WaitForChild("Signals", 5):WaitForChild("RetrievePollData", 5)
+    end)
+    if not success or not retrievePollData then
+        Fluent:Notify({
+            Title = "Spam Poll",
+            Content = "RemoteFunction 'RetrievePollData' não encontrado!",
+            Duration = 3
+        })
+        return false
+    end
+
+    local args = {
+        {
+            ShowResultsTo = "You",
+            VoteTime = "20",
+            Question = "GAME HACKED BY XXMZ",
+            Answers = {
+                "HAHAHAHAHA",
+                "HAHAHAHAHAHA",
+                "HAHAHAHAHAHA"
+            },
+            PlayerArg = "all",
+            Server = "Current"
+        }
+    }
+    retrievePollData:InvokeServer(unpack(args))
+
+    task.wait(0.01) -- Intervalo de 0.01s entre as chamadas
+
+    local success, executePoll = pcall(function()
+        return ReplicatedStorage:WaitForChild("HDAdminClient", 5):WaitForChild("Signals", 5):WaitForChild("ExecutePoll", 5)
+    end)
+    if not success or not executePoll then
+        Fluent:Notify({
+            Title = "Spam Poll",
+            Content = "RemoteFunction 'ExecutePoll' não encontrado!",
+            Duration = 3
+        })
+        return false
+    end
+
+    executePoll:InvokeServer()
+    return true
+end
+
+-- Função pra iniciar o spam da enquete
+local function startSpamPoll()
+    spamPollConnection = RunService.Heartbeat:Connect(function()
+        if not spamPollToggle then return end
+        executePoll()
+    end)
+end
+
+-- Função pra parar o spam
+local function stopSpamPoll()
+    if spamPollConnection then
+        spamPollConnection:Disconnect()
+        spamPollConnection = nil
+    end
+end
+
+-- Toggle na Fluent UI
+Tabs.Main:AddToggle("SpamPollToggle", {
+    Title = "Spam Poll",
+    Description = "Spamma enquete com GAME HACKED BY XXMZ",
+    Default = false,
+    Callback = function(state)
+        spamPollToggle = state
+        if state then
+            if executePoll() then
+                startSpamPoll()
+                Fluent:Notify({
+                    Title = "Spam Poll",
+                    Content = "Spam de enquete ativado!",
+                    Duration = 3
+                })
+            else
+                spamPollToggle = false
+                Tabs.Main:Toggle("SpamPollToggle"):SetValue(false)
+            end
+        else
+            stopSpamPoll()
+            Fluent:Notify({
+                Title = "Spam Poll",
+                Content = "Spam de enquete desativado!",
+                Duration = 2
+            })
+        end
+    end
+})
+
+-- Inicializa a UI
+Window:SelectTab(1)

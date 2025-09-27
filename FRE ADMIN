@@ -1,26 +1,3 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-
--- Configuração da Fluent UI
-local Window = Fluent:CreateWindow({
-    Title = "Forsaken Hub",
-    SubTitle = "Autofarm & Poll Spam",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
-
-local Tabs = {
-    Main = Window:AddTab({
-        Title = "Main",
-        Icon = "home"
-    })
-}
-
--- Estado do toggle
 local spamPollToggle = false
 local spamPollConnection = nil
 
@@ -117,6 +94,3 @@ Tabs.Main:AddToggle("SpamPollToggle", {
         end
     end
 })
-
--- Inicializa a UI
-Window:SelectTab(1)

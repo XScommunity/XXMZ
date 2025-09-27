@@ -1,3 +1,89 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Configuração da Fluent UI
+local Window = Fluent:CreateWindow({
+    Title = "Forsaken Hub",
+    SubTitle = "Autofarm & Commands",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({
+        Title = "Main",
+        Icon = "home"
+    })
+}
+
+-- Função pra coletar nomes dos jogadores e formatar o comando
+local function executeCommandAll(inputCommand)
+    if not inputCommand or inputCommand == "" then
+        Fluent:Notify({
+            Title = "Command All",
+            Content = "Digite um comando válido!",
+            Duration = 3
+        })
+        return false
+    end
+
+    local playerList = Players:GetPlayers()
+    if #playerList == 0 then
+        Fluent:Notify({
+            Title = "Command All",
+            Content = "Nenhum jogador encontrado no servidor!",
+            Duration = 3
+        })
+        return false
+    end
+
+    local success, requestCommand = pcall(function()
+        return ReplicatedStorage:WaitForChild("HDAdminClient", 5):WaitForChild("Signals", 5):WaitForChild("RequestCommand", 5)
+    end)
+    if not success or not requestCommand then
+        Fluent:Notify({
+            Title = "Command All",
+            Content = "RemoteFunction 'RequestCommand' não encontrado!",
+            Duration = 3
+        })
+        return false
+    end
+
+    -- Formata a string do comando (ex.: ":poop player1 :poop player2")
+    local commandString = ""
+    for i, player in ipairs(playerList) do
+        commandString = commandString .. inputCommand .. " " .. player.Name
+        if i < #playerList then
+            commandString = commandString .. " "
+        end
+    end
+
+    local args = { commandString }
+    requestCommand:InvokeServer(unpack(args))
+
+    Fluent:Notify({
+        Title = "Command All",
+        Content = "Comando executado: " .. commandString,
+        Duration = 5
+    })
+    return true
+end
+
+-- Input na Fluent UI
+Tabs.Main:AddInput("CommandAllInput", {
+    Title = "Command All",
+    Description = "Digite um comando para executar em todos os jogadores (ex.: :poop)",
+    Placeholder = ":poop",
+    Default = "",
+    Callback = function(value)
+        executeCommandAll(value)
+    end
+})
+
 local spamPollToggle = false
 local spamPollConnection = nil
 
@@ -94,3 +180,6 @@ Tabs.Main:AddToggle("SpamPollToggle", {
         end
     end
 })
+
+-- Inicializa a UI
+Window:SelectTab(1)

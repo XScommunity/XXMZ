@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Configuração da WindUI
 WindUI:Popup({
     Title = "XXMZ Hub v2.0",
-    Content = "Hub para Forsaken. Caso encontre erros, entre em nosso discord e avise.",
+    Content = "Hub para Free Admin. Caso encontre erros, entre em nosso discord e avise.",
     Buttons = {
         {
             Title = "Discord",

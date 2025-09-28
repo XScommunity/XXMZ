@@ -91,7 +91,7 @@ local function executePoll()
 
     local args = {
         {
-            ShowResultsTo = "You",
+            ShowResultsTo = "Everyone",
             VoteTime = "20",
             Question = "GAME HACKED BY XXMZ",
             Answers = {

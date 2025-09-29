@@ -1561,6 +1561,246 @@ local ZombieToggle = ESPTab:Toggle({
     end
 })
 
+local StatsTab = Window:Tab({
+    Title = "Info",
+    Icon = "user",
+    Locked = false,
+})
+
+local playerParagraphs = {} -- Tabela para armazenar os paragraphs criados e conexões
+
+local function clearParagraphs()
+    for _, info in pairs(playerParagraphs) do
+        if info.para then
+            pcall(function()
+                info.para:Destroy()
+            end)
+        end
+        if info.connection then
+            info.connection:Disconnect()
+        end
+    end
+    playerParagraphs = {}
+end
+
+local PlayerNameInput = StatsTab:Input({
+    Title = "Nome do Jogador",
+    Desc = "Digite o nome do jogador para ver os status",
+    Placeholder = "Nome do jogador",
+    Locked = false,
+    Callback = function(name)
+        clearParagraphs() -- Limpa os paragraphs anteriores
+
+        local player = Players:FindFirstChild(name)
+        if not player then
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Jogador não encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+            return
+        end
+
+        local playerData = player:FindFirstChild("PlayerData")
+        if not playerData then
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "PlayerData não encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+            return
+        end
+
+        local stats = playerData:FindFirstChild("Stats")
+        if not stats then
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Stats não encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+            return
+        end
+
+        local killerStats = stats:FindFirstChild("KillerStats")
+        local survivorStats = stats:FindFirstChild("SurvivorStats")
+        if not killerStats or not survivorStats then
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "KillerStats ou SurvivorStats não encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+            return
+        end
+
+        -- Paragraph para Killer Stats header
+        StatsTab:Paragraph({
+            Title = "Killer Stats de " .. name,
+            Desc = "Status do jogador como Killer",
+            Color = "Green",
+            Locked = false,
+        })
+
+        -- Cria paragraphs para cada stat em KillerStats
+        for _, stat in ipairs(killerStats:GetChildren()) do
+            if stat:IsA("NumberValue") or stat:IsA("IntValue") or stat:IsA("StringValue") then
+                local para = StatsTab:Paragraph({
+                    Title = stat.Name .. ": " .. tostring(stat.Value),
+                    Desc = "",
+                    Color = "Green",
+                    Locked = false,
+                })
+                local connection = stat.Changed:Connect(function(newValue)
+                    para:SetTitle(stat.Name .. ": " .. tostring(newValue))
+                end)
+                table.insert(playerParagraphs, {para = para, connection = connection})
+            end
+        end
+
+        -- Paragraph para Survivor Stats header
+        StatsTab:Paragraph({
+            Title = "Survivor Stats de " .. name,
+            Desc = "Status do jogador como Survivor",
+            Color = "Green",
+            Locked = false,
+        })
+
+        -- Cria paragraphs para cada stat em SurvivorStats
+        for _, stat in ipairs(survivorStats:GetChildren()) do
+            if stat:IsA("NumberValue") or stat:IsA("IntValue") or stat:IsA("StringValue") then
+                local para = StatsTab:Paragraph({
+                    Title = stat.Name .. ": " .. tostring(stat.Value),
+                    Desc = "",
+                    Color = "Green",
+                    Locked = false,
+                })
+                local connection = stat.Changed:Connect(function(newValue)
+                    para:SetTitle(stat.Name .. ": " .. tostring(newValue))
+                end)
+                table.insert(playerParagraphs, {para = para, connection = connection})
+            end
+        end
+
+        local equipped = playerData:FindFirstChild("Equipped")
+        if not equipped then
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Equipped não encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+            return
+        end
+
+        local equippedEmotes = equipped:FindFirstChild("Emotes")
+        local equippedKiller = equipped:FindFirstChild("Killer")
+        local equippedSurvivor = equipped:FindFirstChild("Survivor")
+        if not equippedEmotes or not equippedKiller or not equippedSurvivor then
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Emotes, Killer ou Survivor não encontrado em Equipped!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+            return
+        end
+
+        -- Paragraph para Equipped Emotes header
+        StatsTab:Paragraph({
+            Title = "Equipped Emotes de " .. name,
+            Desc = "Emotes equipados do jogador",
+            Color = "Green",
+            Locked = false,
+        })
+
+        -- Processa e exibe Emotes (assumindo StringValue com valores separados por "|")
+        if equippedEmotes:IsA("StringValue") then
+            local emotes = {}
+            for emote in string.gmatch(equippedEmotes.Value, "[^|]+") do
+                if emote ~= "nil" then
+                    table.insert(emotes, emote)
+                end
+            end
+            local emotesStr = table.concat(emotes, ", ")
+            local para = StatsTab:Paragraph({
+                Title = "Emotes: " .. (emotesStr ~= "" and emotesStr or "Nenhum emote equipado"),
+                Desc = "",
+                Color = "Green",
+                Locked = false,
+            })
+            local connection = equippedEmotes.Changed:Connect(function(newValue)
+                local updatedEmotes = {}
+                for emote in string.gmatch(newValue, "[^|]+") do
+                    if emote ~= "nil" then
+                        table.insert(updatedEmotes, emote)
+                    end
+                end
+                local updatedStr = table.concat(updatedEmotes, ", ")
+                para:SetTitle("Emotes: " .. (updatedStr ~= "" and updatedStr or "Nenhum emote equipado"))
+            end)
+            table.insert(playerParagraphs, {para = para, connection = connection})
+        end
+
+        -- Paragraph para Equipped Killer header
+        StatsTab:Paragraph({
+            Title = "Equipped Killer de " .. name,
+            Desc = "Killer equipado do jogador",
+            Color = "Green",
+            Locked = false,
+        })
+
+        -- Cria paragraphs para cada item em Equipped.Killer (assumindo Folder ou valores)
+        for _, item in ipairs(equippedKiller:GetChildren()) do
+            if item:IsA("NumberValue") or item:IsA("IntValue") or item:IsA("StringValue") then
+                local para = StatsTab:Paragraph({
+                    Title = item.Name .. ": " .. tostring(item.Value),
+                    Desc = "",
+                    Color = "Green",
+                    Locked = false,
+                })
+                local connection = item.Changed:Connect(function(newValue)
+                    para:SetTitle(item.Name .. ": " .. tostring(newValue))
+                end)
+                table.insert(playerParagraphs, {para = para, connection = connection})
+            end
+        end
+
+        -- Paragraph para Equipped Survivor header
+        StatsTab:Paragraph({
+            Title = "Equipped Survivor de " .. name,
+            Desc = "Survivor equipado do jogador",
+            Color = "Green",
+            Locked = false,
+        })
+
+        -- Cria paragraphs para cada item em Equipped.Survivor (assumindo Folder ou valores)
+        for _, item in ipairs(equippedSurvivor:GetChildren()) do
+            if item:IsA("NumberValue") or item:IsA("IntValue") or item:IsA("StringValue") then
+                local para = StatsTab:Paragraph({
+                    Title = item.Name .. ": " .. tostring(item.Value),
+                    Desc = "",
+                    Color = "Green",
+                    Locked = false,
+                })
+                local connection = item.Changed:Connect(function(newValue)
+                    para:SetTitle(item.Name .. ": " .. tostring(newValue))
+                end)
+                table.insert(playerParagraphs, {para = para, connection = connection})
+            end
+        end
+
+        WindUI:Notify({
+            Title = "Status Carregados",
+            Content = "Status do jogador " .. name .. " carregados com sucesso!",
+            Duration = 3,
+            Icon = "check",
+        })
+    end
+})
+
 -- =============================
 -- CONFIGURAÇÕES TAB
 -- =============================

@@ -1,82 +1,363 @@
 loadstring(game:HttpGet("https://raw.githubusercontent.com/TheWExploiter/Slap-Battles-TP/main/testRun.lua"))()
-
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Pro666Pro/BypassAntiCheat/refs/heads/main/main.lua"))()
 
-local OrionLib = loadstring(game:HttpGet("https://pastebin.com/raw/6a4F5ENH", true))()
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
-local Window = OrionLib:MakeWindow({Name = "XS Hub V3", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest"})
-
-local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-local jobIdInput = ""
 local player = game.Players.LocalPlayer
 local username = player.Name
 
-local HomeTab = Window:MakeTab({
-    Name = "Home",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+WindUI:Popup({
+    Title = "XXMZ | Slap Battles",
+    Content = "Bem-vindo ao XXMZ! Agora com WindUI.",
+    Buttons = {
+        {
+            Title = "Discord",
+            Callback = function()
+                setclipboard("https://discord.gg/3gWvqV8Frg")
+                WindUI:Notify({
+                    Title = "Discord",
+                    Content = "Convite copiado para área de transferência!",
+                    Duration = 3,
+                    Icon = "check",
+                })
+            end
+        },
+        {
+            Title = "Fechar",
+            Callback = function()
+                print("Popup fechado")
+            end
+        }
+    }
 })
 
-local TeleportsTab = Window:MakeTab({
-    Name = "Teleports",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+local Window = WindUI:CreateWindow({
+    Title = "XXMZ | Slap Battles",
+    Icon = "door-open",
+    Author = "Uma_pessoa29",
+    Folder = "XSHubV3",
+    
+    Size = UDim2.fromOffset(600, 480),
+    MinSize = Vector2.new(580, 370),
+    MaxSize = Vector2.new(900, 600),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = false,
+    ScrollBarEnabled = true,
+    Background = "rbxassetid://106924593304955",
+    
+    User = {
+        Enabled = true,
+        Anonymous = false,
+        Callback = function()
+        end,
+    },
 })
 
-local FeaturesTab = Window:MakeTab({
-    Name = "Features",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+-- =============================
+-- HOME TAB
+-- =============================
+local HomeTab = Window:Tab({
+    Title = "Home",
+    Icon = "home",
+    Locked = false,
 })
 
-local GlovesTab = Window:MakeTab({
-    Name = "Gloves",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+HomeTab:Button({
+    Title = "Copy Discord Invite",
+    Desc = "Copiar convite do Discord",
+    Locked = false,
+    Callback = function()
+        setclipboard("https://discord.gg/3gWvqV8Frg")
+        WindUI:Notify({
+            Title = "Discord",
+            Content = "Convite copiado!",
+            Duration = 3,
+            Icon = "check",
+        })
+    end
 })
 
-local TrollTab = Window:MakeTab({
-    Name = "Troll Stuff",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+HomeTab:Paragraph({
+    Title = "Bem-vindo, " .. username .. "!",
+    Desc = "Obrigado por usar o XS Hub V3"
 })
 
-local FarmTab = Window:MakeTab({
-    Name = "Farm Scripts",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+-- =============================
+-- TELEPORTS TAB
+-- =============================
+local TeleportsTab = Window:Tab({
+    Title = "Teleports",
+    Icon = "map-pin",
+    Locked = false,
 })
 
-local CombatTab = Window:MakeTab({
-    Name = "Combat",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+local function teleportTo(x, y, z)
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(x, y, z))
+    end
+end
+
+TeleportsTab:Button({
+    Title = "Normal Arena",
+    Desc = "Teleportar para Arena Normal",
+    Locked = false,
+    Callback = function()
+        teleportTo(-14, 66, -1)
+    end
 })
 
-local ChangeLogTab = Window:MakeTab({
-    Name = "Changelogs",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+TeleportsTab:Button({
+    Title = "Slapple Island",
+    Desc = "Teleportar para Ilha Slapple",
+    Locked = false,
+    Callback = function()
+        teleportTo(-395, 51, -13)
+    end
 })
 
-local CreditsTab = Window:MakeTab({
-    Name = "Credits",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+TeleportsTab:Button({
+    Title = "Cannon Island",
+    Desc = "Teleportar para Ilha do Canhão",
+    Locked = false,
+    Callback = function()
+        teleportTo(263, 33, 197)
+    end
 })
 
+TeleportsTab:Button({
+    Title = "Guide Room (Inside)",
+    Desc = "Teleportar para Sala do Guia (Dentro)",
+    Locked = false,
+    Callback = function()
+        teleportTo(17894, -130, -3542)
+    end
+})
 
-HomeTab:AddSection({Name = "Welcome, " .. username .. "!"})
-TeleportsTab:AddSection({Name = "Teleports"})
-FeaturesTab:AddSection({Name = "Useful Features"})
-GlovesTab:AddSection({Name = "Auto Get Gloves"})
-CreditsTab:AddSection({Name = "Credits"})
-TrollTab:AddSection({Name = "Troll Scripts"})
-FarmTab:AddSection({Name = "Farm Scripts"})
-ChangeLogTab:AddSection({Name = "Update Changelogs"})
-CombatTab:AddSection({Name = "Combat"})
+TeleportsTab:Button({
+    Title = "Guide Room (Outside)",
+    Desc = "Teleportar para Sala do Guia (Fora)",
+    Locked = false,
+    Callback = function()
+        teleportTo(17938, -130, -3598)
+    end
+})
+
+TeleportsTab:Button({
+    Title = "New Arena",
+    Desc = "Free Slaps & Null Shards",
+    Locked = false,
+    Callback = function()
+        teleportTo(3419, 260, -18)
+    end
+})
+
+TeleportsTab:Button({
+    Title = "Void Platform",
+    Desc = "Teleportar para Plataforma do Void",
+    Locked = false,
+    Callback = function()
+        teleportTo(-34919, -2593, -18)
+    end
+})
+
+local targetPlayerName = ""
+TeleportsTab:Input({
+    Title = "Teleport to Player",
+    Desc = "Digite o nome do jogador",
+    Placeholder = "Nome do jogador",
+    Callback = function(val)
+        targetPlayerName = val
+    end
+})
+
+TeleportsTab:Button({
+    Title = "Executar Teleporte",
+    Desc = "Teleportar para o jogador digitado",
+    Locked = false,
+    Callback = function()
+        local target = game.Players:FindFirstChild(targetPlayerName)
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+            WindUI:Notify({
+                Title = "Teleporte",
+                Content = "Teleportado para " .. targetPlayerName,
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Jogador não encontrado!",
+                Duration = 3,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+-- =============================
+-- FEATURES TAB
+-- =============================
+local FeaturesTab = Window:Tab({
+    Title = "Features",
+    Icon = "settings",
+    Locked = false,
+})
+
+FeaturesTab:Button({
+    Title = "Hide Name (Client)",
+    Desc = "Esconder nome (para vídeos)",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/isaberjan420/Roblox/refs/heads/main/Slap%20Battles/NameHider"))()
+    end
+})
+
+FeaturesTab:Button({
+    Title = "Bypass Ban",
+    Desc = "Bypass anti-cheat",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Pro666Pro/BypassAntiCheat/refs/heads/main/main.lua"))()
+    end
+})
+
+local jobIdInput = ""
+FeaturesTab:Input({
+    Title = "Join Job ID",
+    Desc = "Digite o Job ID do servidor",
+    Placeholder = "Job ID",
+    Callback = function(val)
+        jobIdInput = val
+    end
+})
+
+FeaturesTab:Button({
+    Title = "Join Server",
+    Desc = "Entrar no servidor com Job ID",
+    Locked = false,
+    Callback = function()
+        if jobIdInput and jobIdInput ~= "" then
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, jobIdInput, game.Players.LocalPlayer)
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Digite um Job ID válido!",
+                Duration = 3,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+FeaturesTab:Button({
+    Title = "Copy Current Job ID",
+    Desc = "Copiar Job ID atual",
+    Locked = false,
+    Callback = function()
+        setclipboard(game.JobId)
+        WindUI:Notify({
+            Title = "Job ID",
+            Content = "Job ID copiado!",
+            Duration = 3,
+            Icon = "check",
+        })
+    end
+})
+
+FeaturesTab:Button({
+    Title = "Server Hop (10-16 Players)",
+    Desc = "Trocar para servidor com 10-16 jogadores",
+    Locked = false,
+    Callback = function()
+        local HttpService = game:GetService("HttpService")
+        local TeleportService = game:GetService("TeleportService")
+        local PlaceId = game.PlaceId
+        local cursor = ""
+        local servers = {}
+
+        repeat
+            local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100&cursor="..cursor
+            local data = HttpService:JSONDecode(game:HttpGet(url))
+            for _, server in ipairs(data.data) do
+                if server.playing >= 10 and server.playing <= 16 and server.id ~= game.JobId then
+                    table.insert(servers, server)
+                end
+            end
+            cursor = data.nextPageCursor or ""
+        until not cursor or #servers >= 25
+
+        if #servers > 0 then
+            local chosen = servers[math.random(1, #servers)]
+            TeleportService:TeleportToPlaceInstance(PlaceId, chosen.id)
+        else
+            WindUI:Notify({
+                Title = "Server Hop",
+                Content = "Nenhum servidor encontrado!",
+                Duration = 3,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+FeaturesTab:Button({
+    Title = "Low Server Hop",
+    Desc = "Trocar para servidor vazio (menos de 6 jogadores)",
+    Locked = false,
+    Callback = function()
+        local HttpService = game:GetService("HttpService")
+        local TeleportService = game:GetService("TeleportService")
+        local PlaceId = game.PlaceId
+        local cursor = ""
+        local target = nil
+
+        repeat
+            local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100&cursor="..cursor
+            local data = HttpService:JSONDecode(game:HttpGet(url))
+            for _, server in ipairs(data.data) do
+                if server.playing < 6 and server.id ~= game.JobId then
+                    target = server
+                    break
+                end
+            end
+            cursor = data.nextPageCursor or ""
+        until not cursor or target
+
+        if target then
+            TeleportService:TeleportToPlaceInstance(PlaceId, target.id)
+        else
+            WindUI:Notify({
+                Title = "Server Hop",
+                Content = "Nenhum servidor vazio encontrado!",
+                Duration = 3,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+-- =============================
+-- GLOVES TAB
+-- =============================
+local GlovesTab = Window:Tab({
+    Title = "Gloves",
+    Icon = "hand",
+    Locked = false,
+})
+
+local Button = GlovesTab:Button({
+    Title = "Get All Badge Gloves forever",
+    Desc = "after clicking, rejoin if u are in private server, go in public server",
+    Locked = false,
+    Callback = function()
+        -- ...
+    end
+})
 
 local gloveScripts = {
     ["Boxer Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/BoxerGlove.luau",
@@ -105,7 +386,7 @@ local gloveScripts = {
     ["MEGAROCK Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/MEGAROCKGlove.luau",
     ["Admin Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/AdminGlove.luau",
     ["Sword Fighter Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/SwordfigterGlove.luau",
-    ["Eggler Glove [Take Quest First!]"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/EgglerGlove.luau",
+    ["Eggler Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/EgglerGlove.luau",
     ["UTG Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/UTGGlove.luau",
     ["[REDACTED] Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/REDACTEDGlove.luau",
     ["Link Glove"] = "https://raw.githubusercontent.com/Pro666Pro/OpenSourceScripts/refs/heads/main/Gloves/LinkGlove.luau",
@@ -123,241 +404,124 @@ local gloveScripts = {
 }
 
 for name, link in pairs(gloveScripts) do
-    GlovesTab:AddButton({
-        Name = name,
+    GlovesTab:Button({
+        Title = name,
+        Desc = "Auto obter " .. name,
+        Locked = false,
         Callback = function()
             loadstring(game:HttpGet(link))()
+            WindUI:Notify({
+                Title = name,
+                Content = "Script executado!",
+                Duration = 3,
+                Icon = "check",
+            })
         end
     })
 end
 
-local featureScripts = {
-["Hide Name (Client) (for vids)"] = "https://raw.githubusercontent.com/isaberjan420/Roblox/refs/heads/main/Slap%20Battles/NameHider",
-["Bypass Ban"] = "https://raw.githubusercontent.com/Pro666Pro/BypassAntiCheat/refs/heads/main/main.lua"
-}
-
-for name, link in pairs(featureScripts) do
-    FeaturesTab:AddButton({
-        Name = name,
-        Callback = function()
-            loadstring(game:HttpGet(link))()
-        end
-    })
-end
-
-local farmscripts = {
-["Slapple Farm"] = "https://raw.githubusercontent.com/Skzuppy/forge-hub/refs/heads/main/slapfarm_slapple",
-["Snow Slap Farm (by incognitoscripts)"] = "https://raw.githubusercontent.com/IncognitoScripts/SlapBattles/refs/heads/main/SnowFarm",    
-["Get Bob (need replica)"] = "https://raw.githubusercontent.com/TheWExploiter/Slap-Battles-TP/refs/heads/main/bobfarm.lua"
-}
-
-for name, link in pairs(farmscripts) do
-    FarmTab:AddButton({
-        Name = name,
-        Callback = function()
-            loadstring(game:HttpGet(link))()
-        end
-    })
-end
-
-local trollScripts = {
-["Fling Gui V1"] = "https://raw.githubusercontent.com/TheWExploiter/FlingGuiV1/refs/heads/main/FlingGUIV1.lua"
-}
-
-for name, link in pairs(trollScripts) do
-    TrollTab:AddButton({
-        Name = name,
-        Callback = function()
-            loadstring(game:HttpGet(link))()
-        end
-    })
-end
-
-CreditsTab:AddParagraph("Made By : Uma_pessoa29")
-CreditsTab:AddParagraph("Get Glove Scripts By : Nexer1234!")
-CreditsTab:AddParagraph("Some Scripts By : Celerity!")
-ChangeLogTab:AddParagraph("(Update V2.8)!              Added Jobid Join")
-ChangeLogTab:AddParagraph("(Update V2.7)!              Added Auto Get Bob (10% chance)")
-ChangeLogTab:AddParagraph("(Update V2.6)!              Bug Fixes!, Combat Tab (New)")
-ChangeLogTab:AddParagraph("(Update V2.5)!              Added Better Slap Aura! (fixed)")
-ChangeLogTab:AddParagraph("(Update V2.4)!              Added Anti Void (Tournament)")
-ChangeLogTab:AddParagraph("(Update V2.3)!              Slap Aura (fixed), Slap / Slapple Farm Added!")
-
-local function teleportTo(x, y, z)
-    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(x, y, z))
-    end
-end
-
-TeleportsTab:AddButton({Name = "Normal Arena", Callback = function() teleportTo(-14, 66, -1) end})
-TeleportsTab:AddButton({Name = "Slapple Island", Callback = function() teleportTo(-395, 51, -13) end})
-TeleportsTab:AddButton({Name = "Cannon Island", Callback = function() teleportTo(263, 33, 197) end})
-TeleportsTab:AddButton({Name = "Guide Room (Inside)", Callback = function() teleportTo(17894, -130, -3542) end})
-TeleportsTab:AddButton({Name = "Guide Room (Outside)", Callback = function() teleportTo(17938, -130, -3598) end})
-TeleportsTab:AddButton({Name = "New Arena (Free Slaps & Null Shards)", Callback = function() teleportTo(3419, 260, -18) end})
-TeleportsTab:AddButton({Name = "Void Platform", Callback = function() teleportTo(-34919, -2593, -18) end})
-
-
-TeleportsTab:AddTextbox({
-    Name = "Teleport to Player",
-    Default = "",
-    TextDisappear = true,
-    Callback = function(value)
-        local target = game.Players:FindFirstChild(value)
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            player.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
-        end
-    end
+-- =============================
+-- FARM TAB
+-- =============================
+local FarmTab = Window:Tab({
+    Title = "Farm Scripts",
+    Icon = "target",
+    Locked = false,
 })
 
-FeaturesTab:AddTextbox({
-    Name = "Join Job ID",
-    Default = "",
-    TextDisappear = false,
-    Callback = function(Value)
-        jobIdInput = Value
-    end
-})
-
-FeaturesTab:AddButton({
-    Name = "Join Server with Job ID",
+FarmTab:Button({
+    Title = "Slapple Farm",
+    Desc = "Farm automático de Slapples",
+    Locked = false,
     Callback = function()
-        if jobIdInput and jobIdInput ~= "" then
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, jobIdInput, Players.LocalPlayer)
-        end
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Skzuppy/forge-hub/refs/heads/main/slapfarm_slapple"))()
     end
 })
 
-FeaturesTab:AddButton({
-    Name = "Copy Current Job ID",
+FarmTab:Button({
+    Title = "Snow Slap Farm",
+    Desc = "Farm de Snow Slap (by incognitoscripts)",
+    Locked = false,
     Callback = function()
-        local currentJobId = game.JobId
-        setclipboard(currentJobId)
-        OrionLib:MakeNotification({
-            Name = "Copied!",
-            Content = "Your current Job ID has been copied.",
-            Image = "rbxassetid://4483345998",
-            Time = 3
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/IncognitoScripts/SlapBattles/refs/heads/main/SnowFarm"))()
+    end
+})
+
+FarmTab:Button({
+    Title = "Get Bob",
+    Desc = "Farm Bob (precisa de replica)",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/TheWExploiter/Slap-Battles-TP/refs/heads/main/bobfarm.lua"))()
+    end
+})
+
+-- =============================
+-- COMBAT TAB
+-- =============================
+local CombatTab = Window:Tab({
+    Title = "Combat",
+    Icon = "sword",
+    Locked = false,
+})
+
+local Keybind = CombatTab:Keybind({
+    Title = "Anti Cooldown Ability",
+    Desc = "dont spam, or u will get kicked",
+    Value = "Z",
+    Callback = function(v)
+        local UserInputService = game:GetService("UserInputService")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode[v] then
+                -- Ativa 1 vez
+                ReplicatedStorage:WaitForChild("GeneralAbility"):FireServer()
+                
+                WindUI:Notify({
+                    Title = "Ability",
+                    Content = "Habilidade ativada!",
+                    Duration = 1,
+                    Icon = "zap",
+                })
+            end
+        end)
+        
+        WindUI:Notify({
+            Title = "Anti Cooldown Ability",
+            Content = "Keybind configurada para: " .. v,
+            Duration = 2,
+            Icon = "keyboard",
         })
     end
 })
 
 local slapAuraStopper
-
-CombatTab:AddToggle({
-	Name = "Slap Aura",
-	Default = false,
-	Callback = function(state)
-		if state then
-			slapAuraStopper = loadstring(game:HttpGet("https://raw.githubusercontent.com/TheWExploiter/Slap-Battles-TP/refs/heads/main/slapaura.lua"))()
-		else
-			if slapAuraStopper then
-				slapAuraStopper()
-			end
-		end
-	end
-})
-
-local platform = Instance.new("Part")
-platform.Size = Vector3.new(5, 2, 5)
-platform.Position = Vector3.new(3419, 257, -18)
-platform.Anchored = true
-platform.Transparency = 0.7
-platform.Color = Color3.fromRGB(255, 0, 0)
-platform.Parent = game.Workspace
-
-local voidplatform = Instance.new("Part")
-voidplatform.Size = Vector3.new(9999, 3, 9999)
-voidplatform.Position = Vector3.new(-34919, -2597, -18)
-voidplatform.Anchored = true
-voidplatform.Transparency = 0.7
-voidplatform.Color = Color3.fromRGB(0, 0, 0)
-voidplatform.Parent = game.Workspace
-
-
-local platform2 = Instance.new("Part")
-platform2.Size = Vector3.new(300, 2, 300)
-platform2.Position = Vector3.new(3419, 235, -19)
-platform2.Anchored = true
-platform2.Transparency = 0.83
-platform2.Color = Color3.fromRGB(0, 0, 0)
-platform2.Parent = game.Workspace
-
-
-CombatTab:AddTextbox({
-    Name = "WalkSpeed",
-    Default = "16",
-    TextDisappear = true,
-    Callback = function(value)
-        local speed = tonumber(value)
-        if speed then
-            player.Character.Humanoid.WalkSpeed = speed
-        end
-    end
-})
-
-FeaturesTab:AddButton({
-    Name = "Server Hop (10-16 Players)",
-    Callback = function()
-        local HttpService = game:GetService("HttpService")
-        local TeleportService = game:GetService("TeleportService")
-        local PlaceId = game.PlaceId
-        local cursor = ""
-        local servers = {}
-
-        repeat
-            local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100&cursor="..cursor
-            local data = HttpService:JSONDecode(game:HttpGet(url))
-            for _, server in ipairs(data.data) do
-                if server.playing >= 10 and server.playing <= 16 and server.id ~= game.JobId then
-                    table.insert(servers, server)
-                end
-            end
-            cursor = data.nextPageCursor or ""
-        until not cursor or #servers >= 25
-
-        if #servers > 0 then
-            local chosen = servers[math.random(1, #servers)]
-            TeleportService:TeleportToPlaceInstance(PlaceId, chosen.id)
-        else
-            OrionLib:MakeNotification({
-                Name = "No Servers Found",
-                Content = "No 10–16 player servers available!",
-                Time = 5
+CombatTab:Toggle({
+    Title = "Slap Aura",
+    Desc = "Ativa aura de slap automático",
+    Icon = "zap",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        if state then
+            slapAuraStopper = loadstring(game:HttpGet("https://raw.githubusercontent.com/TheWExploiter/Slap-Battles-TP/refs/heads/main/slapaura.lua"))()
+            WindUI:Notify({
+                Title = "Slap Aura",
+                Content = "Slap Aura ativado!",
+                Duration = 3,
+                Icon = "check",
             })
-        end
-    end
-})
-
-
-FeaturesTab:AddButton({
-    Name = "Low Server Hop",
-    Callback = function()
-        local HttpService = game:GetService("HttpService")
-        local TeleportService = game:GetService("TeleportService")
-        local PlaceId = game.PlaceId
-        local cursor = ""
-        local target = nil
-
-        repeat
-            local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100&cursor="..cursor
-            local data = HttpService:JSONDecode(game:HttpGet(url))
-            for _, server in ipairs(data.data) do
-                if server.playing < 6 and server.id ~= game.JobId then
-                    target = server
-                    break
-                end
-            end
-            cursor = data.nextPageCursor or ""
-        until not cursor or target
-
-        if target then
-            TeleportService:TeleportToPlaceInstance(PlaceId, target.id)
         else
-            OrionLib:MakeNotification({
-                Name = "No Low Server",
-                Content = "No servers under 5 players found!",
-                Time = 5
+            if slapAuraStopper then
+                slapAuraStopper()
+            end
+            WindUI:Notify({
+                Title = "Slap Aura",
+                Content = "Slap Aura desativado!",
+                Duration = 2,
+                Icon = "x",
             })
         end
     end
@@ -369,11 +533,14 @@ antiVoidPart.Position = Vector3.new(0, -11.5, 0)
 antiVoidPart.Anchored = true
 antiVoidPart.Color = Color3.fromRGB(255, 255, 255)
 antiVoidPart.CanCollide = true
-antiVoidPart.Transparency = 1
+antiVoidPart.Transparency = 0.7
 antiVoidPart.Parent = game.Workspace
 
-CombatTab:AddToggle({
-    Name = "Anti Void",
+CombatTab:Toggle({
+    Title = "Anti Void",
+    Desc = "Previne quedas no void",
+    Icon = "shield",
+    Type = "Checkbox",
     Default = true,
     Callback = function(state)
         if state then
@@ -386,15 +553,11 @@ CombatTab:AddToggle({
     end
 })
 
-HomeTab:AddButton({
-    Name = "Copy Discord Invite",
-    Callback = function()
-        setclipboard("https://discord.gg/3gWvqV8Frg")
-    end
-})
-
-CombatTab:AddToggle({
-    Name = "Anti Ragdoll (Need Reset)",
+CombatTab:Toggle({
+    Title = "Anti Ragdoll",
+    Desc = "Previne ragdoll (precisa resetar)",
+    Icon = "user-check",
+    Type = "Checkbox",
     Default = false,
     Callback = function(state)
         if state then
@@ -413,9 +576,169 @@ CombatTab:AddToggle({
                     end
                 end)
             end)
+            WindUI:Notify({
+                Title = "Anti Ragdoll",
+                Content = "Anti Ragdoll ativado! Resete para funcionar.",
+                Duration = 3,
+                Icon = "check",
+            })
         end
     end
 })
 
+CombatTab:Input({
+    Title = "WalkSpeed",
+    Desc = "Alterar velocidade de movimento",
+    Placeholder = "16",
+    Callback = function(val)
+        local speed = tonumber(val)
+        if speed and player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.WalkSpeed = speed
+            WindUI:Notify({
+                Title = "WalkSpeed",
+                Content = "Velocidade alterada para " .. speed,
+                Duration = 3,
+                Icon = "check",
+            })
+        end
+    end
+})
 
-OrionLib:Init()
+-- =============================
+-- TROLL TAB
+-- =============================
+local TrollTab = Window:Tab({
+    Title = "Troll Stuff",
+    Icon = "smile",
+    Locked = false,
+})
+
+TrollTab:Button({
+    Title = "Fling Gui V1",
+    Desc = "GUI para fling de jogadores",
+    Locked = false,
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/TheWExploiter/FlingGuiV1/refs/heads/main/FlingGUIV1.lua"))()
+    end
+})
+
+-- =============================
+-- CHANGELOGS TAB
+-- =============================
+local ChangeLogTab = Window:Tab({
+    Title = "Changelogs",
+    Icon = "file-text",
+    Locked = false,
+})
+
+ChangeLogTab:Paragraph({
+    Title = "Update V2.8",
+    Desc = "Added Jobid Join"
+})
+
+ChangeLogTab:Paragraph({
+    Title = "Update V2.7",
+    Desc = "Added Auto Get Bob (10% chance)"
+})
+
+ChangeLogTab:Paragraph({
+    Title = "Update V2.6",
+    Desc = "Bug Fixes!, Combat Tab (New)"
+})
+
+ChangeLogTab:Paragraph({
+    Title = "Update V2.5",
+    Desc = "Added Better Slap Aura! (fixed)"
+})
+
+ChangeLogTab:Paragraph({
+    Title = "Update V2.4",
+    Desc = "Added Anti Void (Tournament)"
+})
+
+ChangeLogTab:Paragraph({
+    Title = "Update V2.3",
+    Desc = "Slap Aura (fixed), Slap / Slapple Farm Added!"
+})
+
+-- =============================
+-- CREDITS TAB
+-- =============================
+local CreditsTab = Window:Tab({
+    Title = "Credits",
+    Icon = "users",
+    Locked = false,
+})
+
+CreditsTab:Paragraph({
+    Title = "Made By",
+    Desc = "Uma_pessoa29"
+})
+
+CreditsTab:Paragraph({
+    Title = "Get Glove Scripts By",
+    Desc = "Nexer1234!"
+})
+
+CreditsTab:Paragraph({
+    Title = "Some Scripts By",
+    Desc = "Celerity!"
+})
+
+CreditsTab:Paragraph({
+    Title = "Converted to WindUI",
+    Desc = "XS Hub V3 - WindUI Version"
+})
+
+local ConfigTab = Window:Tab({
+    Title = "Configurações",
+    Icon = "settings",
+    Locked = false,
+})
+
+local Keybind = ConfigTab:Keybind({
+    Title = "Keybind",
+    Desc = "Keybind para abrir/fechar a UI",
+    Value = "K",
+    Callback = function(v)
+        Window:SetToggleKey(Enum.KeyCode[v])
+        WindUI:Notify({
+            Title = "Keybind",
+            Content = "Keybind alterada para: " .. v,
+            Duration = 2,
+            Icon = "keyboard",
+        })
+    end
+})
+
+-- Criar plataformas auxiliares
+local platform = Instance.new("Part")
+platform.Size = Vector3.new(5, 2, 5)
+platform.Position = Vector3.new(3419, 257, -18)
+platform.Anchored = true
+platform.Transparency = 0.7
+platform.Color = Color3.fromRGB(255, 0, 0)
+platform.Parent = game.Workspace
+
+local voidplatform = Instance.new("Part")
+voidplatform.Size = Vector3.new(9999, 3, 9999)
+voidplatform.Position = Vector3.new(-34919, -2597, -18)
+voidplatform.Anchored = true
+voidplatform.Transparency = 0.7
+voidplatform.Color = Color3.fromRGB(0, 0, 0)
+voidplatform.Parent = game.Workspace
+
+local platform2 = Instance.new("Part")
+platform2.Size = Vector3.new(300, 2, 300)
+platform2.Position = Vector3.new(3419, 235, -19)
+platform2.Anchored = true
+platform2.Transparency = 0.83
+platform2.Color = Color3.fromRGB(0, 0, 0)
+platform2.Parent = game.Workspace
+
+WindUI:Notify({
+    Title = "XS Hub V3",
+    Content = "Hub carregado com sucesso!",
+    Duration = 5,
+    Icon = "check",
+})

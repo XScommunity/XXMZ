@@ -1604,20 +1604,51 @@ local StatsTab = Window:Tab({
     Locked = false,
 })
 
-local playerParagraphs = {} -- Tabela para armazenar os paragraphs criados e conexões
+local paragraphs = {
+    timePlayed = nil,
+    killerHeader = nil,
+    killerStats = {},
+    survivorHeader = nil,
+    survivorStats = {},
+    emotesHeader = nil,
+    emotes = nil,
+    killerEquipHeader = nil,
+    killerEquip = {},
+    survivorEquipHeader = nil,
+    survivorEquip = {}
+}
 
-local function clearParagraphs()
-    for _, info in pairs(playerParagraphs) do
-        if info.para then
-            pcall(function()
-                info.para:Destroy()
-            end)
-        end
-        if info.connection then
-            info.connection:Disconnect()
-        end
+local connections = {}
+
+local function disconnectAll()
+    for _, conn in pairs(connections) do
+        conn:Disconnect()
     end
-    playerParagraphs = {}
+    connections = {}
+end
+
+-- Função para converter segundos em formato legível
+local function formatTime(seconds)
+    local days = math.floor(seconds / 86400)
+    local hours = math.floor((seconds % 86400) / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local secs = math.floor(seconds % 60)
+    
+    local parts = {}
+    if days > 0 then
+        table.insert(parts, days .. " Dia" .. (days > 1 and "s" or ""))
+    end
+    if hours > 0 then
+        table.insert(parts, hours .. " Hora" .. (hours > 1 and "s" or ""))
+    end
+    if minutes > 0 then
+        table.insert(parts, minutes .. " Minuto" .. (minutes > 1 and "s" or ""))
+    end
+    if secs > 0 or #parts == 0 then
+        table.insert(parts, secs .. " Segundo" .. (secs > 1 and "s" or ""))
+    end
+    
+    return table.concat(parts, ", ")
 end
 
 local PlayerNameInput = StatsTab:Input({
@@ -1626,7 +1657,7 @@ local PlayerNameInput = StatsTab:Input({
     Placeholder = "Nome do jogador",
     Locked = false,
     Callback = function(name)
-        clearParagraphs() -- Limpa os paragraphs anteriores
+        disconnectAll() -- Desconecta todas as conexões antigas
 
         local player = Players:FindFirstChild(name)
         if not player then
@@ -1661,6 +1692,30 @@ local PlayerNameInput = StatsTab:Input({
             return
         end
 
+        -- Tempo Jogado
+        local general = stats:FindFirstChild("General")
+        if general then
+            local timePlayed = general:FindFirstChild("TimePlayed")
+            if timePlayed and (timePlayed:IsA("NumberValue") or timePlayed:IsA("IntValue")) then
+                if not paragraphs.timePlayed then
+                    paragraphs.timePlayed = StatsTab:Paragraph({
+                        Title = "⏱️ Tempo Jogado",
+                        Desc = formatTime(timePlayed.Value),
+                        Color = "Blue",
+                        Locked = false,
+                    })
+                else
+                    paragraphs.timePlayed:SetTitle("⏱️ Tempo Jogado")
+                    paragraphs.timePlayed:SetDesc(formatTime(timePlayed.Value))
+                end
+                
+                local conn = timePlayed.Changed:Connect(function(newValue)
+                    paragraphs.timePlayed:SetDesc(formatTime(newValue))
+                end)
+                table.insert(connections, conn)
+            end
+        end
+
         local killerStats = stats:FindFirstChild("KillerStats")
         local survivorStats = stats:FindFirstChild("SurvivorStats")
         if not killerStats or not survivorStats then
@@ -1673,51 +1728,77 @@ local PlayerNameInput = StatsTab:Input({
             return
         end
 
-        -- Paragraph para Killer Stats header
-        StatsTab:Paragraph({
-            Title = "Killer Stats de " .. name,
-            Desc = "Status do jogador como Killer",
-            Color = "Green",
-            Locked = false,
-        })
+        -- Killer Stats Header
+        if not paragraphs.killerHeader then
+            paragraphs.killerHeader = StatsTab:Paragraph({
+                Title = "Killer Stats de " .. name,
+                Desc = "Status do jogador como Killer",
+                Color = "Green",
+                Locked = false,
+            })
+        else
+            paragraphs.killerHeader:SetTitle("Killer Stats de " .. name)
+            paragraphs.killerHeader:SetDesc("Status do jogador como Killer")
+        end
 
-        -- Cria paragraphs para cada stat em KillerStats
+        -- Killer Stats
+        local killerIndex = 1
         for _, stat in ipairs(killerStats:GetChildren()) do
             if stat:IsA("NumberValue") or stat:IsA("IntValue") or stat:IsA("StringValue") then
-                local para = StatsTab:Paragraph({
-                    Title = stat.Name .. ": " .. tostring(stat.Value),
-                    Desc = "",
-                    Color = "Green",
-                    Locked = false,
-                })
-                local connection = stat.Changed:Connect(function(newValue)
-                    para:SetTitle(stat.Name .. ": " .. tostring(newValue))
+                if not paragraphs.killerStats[killerIndex] then
+                    paragraphs.killerStats[killerIndex] = StatsTab:Paragraph({
+                        Title = stat.Name .. ": " .. tostring(stat.Value),
+                        Desc = "",
+                        Color = "Green",
+                        Locked = false,
+                    })
+                else
+                    paragraphs.killerStats[killerIndex]:SetTitle(stat.Name .. ": " .. tostring(stat.Value))
+                    paragraphs.killerStats[killerIndex]:SetDesc("")
+                end
+                
+                local conn = stat.Changed:Connect(function(newValue)
+                    paragraphs.killerStats[killerIndex]:SetTitle(stat.Name .. ": " .. tostring(newValue))
                 end)
-                table.insert(playerParagraphs, {para = para, connection = connection})
+                table.insert(connections, conn)
+                killerIndex = killerIndex + 1
             end
         end
 
-        -- Paragraph para Survivor Stats header
-        StatsTab:Paragraph({
-            Title = "Survivor Stats de " .. name,
-            Desc = "Status do jogador como Survivor",
-            Color = "Green",
-            Locked = false,
-        })
+        -- Survivor Stats Header
+        if not paragraphs.survivorHeader then
+            paragraphs.survivorHeader = StatsTab:Paragraph({
+                Title = "Survivor Stats de " .. name,
+                Desc = "Status do jogador como Survivor",
+                Color = "Green",
+                Locked = false,
+            })
+        else
+            paragraphs.survivorHeader:SetTitle("Survivor Stats de " .. name)
+            paragraphs.survivorHeader:SetDesc("Status do jogador como Survivor")
+        end
 
-        -- Cria paragraphs para cada stat em SurvivorStats
+        -- Survivor Stats
+        local survivorIndex = 1
         for _, stat in ipairs(survivorStats:GetChildren()) do
             if stat:IsA("NumberValue") or stat:IsA("IntValue") or stat:IsA("StringValue") then
-                local para = StatsTab:Paragraph({
-                    Title = stat.Name .. ": " .. tostring(stat.Value),
-                    Desc = "",
-                    Color = "Green",
-                    Locked = false,
-                })
-                local connection = stat.Changed:Connect(function(newValue)
-                    para:SetTitle(stat.Name .. ": " .. tostring(newValue))
+                if not paragraphs.survivorStats[survivorIndex] then
+                    paragraphs.survivorStats[survivorIndex] = StatsTab:Paragraph({
+                        Title = stat.Name .. ": " .. tostring(stat.Value),
+                        Desc = "",
+                        Color = "Green",
+                        Locked = false,
+                    })
+                else
+                    paragraphs.survivorStats[survivorIndex]:SetTitle(stat.Name .. ": " .. tostring(stat.Value))
+                    paragraphs.survivorStats[survivorIndex]:SetDesc("")
+                end
+                
+                local conn = stat.Changed:Connect(function(newValue)
+                    paragraphs.survivorStats[survivorIndex]:SetTitle(stat.Name .. ": " .. tostring(newValue))
                 end)
-                table.insert(playerParagraphs, {para = para, connection = connection})
+                table.insert(connections, conn)
+                survivorIndex = survivorIndex + 1
             end
         end
 
@@ -1745,15 +1826,20 @@ local PlayerNameInput = StatsTab:Input({
             return
         end
 
-        -- Paragraph para Equipped Emotes header
-        StatsTab:Paragraph({
-            Title = "Equipped Emotes de " .. name,
-            Desc = "Emotes equipados do jogador",
-            Color = "Green",
-            Locked = false,
-        })
+        -- Emotes Header
+        if not paragraphs.emotesHeader then
+            paragraphs.emotesHeader = StatsTab:Paragraph({
+                Title = "Equipped Emotes de " .. name,
+                Desc = "Emotes equipados do jogador",
+                Color = "Green",
+                Locked = false,
+            })
+        else
+            paragraphs.emotesHeader:SetTitle("Equipped Emotes de " .. name)
+            paragraphs.emotesHeader:SetDesc("Emotes equipados do jogador")
+        end
 
-        -- Processa e exibe Emotes (assumindo StringValue com valores separados por "|")
+        -- Emotes
         if equippedEmotes:IsA("StringValue") then
             local emotes = {}
             for emote in string.gmatch(equippedEmotes.Value, "[^|]+") do
@@ -1762,13 +1848,20 @@ local PlayerNameInput = StatsTab:Input({
                 end
             end
             local emotesStr = table.concat(emotes, ", ")
-            local para = StatsTab:Paragraph({
-                Title = "Emotes: " .. (emotesStr ~= "" and emotesStr or "Nenhum emote equipado"),
-                Desc = "",
-                Color = "Green",
-                Locked = false,
-            })
-            local connection = equippedEmotes.Changed:Connect(function(newValue)
+            
+            if not paragraphs.emotes then
+                paragraphs.emotes = StatsTab:Paragraph({
+                    Title = "Emotes: " .. (emotesStr ~= "" and emotesStr or "Nenhum emote equipado"),
+                    Desc = "",
+                    Color = "Green",
+                    Locked = false,
+                })
+            else
+                paragraphs.emotes:SetTitle("Emotes: " .. (emotesStr ~= "" and emotesStr or "Nenhum emote equipado"))
+                paragraphs.emotes:SetDesc("")
+            end
+            
+            local conn = equippedEmotes.Changed:Connect(function(newValue)
                 local updatedEmotes = {}
                 for emote in string.gmatch(newValue, "[^|]+") do
                     if emote ~= "nil" then
@@ -1776,56 +1869,82 @@ local PlayerNameInput = StatsTab:Input({
                     end
                 end
                 local updatedStr = table.concat(updatedEmotes, ", ")
-                para:SetTitle("Emotes: " .. (updatedStr ~= "" and updatedStr or "Nenhum emote equipado"))
+                paragraphs.emotes:SetTitle("Emotes: " .. (updatedStr ~= "" and updatedStr or "Nenhum emote equipado"))
             end)
-            table.insert(playerParagraphs, {para = para, connection = connection})
+            table.insert(connections, conn)
         end
 
-        -- Paragraph para Equipped Killer header
-        StatsTab:Paragraph({
-            Title = "Equipped Killer de " .. name,
-            Desc = "Killer equipado do jogador",
-            Color = "Green",
-            Locked = false,
-        })
+        -- Killer Equip Header
+        if not paragraphs.killerEquipHeader then
+            paragraphs.killerEquipHeader = StatsTab:Paragraph({
+                Title = "Equipped Killer de " .. name,
+                Desc = "Killer equipado do jogador",
+                Color = "Green",
+                Locked = false,
+            })
+        else
+            paragraphs.killerEquipHeader:SetTitle("Equipped Killer de " .. name)
+            paragraphs.killerEquipHeader:SetDesc("Killer equipado do jogador")
+        end
 
-        -- Cria paragraphs para cada item em Equipped.Killer (assumindo Folder ou valores)
+        -- Killer Equip
+        local killerEquipIndex = 1
         for _, item in ipairs(equippedKiller:GetChildren()) do
             if item:IsA("NumberValue") or item:IsA("IntValue") or item:IsA("StringValue") then
-                local para = StatsTab:Paragraph({
-                    Title = item.Name .. ": " .. tostring(item.Value),
-                    Desc = "",
-                    Color = "Green",
-                    Locked = false,
-                })
-                local connection = item.Changed:Connect(function(newValue)
-                    para:SetTitle(item.Name .. ": " .. tostring(newValue))
+                if not paragraphs.killerEquip[killerEquipIndex] then
+                    paragraphs.killerEquip[killerEquipIndex] = StatsTab:Paragraph({
+                        Title = item.Name .. ": " .. tostring(item.Value),
+                        Desc = "",
+                        Color = "Green",
+                        Locked = false,
+                    })
+                else
+                    paragraphs.killerEquip[killerEquipIndex]:SetTitle(item.Name .. ": " .. tostring(item.Value))
+                    paragraphs.killerEquip[killerEquipIndex]:SetDesc("")
+                end
+                
+                local conn = item.Changed:Connect(function(newValue)
+                    paragraphs.killerEquip[killerEquipIndex]:SetTitle(item.Name .. ": " .. tostring(newValue))
                 end)
-                table.insert(playerParagraphs, {para = para, connection = connection})
+                table.insert(connections, conn)
+                killerEquipIndex = killerEquipIndex + 1
             end
         end
 
-        -- Paragraph para Equipped Survivor header
-        StatsTab:Paragraph({
-            Title = "Equipped Survivor de " .. name,
-            Desc = "Survivor equipado do jogador",
-            Color = "Green",
-            Locked = false,
-        })
+        -- Survivor Equip Header
+        if not paragraphs.survivorEquipHeader then
+            paragraphs.survivorEquipHeader = StatsTab:Paragraph({
+                Title = "Equipped Survivor de " .. name,
+                Desc = "Survivor equipado do jogador",
+                Color = "Green",
+                Locked = false,
+            })
+        else
+            paragraphs.survivorEquipHeader:SetTitle("Equipped Survivor de " .. name)
+            paragraphs.survivorEquipHeader:SetDesc("Survivor equipado do jogador")
+        end
 
-        -- Cria paragraphs para cada item em Equipped.Survivor (assumindo Folder ou valores)
+        -- Survivor Equip
+        local survivorEquipIndex = 1
         for _, item in ipairs(equippedSurvivor:GetChildren()) do
             if item:IsA("NumberValue") or item:IsA("IntValue") or item:IsA("StringValue") then
-                local para = StatsTab:Paragraph({
-                    Title = item.Name .. ": " .. tostring(item.Value),
-                    Desc = "",
-                    Color = "Green",
-                    Locked = false,
-                })
-                local connection = item.Changed:Connect(function(newValue)
-                    para:SetTitle(item.Name .. ": " .. tostring(newValue))
+                if not paragraphs.survivorEquip[survivorEquipIndex] then
+                    paragraphs.survivorEquip[survivorEquipIndex] = StatsTab:Paragraph({
+                        Title = item.Name .. ": " .. tostring(item.Value),
+                        Desc = "",
+                        Color = "Green",
+                        Locked = false,
+                    })
+                else
+                    paragraphs.survivorEquip[survivorEquipIndex]:SetTitle(item.Name .. ": " .. tostring(item.Value))
+                    paragraphs.survivorEquip[survivorEquipIndex]:SetDesc("")
+                end
+                
+                local conn = item.Changed:Connect(function(newValue)
+                    paragraphs.survivorEquip[survivorEquipIndex]:SetTitle(item.Name .. ": " .. tostring(newValue))
                 end)
-                table.insert(playerParagraphs, {para = para, connection = connection})
+                table.insert(connections, conn)
+                survivorEquipIndex = survivorEquipIndex + 1
             end
         end
 
@@ -1847,10 +1966,41 @@ local FakeReportTab = Window:Tab({
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
+-- Salva os valores originais IMEDIATAMENTE quando a aba carrega
 local originalHealthText
-local originalUsernameName
+local originalUsernameName = "Username"
 local originalUsernameText
 local originalActorText
+
+task.spawn(function()
+    local success, err = pcall(function()
+        local PlayerGui = LocalPlayer.PlayerGui
+        local spectateUI = PlayerGui:WaitForChild("MainUI"):WaitForChild("Spectate")
+        local healthLabel = spectateUI:WaitForChild("Health")
+        local actorLabel = spectateUI:WaitForChild("ActorName")
+        
+        -- Procura o Label Username ou qualquer label que nao seja Health/ActorName
+        local usernameLabel = spectateUI:FindFirstChild("Username")
+        if not usernameLabel then
+            for _, child in pairs(spectateUI:GetChildren()) do
+                if child:IsA("TextLabel") and child.Name ~= "Health" and child.Name ~= "ActorName" then
+                    usernameLabel = child
+                    break
+                end
+            end
+        end
+        
+        if usernameLabel then
+            -- Restaura automaticamente o nome para "Username"
+            usernameLabel.Name = "Username"
+            
+            -- Salva os valores originais
+            originalHealthText = healthLabel.Text
+            originalUsernameText = usernameLabel.Text
+            originalActorText = actorLabel.Text
+        end
+    end)
+end)
 
 local InputUsername = FakeReportTab:Input({
     Title = "Nome do Jogador (Username)",
@@ -1917,37 +2067,27 @@ local InputHealth = FakeReportTab:Input({
 
 local Button = FakeReportTab:Button({
     Title = "Fix Spectate",
-    Desc = "Restaura a interface original do spectate",
+    Desc = "Restaura apenas o nome do Label para Username",
     Locked = false,
     Callback = function()
         local PlayerGui = LocalPlayer.PlayerGui
         local spectateUI = PlayerGui.MainUI.Spectate
         
-        -- Procura o label que teve o nome mudado
+        -- Procura o label que teve o nome mudado e restaura APENAS o nome para "Username"
         for _, child in pairs(spectateUI:GetChildren()) do
             if child:IsA("TextLabel") or child:IsA("TextButton") then
-                if originalUsernameName and child.Name ~= "Username" and child.Name ~= "Health" and child.Name ~= "ActorName" then
+                if child.Name ~= "Username" and child.Name ~= "Health" and child.Name ~= "ActorName" then
                     child.Name = "Username"
-                    if originalUsernameText then
-                        child.Text = originalUsernameText
-                    end
                 end
             end
         end
         
-        local healthLabel = spectateUI:FindFirstChild("Health")
-        local usernameLabel = spectateUI:FindFirstChild("Username")
-        local actorLabel = spectateUI:FindFirstChild("ActorName")
-        
-        if usernameLabel and originalUsernameText then
-            usernameLabel.Text = originalUsernameText
-        end
-        if actorLabel and originalActorText then
-            actorLabel.Text = originalActorText
-        end
-        if healthLabel and originalHealthText then
-            healthLabel.Text = originalHealthText
-        end
+        WindUI:Notify({
+            Title = "Fix Spectate",
+            Content = "Nome do Label restaurado!",
+            Duration = 2,
+            Icon = "check",
+        })
     end
 })
 

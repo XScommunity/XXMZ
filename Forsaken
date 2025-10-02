@@ -1801,6 +1801,119 @@ local PlayerNameInput = StatsTab:Input({
     end
 })
 
+local FakeReportTab = Window:Tab({
+    Title = "Fake Report",
+    Icon = "flag",
+    Locked = false,
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local originalHealthText
+local originalUsernameName
+local originalUsernameText
+local originalActorText
+
+local InputUsername = FakeReportTab:Input({
+    Title = "Nome do Jogador (Username)",
+    Desc = "Digite o nome do jogador",
+    Value = "",
+    InputIcon = "user",
+    Type = "Input",
+    Placeholder = "Digite o username...",
+    Callback = function(input) 
+        local PlayerGui = LocalPlayer.PlayerGui
+        local spectateUI = PlayerGui.MainUI.Spectate
+        local usernameLabel = spectateUI.Username
+        
+        if not originalUsernameName then
+            originalUsernameName = usernameLabel.Name
+            originalUsernameText = usernameLabel.Text
+        end
+        
+        usernameLabel.Name = input
+        task.wait(0.1)
+        usernameLabel.Text = input
+    end
+})
+
+local InputActor = FakeReportTab:Input({
+    Title = "Nome do Personagem (ActorName)",
+    Desc = "Digite o nome do personagem",
+    Value = "",
+    InputIcon = "users",
+    Type = "Input",
+    Placeholder = "Digite o personagem...",
+    Callback = function(input) 
+        local PlayerGui = LocalPlayer.PlayerGui
+        local spectateUI = PlayerGui.MainUI.Spectate
+        local actorLabel = spectateUI.ActorName
+        
+        if not originalActorText then
+            originalActorText = actorLabel.Text
+        end
+        
+        actorLabel.Text = input
+    end
+})
+
+local InputHealth = FakeReportTab:Input({
+    Title = "Vida (Health)",
+    Desc = "Digite a vida do jogador",
+    Value = "",
+    InputIcon = "heart",
+    Type = "Input",
+    Placeholder = "Ex: 100/100",
+    Callback = function(input) 
+        local PlayerGui = LocalPlayer.PlayerGui
+        local spectateUI = PlayerGui.MainUI.Spectate
+        local healthLabel = spectateUI.Health
+        
+        if not originalHealthText then
+            originalHealthText = healthLabel.Text
+        end
+        
+        healthLabel.Text = input
+    end
+})
+
+local Button = FakeReportTab:Button({
+    Title = "Fix Spectate",
+    Desc = "Restaura a interface original do spectate",
+    Locked = false,
+    Callback = function()
+        local PlayerGui = LocalPlayer.PlayerGui
+        local spectateUI = PlayerGui.MainUI.Spectate
+        
+        -- Procura o label que teve o nome mudado
+        for _, child in pairs(spectateUI:GetChildren()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") then
+                if originalUsernameName and child.Name ~= "Username" and child.Name ~= "Health" and child.Name ~= "ActorName" then
+                    child.Name = "Username"
+                    if originalUsernameText then
+                        child.Text = originalUsernameText
+                    end
+                end
+            end
+        end
+        
+        local healthLabel = spectateUI:FindFirstChild("Health")
+        local usernameLabel = spectateUI:FindFirstChild("Username")
+        local actorLabel = spectateUI:FindFirstChild("ActorName")
+        
+        if usernameLabel and originalUsernameText then
+            usernameLabel.Text = originalUsernameText
+        end
+        if actorLabel and originalActorText then
+            actorLabel.Text = originalActorText
+        end
+        if healthLabel and originalHealthText then
+            healthLabel.Text = originalHealthText
+        end
+    end
+})
+
 -- =============================
 -- CONFIGURAÇÕES TAB
 -- =============================

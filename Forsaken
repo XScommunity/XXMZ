@@ -1075,6 +1075,43 @@ local AnimationTab = Window:Tab({
     Locked = false,
 })
 
+local Button = AnimationTab:Button({
+    Title = "Fake Block",
+    Desc = "Simula animacao de bloqueio",
+    Locked = false,
+    Callback = function()
+        local localPlayer = game.Players.LocalPlayer
+        local character = localPlayer.Character
+        
+        if character and character:FindFirstChild("Humanoid") then
+            local humanoid = character.Humanoid
+            
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://72722244508749"
+            
+            local animTrack = humanoid:LoadAnimation(anim)
+            animTrack.Looped = false
+            animTrack:Play()
+            
+            WindUI:Notify({
+                Title = "Fake Block",
+                Content = "Animacao de bloqueio ativada!",
+                Duration = 3,
+                Icon = "shield",
+            })
+            
+            _G.specialAnimTrack = animTrack
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Personagem nao encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+        end
+    end
+})
+
 -- Guest 666 Animation
 local Button = AnimationTab:Button({
     Title = "Guest 666 Animation",

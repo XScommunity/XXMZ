@@ -1,0 +1,313 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "XXMZ HUB | EB do Delta",
+    Icon = "rbxassetid://10723415903",
+    Author = "XXMZ",
+    Folder = "EBDeltaConfig",
+    Size = UDim2.fromOffset(580, 460),
+    KeySystem = false,
+    Transparent = true,
+    Theme = "Dark",
+    SideBarWidth = 170,
+})
+
+local FarmTab = Window:Tab({
+    Title = "Farm",
+    Icon = "box",
+    Locked = false,
+})
+
+local GunTab = Window:Tab({
+    Title = "Gun",
+    Icon = "gun",
+    Locked = false,
+})
+
+local autoFarmEnabled = false
+local autoFarmLoop = nil
+
+local autoFarmPostoEnabled = false
+local autoFarmPostoLoop = nil
+
+FarmTab:Toggle({
+    Title = "Auto Farm | Caixa",
+    Desc = "Teleporta, interage com a caixa e repete automaticamente",
+    Default = false,
+    Callback = function(value)
+        autoFarmEnabled = value
+        
+        if value then
+            WindUI:Notify({
+                Title = "Auto Farm Ativado",
+                Content = "Farm de caixa iniciado!",
+                Duration = 3,
+                Icon = "check",
+            })
+            
+            -- Loop do Auto Farm
+            autoFarmLoop = task.spawn(function()
+                local player = game.Players.LocalPlayer
+                local character = player.Character or player.CharacterAdded:Wait()
+                local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+                
+                while autoFarmEnabled do
+                    -- IDA: Teleporta para a caixa PRIMEIRO
+                    humanoidRootPart.CFrame = CFrame.new(81, 3, -425)
+                    task.wait(0.5)
+                    
+                    -- Interage com o ProximityPrompt
+                    local promptPart = workspace.Map.Sistemas.Jobs.Caixas.PromptPart
+                    if promptPart and promptPart:FindFirstChild("ProximityPrompt") then
+                        local prompt = promptPart.ProximityPrompt
+                        fireproximityprompt(prompt)
+                    end
+                    
+                    task.wait(0.5)
+                    
+                    -- IDA: Continua o caminho
+                    humanoidRootPart.CFrame = CFrame.new(77, 3, -377)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(451, 3, -324)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(450, 4, -226)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(443, 4, -222)
+                    task.wait(0.5)
+                    
+                    -- VOLTA: Teleporta de volta (caminho inverso)
+                    humanoidRootPart.CFrame = CFrame.new(450, 4, -226)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(451, 3, -324)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(77, 3, -377)
+                    task.wait(0.5)
+                    
+                    -- Atualiza o character caso morra
+                    if not character or not character.Parent then
+                        character = player.Character or player.CharacterAdded:Wait()
+                        humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+                    end
+                end
+            end)
+        else
+            autoFarmEnabled = false
+            if autoFarmLoop then
+                task.cancel(autoFarmLoop)
+            end
+            
+            WindUI:Notify({
+                Title = "Auto Farm Desativado",
+                Content = "Farm de caixa parado!",
+                Duration = 3,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+FarmTab:Toggle({
+    Title = "Auto Farm | Posto",
+    Desc = "Teleporta, interage com o posto e repete automaticamente",
+    Default = false,
+    Callback = function(value)
+        autoFarmPostoEnabled = value
+        
+        if value then
+            WindUI:Notify({
+                Title = "Auto Farm Posto Ativado",
+                Content = "Farm de posto iniciado!",
+                Duration = 3,
+                Icon = "check",
+            })
+            
+            -- Loop do Auto Farm Posto
+            autoFarmPostoLoop = task.spawn(function()
+                local player = game.Players.LocalPlayer
+                local character = player.Character or player.CharacterAdded:Wait()
+                local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+                
+                while autoFarmPostoEnabled do
+                    -- IDA: Teleporta para o posto PRIMEIRO
+                    humanoidRootPart.CFrame = CFrame.new(-122, 3, -281)
+                    task.wait(0.5)
+                    
+                    -- Interage com o ProximityPrompt do posto
+                    local mapChildren = workspace.Map:GetChildren()
+                    if mapChildren[93] and mapChildren[93]:FindFirstChild("ProximityPrompt") then
+                        local prompt = mapChildren[93].ProximityPrompt
+                        fireproximityprompt(prompt)
+                    end
+                    
+                    task.wait(0.5)
+                    
+                    -- IDA: Continua o caminho
+                    humanoidRootPart.CFrame = CFrame.new(-117, 3, -265)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(193, 3, -291)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(197, 3, -347)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(453, 3, -317)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(450, 4, -225)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(442, 4, -222)
+                    task.wait(0.5)
+                    
+                    -- VOLTA: Teleporta de volta (caminho inverso)
+                    humanoidRootPart.CFrame = CFrame.new(450, 4, -225)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(453, 3, -317)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(197, 3, -347)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(193, 3, -291)
+                    task.wait(0.5)
+                    
+                    humanoidRootPart.CFrame = CFrame.new(-117, 3, -265)
+                    task.wait(0.5)
+                    
+                    -- Atualiza o character caso morra
+                    if not character or not character.Parent then
+                        character = player.Character or player.CharacterAdded:Wait()
+                        humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+                    end
+                end
+            end)
+        else
+            autoFarmPostoEnabled = false
+            if autoFarmPostoLoop then
+                task.cancel(autoFarmPostoLoop)
+            end
+            
+            WindUI:Notify({
+                Title = "Auto Farm Posto Desativado",
+                Content = "Farm de posto parado!",
+                Duration = 3,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+FarmTab:Paragraph({
+    Title = "ℹ️ Como Funciona",
+    Desc = "O Auto Farm teleporta você para a caixa (81, 3, -425), interage com ela, depois teleporta para (443, 4, -222) e repete o ciclo.",
+    Color = "Blue",
+    Locked = false,
+})
+
+-- ========== GUN TAB ==========
+local gunModifyEnabled = false
+
+GunTab:Toggle({
+    Title = "Gun Modify BETA",
+    Desc = "Modifica a arma para ter munição infinita",
+    Default = false,
+    Callback = function(value)
+        gunModifyEnabled = value
+        
+        if value then
+            local player = game:GetService("Players").LocalPlayer
+            
+            -- Função para modificar a arma
+            local function modifyGun()
+                local character = player.Character or player.CharacterAdded:Wait()
+                
+                -- Procura a arma no personagem ou backpack
+                for _, tool in ipairs(character:GetChildren()) do
+                    if tool:IsA("Tool") then
+                        -- Hook na função de tiro
+                        for _, script in ipairs(tool:GetDescendants()) do
+                            if script:IsA("LocalScript") then
+                                -- Tenta modificar as variáveis de munição
+                                local success = pcall(function()
+                                    -- Força munição infinita modificando o ambiente
+                                    if getsenv then
+                                        local env = getsenv(script)
+                                        if env then
+                                            -- Modifica a variável de munição
+                                            if env.v_u_19 then
+                                                env.v_u_19 = 9999
+                                            end
+                                            
+                                            -- Hook na função de disparo para não diminuir munição
+                                            if env.v_u_33 then
+                                                local oldShoot = env.v_u_33
+                                                env.v_u_33 = function(...)
+                                                    env.v_u_19 = 9999 -- Mantém munição em 9999
+                                                    return oldShoot(...)
+                                                end
+                                            end
+                                        end
+                                    end
+                                end)
+                                
+                                if success then
+                                    WindUI:Notify({
+                                        Title = "Gun Modify Ativado",
+                                        Content = "Munição infinita ativada!",
+                                        Duration = 3,
+                                        Icon = "check",
+                                    })
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- Se não encontrou arma equipada, tenta no backpack
+                for _, tool in ipairs(player.Backpack:GetChildren()) do
+                    if tool:IsA("Tool") then
+                        WindUI:Notify({
+                            Title = "Aviso",
+                            Content = "Equipe a arma para ativar a munição infinita!",
+                            Duration = 3,
+                            Icon = "alert-triangle",
+                        })
+                        return
+                    end
+                end
+            end
+            
+            modifyGun()
+            
+            -- Monitora quando equipar nova arma
+            player.Character.ChildAdded:Connect(function(child)
+                if gunModifyEnabled and child:IsA("Tool") then
+                    task.wait(0.5)
+                    modifyGun()
+                end
+            end)
+        else
+            WindUI:Notify({
+                Title = "Gun Modify Desativado",
+                Content = "Reequipe a arma para voltar ao normal",
+                Duration = 3,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+GunTab:Paragraph({
+    Title = "⚠️ BETA - Como Usar",
+    Desc = "1. Ative o toggle\n2. Equipe sua arma\n3. A munição ficará infinita\n\nNota: Pode não funcionar em todos os executors.",
+    Color = "Red",
+    Locked = false,
+})

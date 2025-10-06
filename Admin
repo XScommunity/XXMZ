@@ -1,0 +1,162 @@
+-- oque está fazendo aqui? Não adianta executar, você não vai ganhar poderes kkkkkkkkkk
+-- XXMZ | Admin Hub - Server Joiner
+-- Carrega a biblioteca Fluent
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+-- Cria a janela
+local Window = Fluent:CreateWindow({
+    Title = "XXMZ | Admin Hub",
+    SubTitle = "Join server",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- Cria as abas
+local Tabs = {
+    Main = Window:AddTab({ Title = "Server Joiner", Icon = "server" }),
+    Info = Window:AddTab({ Title = "Informações", Icon = "info" })
+}
+
+-- ========================================
+-- ABA PRINCIPAL - SERVER JOINER
+-- ========================================
+
+local jobIdInput = ""
+
+Tabs.Main:AddParagraph({
+    Title = "🌐 Teleporte para Servidor",
+    Content = "Cole o Job ID do servidor que deseja entrar e clique em teleportar."
+})
+
+-- Input para o Job ID
+Tabs.Main:AddInput("JobIdInput", {
+    Title = "Job ID do Servidor",
+    Default = "",
+    Placeholder = "Cole o Job ID aqui...",
+    Numeric = false,
+    Finished = true,
+    Callback = function(value)
+        jobIdInput = value
+    end
+})
+
+-- Botão para copiar Job ID atual
+Tabs.Main:AddButton({
+    Title = "📋 Copiar Job ID Atual",
+    Description = "Copia o Job ID do servidor atual",
+    Callback = function()
+        local currentJobId = game.JobId
+        setclipboard(currentJobId)
+        Fluent:Notify({
+            Title = "Job ID Copiado!",
+            Content = "Job ID atual copiado para área de transferência",
+            Duration = 3
+        })
+    end
+})
+
+-- Botão para teleportar
+Tabs.Main:AddButton({
+    Title = "🚀 Teleportar para Servidor",
+    Description = "Entra no servidor com o Job ID especificado",
+    Callback = function()
+        if jobIdInput == "" or jobIdInput == nil then
+            Fluent:Notify({
+                Title = "Erro!",
+                Content = "Por favor, insira um Job ID válido",
+                Duration = 5
+            })
+            return
+        end
+        
+        Fluent:Notify({
+            Title = "Teleportando...",
+            Content = "Entrando no servidor especificado",
+            Duration = 3
+        })
+        
+        local success, err = pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, jobIdInput, Players.LocalPlayer)
+        end)
+        
+        if not success then
+            Fluent:Notify({
+                Title = "Erro ao Teleportar!",
+                Content = "Job ID inválido ou servidor não encontrado",
+                Duration = 5
+            })
+        end
+    end
+})
+
+Tabs.Main:AddSection("Servidores Recentes")
+
+-- Botão para servidor aleatório
+Tabs.Main:AddButton({
+    Title = "🎲 Servidor Aleatório",
+    Description = "Entra em um servidor aleatório do jogo",
+    Callback = function()
+        Fluent:Notify({
+            Title = "Teleportando...",
+            Content = "Procurando servidor aleatório",
+            Duration = 3
+        })
+        
+        TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+    end
+})
+
+-- ========================================
+-- ABA DE INFORMAÇÕES
+-- ========================================
+
+Tabs.Info:AddParagraph({
+    Title = "ℹ️ Informações do Servidor Atual",
+    Content = string.format(
+        "🎮 Jogo: %s\n" ..
+        "🆔 Place ID: %d\n" ..
+        "🌐 Job ID: %s\n" ..
+        "👥 Jogadores: %d/%d",
+        game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
+        game.PlaceId,
+        game.JobId,
+        #Players:GetPlayers(),
+        Players.MaxPlayers
+    )
+})
+
+Tabs.Info:AddParagraph({
+    Title = "📖 Como Usar",
+    Content = 
+        "1. Para copiar o Job ID do servidor atual, clique em 'Copiar Job ID Atual'\n\n" ..
+        "2. Para entrar em um servidor específico:\n" ..
+        "   • Cole o Job ID no campo de texto\n" ..
+        "   • Clique em 'Teleportar para Servidor'\n\n" ..
+        "3. Use 'Servidor Aleatório' para entrar em qualquer servidor disponível"
+})
+
+Tabs.Info:AddParagraph({
+    Title = "⚠️ Avisos",
+    Content = 
+        "• O Job ID é único para cada servidor\n" ..
+        "• Servidores podem estar cheios ou offline\n" ..
+        "• Alguns jogos podem ter restrições de teleporte"
+})
+
+-- ========================================
+-- NOTIFICAÇÃO INICIAL
+-- ========================================
+
+Fluent:Notify({
+    Title = "XXMZ | Admin Hub",
+    Content = "Hub carregado com sucesso!",
+    Duration = 5
+})
+
+print("✅ XXMZ | Admin Hub carregado com sucesso!")

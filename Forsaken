@@ -1076,6 +1076,43 @@ local AnimationTab = Window:Tab({
 })
 
 local Button = AnimationTab:Button({
+    Title = "Hakari Dance",
+    Desc = "seila ",
+    Locked = false,
+    Callback = function()
+        local localPlayer = game.Players.LocalPlayer
+        local character = localPlayer.Character
+        
+        if character and character:FindFirstChild("Humanoid") then
+            local humanoid = character.Humanoid
+            
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://138019937280193"
+            
+            local animTrack = humanoid:LoadAnimation(anim)
+            animTrack.Looped = false
+            animTrack:Play()
+            
+            WindUI:Notify({
+                Title = "Hakari Dance",
+                Content = "Animacao ativada!",
+                Duration = 3,
+                Icon = "shield",
+            })
+            
+            _G.specialAnimTrack = animTrack
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Personagem nao encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
+            })
+        end
+    end
+})
+
+local Button = AnimationTab:Button({
     Title = "Fake Block",
     Desc = "Simula animacao de bloqueio",
     Locked = false,

@@ -87,6 +87,149 @@ local MainTab = Window:Tab({
     Locked = false,
 })
 
+-- Adicione esse botão na aba que quiser (MainTab, AnimationTab, etc)
+
+local Button = MainTab:Button({
+    Title = "Spam Effect v2",
+    Desc = "Ativa todos os efeitos do personagem equipado",
+    Locked = false,
+    Callback = function()
+        local Players = game:GetService("Players")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local player = Players.LocalPlayer
+        
+        -- Método 1: Força atualização do personagem
+        pcall(function()
+            local playerData = player:WaitForChild("PlayerData", 3)
+            local equipped = playerData:WaitForChild("Equipped", 3)
+            local killer = equipped:WaitForChild("Killer", 3)
+            local survivor = equipped:WaitForChild("Survivor", 3)
+            
+            -- Força atualização dos efeitos equipados
+            -- Isso geralmente triggera os efeitos visuais
+            for _, item in pairs(killer:GetChildren()) do
+                if item:IsA("StringValue") then
+                    local temp = item.Value
+                    item.Value = ""
+                    wait(0.1)
+                    item.Value = temp
+                end
+            end
+            
+            for _, item in pairs(survivor:GetChildren()) do
+                if item:IsA("StringValue") then
+                    local temp = item.Value
+                    item.Value = ""
+                    wait(0.1)
+                    item.Value = temp
+                end
+            end
+        end)
+        
+        -- Método 2: Tenta disparar RemoteEvents comuns que ativam efeitos
+        pcall(function()
+            local remotes = ReplicatedStorage:WaitForChild("Modules", 3):WaitForChild("Network", 3)
+            local remoteEvent = remotes:FindFirstChild("RemoteEvent")
+            
+            if remoteEvent then
+                -- Tenta alguns eventos comuns que podem ativar efeitos
+                local possibleEvents = {
+                    {"RefreshCharacter"},
+                    {"UpdateEquipped"},
+                    {"LoadCharacter"},
+                    {"SpawnCharacter"}
+                }
+                
+                for _, event in ipairs(possibleEvents) do
+                    pcall(function()
+                        remoteEvent:FireServer(unpack(event))
+                    end)
+                    wait(0.1)
+                end
+            end
+        end)
+        
+        -- Método 3: Força respawn suave (teleporta rapidamente)
+        pcall(function()
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local originalPos = character.HumanoidRootPart.CFrame
+                character.HumanoidRootPart.CFrame = originalPos + Vector3.new(0, 0.1, 0)
+                wait(0.05)
+                character.HumanoidRootPart.CFrame = originalPos
+            end
+        end)
+        
+        -- Método 4: Tenta recarregar aparência/acessórios
+        pcall(function()
+            local character = player.Character
+            if character then
+                -- Força atualização de todos os Attachments e Particles
+                for _, obj in pairs(character:GetDescendants()) do
+                    if obj:IsA("ParticleEmitter") then
+                        obj.Enabled = false
+                        wait(0.05)
+                        obj.Enabled = true
+                    elseif obj:IsA("Beam") or obj:IsA("Trail") then
+                        obj.Enabled = false
+                        wait(0.05)
+                        obj.Enabled = true
+                    end
+                end
+            end
+        end)
+        
+        WindUI:Notify({
+            Title = "Spam effect v2",
+            Content = "Tentando ativar efeitos do personagem...",
+            Duration = 3,
+            Icon = "sparkles",
+        })
+    end
+})
+
+-- VERSÃO ALTERNATIVA: Se o método acima não funcionar, tenta respawn completo
+local Button2 = MainTab:Button({
+    Title = "Spam Effect v1 (respawn)",
+    Desc = "Ativa efeitos fazendo respawn (mais efetivo)",
+    Locked = false,
+    Callback = function()
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        
+        -- Salva posição atual
+        local character = player.Character
+        local savedPos = nil
+        
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            savedPos = character.HumanoidRootPart.CFrame
+        end
+        
+        -- Força respawn
+        pcall(function()
+            character:BreakJoints()
+        end)
+        
+        -- Espera respawn e teleporta de volta
+        player.CharacterAdded:Connect(function(newChar)
+            if savedPos then
+                wait(0.5) -- Espera carregar
+                local hrp = newChar:WaitForChild("HumanoidRootPart", 5)
+                if hrp then
+                    hrp.CFrame = savedPos
+                end
+            end
+        end)
+        
+        WindUI:Notify({
+            Title = "Spam Effect v1",
+            Content = "Respawnando para ativar efeitos...",
+            Duration = 3,
+            Icon = "refresh-cw",
+        })
+    end
+})
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
@@ -1077,36 +1220,180 @@ local AnimationTab = Window:Tab({
 
 local Button = AnimationTab:Button({
     Title = "Hakari Dance",
-    Desc = "seila ",
+    Desc = "\"For 4 minutes and 11 seconds, Hakari is effectively immortal!\"",
     Locked = false,
     Callback = function()
-        local localPlayer = game.Players.LocalPlayer
-        local character = localPlayer.Character
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
         
-        if character and character:FindFirstChild("Humanoid") then
-            local humanoid = character.Humanoid
+        -- Espera o personagem carregar se necessário
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoid = character:WaitForChild("Humanoid")
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+        
+        -- Animação em loop
+        local animator = humanoid:FindFirstChildOfClass("Animator")
+        if not animator then
+            animator = Instance.new("Animator")
+            animator.Parent = humanoid
+        end
+        
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://138019937280193"
+        local animTrack = animator:LoadAnimation(anim)
+        animTrack.Looped = true
+        animTrack:Play()
+        
+        -- SFX em loop
+        local sound = Instance.new("Sound")
+        sound.Name = "HakariDanceSound"
+        sound.SoundId = "rbxassetid://109474987384441"
+        sound.Looped = true
+        sound.Volume = 0.5
+        sound.Parent = rootPart
+        sound:Play()
+        
+        -- VFX (Efeito Visual)
+        local vfx = nil
+        pcall(function()
+            local RS = game:GetService("ReplicatedStorage")
+            local path = RS:FindFirstChild("Assets")
+            if path then
+                path = path:FindFirstChild("Emotes")
+                if path then
+                    path = path:FindFirstChild("HakariDance")
+                    if path then
+                        local vfxTemplate = path:FindFirstChild("HakariBeamEffect")
+                        if vfxTemplate then
+                            vfx = vfxTemplate:Clone()
+                            vfx.Name = "PlayerEmoteVFX"
+                            vfx.CFrame = rootPart.CFrame * CFrame.new(0, -1, -0.3)
+                            
+                            -- Solda o VFX ao personagem
+                            if vfx:FindFirstChild("WeldConstraint") then
+                                vfx.WeldConstraint.Part0 = rootPart
+                                vfx.WeldConstraint.Part1 = vfx
+                            else
+                                local weld = Instance.new("WeldConstraint")
+                                weld.Part0 = rootPart
+                                weld.Part1 = vfx
+                                weld.Parent = vfx
+                            end
+                            
+                            vfx.Parent = character
+                        end
+                    end
+                end
+            end
+        end)
+        
+        -- Salva tudo globalmente
+        _G.HakariDanceActive = {
+            animTrack = animTrack,
+            sound = sound,
+            vfx = vfx,
+            character = character
+        }
+        
+        WindUI:Notify({
+            Title = "Hakari Dance Ativado",
+            Content = "Animação, música e VFX ativados! (Efeitos são apenas visuais)",
+            Duration = 4,
+            Icon = "shield",
+        })
+    end
+})
+
+-- Botão para parar tudo
+local StopButton = AnimationTab:Button({
+    Title = "Stop Animation",
+    Desc = "Para a animação, música e efeitos visuais",
+    Locked = false,
+    Callback = function()
+        local stopped = false
+        
+        -- Para a Hakari Dance
+        if _G.HakariDanceActive then
+            -- Para a animação
+            if _G.HakariDanceActive.animTrack then
+                pcall(function()
+                    _G.HakariDanceActive.animTrack:Stop()
+                    _G.HakariDanceActive.animTrack:Destroy()
+                end)
+                stopped = true
+            end
             
-            local anim = Instance.new("Animation")
-            anim.AnimationId = "rbxassetid://138019937280193"
+            -- Para e remove o som
+            if _G.HakariDanceActive.sound then
+                pcall(function()
+                    _G.HakariDanceActive.sound:Stop()
+                    _G.HakariDanceActive.sound:Destroy()
+                end)
+                stopped = true
+            end
             
-            local animTrack = humanoid:LoadAnimation(anim)
-            animTrack.Looped = false
-            animTrack:Play()
+            -- Remove o VFX
+            if _G.HakariDanceActive.vfx then
+                pcall(function()
+                    _G.HakariDanceActive.vfx:Destroy()
+                end)
+                stopped = true
+            end
             
+            _G.HakariDanceActive = nil
+        end
+        
+        -- Limpeza adicional no personagem
+        pcall(function()
+            local player = game:GetService("Players").LocalPlayer
+            local character = player.Character
+            
+            if character then
+                -- Remove sons restantes
+                for _, obj in pairs(character:GetDescendants()) do
+                    if obj:IsA("Sound") and obj.Name == "HakariDanceSound" then
+                        obj:Stop()
+                        obj:Destroy()
+                        stopped = true
+                    end
+                end
+                
+                -- Remove VFX restantes
+                local vfxObj = character:FindFirstChild("PlayerEmoteVFX")
+                if vfxObj then
+                    vfxObj:Destroy()
+                    stopped = true
+                end
+                
+                -- Para todas as animações
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoid then
+                    local animator = humanoid:FindFirstChildOfClass("Animator")
+                    if animator then
+                        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                            if track.Animation and track.Animation.AnimationId == "rbxassetid://138019937280193" then
+                                track:Stop()
+                                stopped = true
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        
+        if stopped then
             WindUI:Notify({
-                Title = "Hakari Dance",
-                Content = "Animacao ativada!",
+                Title = "Stop Animation",
+                Content = "Todas as animações e efeitos foram parados!",
                 Duration = 3,
-                Icon = "shield",
+                Icon = "square",
             })
-            
-            _G.specialAnimTrack = animTrack
         else
             WindUI:Notify({
-                Title = "Erro",
-                Content = "Personagem nao encontrado!",
+                Title = "Stop Animation",
+                Content = "Nenhuma animação ativa encontrada.",
                 Duration = 3,
-                Icon = "alert-triangle",
+                Icon = "info",
             })
         end
     end

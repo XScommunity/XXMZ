@@ -981,7 +981,6 @@ task.spawn(function()
     end
 end)
 
--- Anti Death
 local Toggle = MainTab:Toggle({
     Title = "Anti Death",
     Desc = "Te teleporta quando killers estão próximos",
@@ -992,22 +991,57 @@ local Toggle = MainTab:Toggle({
         _G.antiDeath = val
         if val then
             task.spawn(function()
-                while _G.antiDeath do
+                while _G.antiDeath and task.wait(0.1) do
                     local player = game.Players.LocalPlayer
-                    local character = player.Character
-                    if character and character:FindFirstChild("HumanoidRootPart") then
-                        for _, killer in pairs(workspace:FindFirstChild("Killers") and workspace.Killers:GetChildren() or {}) do
-                            if killer:FindFirstChild("HumanoidRootPart") then
-                                local distance = (killer.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
-                                if distance <= 18 then
-                                    character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-3560,12,255))
+                    local character = player.Character or player.CharacterAdded:Wait()
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    
+                    if hrp and humanoid and humanoid.Health > 0 then
+                        -- CORRIGIDO: Caminho correto pros killers
+                        local playersFolder = workspace:FindFirstChild("Players")
+                        local killersFolder = playersFolder and playersFolder:FindFirstChild("Killers")
+                        
+                        if killersFolder then
+                            for _, killer in pairs(killersFolder:GetChildren()) do
+                                if killer and killer:FindFirstChild("HumanoidRootPart") then
+                                    local distance = (killer.HumanoidRootPart.Position - hrp.Position).Magnitude
+                                    
+                                    if distance <= 18 then
+                                        -- Teleporta para posição segura
+                                        hrp.CFrame = CFrame.new(-3560, 12, 255)
+                                        print("[Anti Death] Teleportado! Killer detectado a " .. math.floor(distance) .. " studs")
+                                        
+                                        WindUI:Notify({
+                                            Title = "Anti Death",
+                                            Content = "Killer detectado! Teleportado para segurança.",
+                                            Duration = 2,
+                                            Icon = "shield",
+                                        })
+                                        
+                                        task.wait(2) -- Cooldown após teleporte
+                                        break
+                                    end
                                 end
                             end
                         end
                     end
-                    task.wait(3)
                 end
             end)
+            
+            WindUI:Notify({
+                Title = "Anti Death",
+                Content = "Anti Death ativado!",
+                Duration = 3,
+                Icon = "check",
+            })
+        else
+            WindUI:Notify({
+                Title = "Anti Death",
+                Content = "Anti Death desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
         end
     end
 })
@@ -1394,6 +1428,43 @@ local StopButton = AnimationTab:Button({
                 Content = "Nenhuma animação ativa encontrada.",
                 Duration = 3,
                 Icon = "info",
+            })
+        end
+    end
+})
+
+local Button = AnimationTab:Button({
+    Title = "Fake Stun (Shedletsky)",
+    Desc = "Simula animacao",
+    Locked = false,
+    Callback = function()
+        local localPlayer = game.Players.LocalPlayer
+        local character = localPlayer.Character
+        
+        if character and character:FindFirstChild("Humanoid") then
+            local humanoid = character.Humanoid
+            
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://116618003477002"
+            
+            local animTrack = humanoid:LoadAnimation(anim)
+            animTrack.Looped = false
+            animTrack:Play()
+            
+            WindUI:Notify({
+                Title = "Fake Sword",
+                Content = "Animacao de espada shed ativada!",
+                Duration = 3,
+                Icon = "shield",
+            })
+            
+            _G.specialAnimTrack = animTrack
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Personagem nao encontrado!",
+                Duration = 3,
+                Icon = "alert-triangle",
             })
         end
     end
@@ -2416,6 +2487,340 @@ local Button = FakeReportTab:Button({
 })
 
 -- =============================
+-- ANTI'S TAB
+-- =============================
+local AntiTab = Window:Tab({
+    Title = "Anti's",
+    Icon = "shield",
+    Locked = false,
+})
+
+local statusEffectsBackup = {}
+
+-- Função para deletar/restaurar módulos com proteção total
+local function toggleStatusEffect(effectName, state, displayName)
+    pcall(function()
+        local RS = game:GetService("ReplicatedStorage")
+        local statusEffects = RS:FindFirstChild("Modules")
+        if not statusEffects then return end
+        
+        statusEffects = statusEffects:FindFirstChild("StatusEffects")
+        if not statusEffects then return end
+        
+        local effect = statusEffects:FindFirstChild(effectName)
+        
+        if state then
+            -- Ativar: Deletar efeito
+            if effect then
+                if not statusEffectsBackup[effectName] then
+                    statusEffectsBackup[effectName] = {
+                        parent = statusEffects,
+                        module = effect:Clone()
+                    }
+                end
+                effect:Destroy()
+            end
+        else
+            -- Desativar: Restaurar efeito
+            if statusEffectsBackup[effectName] then
+                local backup = statusEffectsBackup[effectName]
+                if backup.parent and backup.module then
+                    local restored = backup.module:Clone()
+                    restored.Parent = backup.parent
+                end
+                statusEffectsBackup[effectName] = nil
+            end
+        end
+    end)
+end
+
+-- Anti Killer Special Stuns
+AntiTab:Toggle({
+    Title = "Anti Killer Special Stuns",
+    Desc = "Remove efeitos especiais de stun do Killer",
+    Icon = "shield",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("KillerExclusive", state, "Killer Stuns")
+        WindUI:Notify({
+            Title = "Anti Killer Stuns",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Survivor Special Stuns
+AntiTab:Toggle({
+    Title = "Anti Survivor Special Stuns",
+    Desc = "Remove efeitos especiais de stun do Survivor",
+    Icon = "shield",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("SurvivorExclusive", state, "Survivor Stuns")
+        WindUI:Notify({
+            Title = "Anti Survivor Stuns",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Bleeding
+AntiTab:Toggle({
+    Title = "Anti Bleeding",
+    Desc = "Remove efeito de sangramento",
+    Icon = "droplet",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Bleeding", state, "Bleeding")
+        WindUI:Notify({
+            Title = "Anti Bleeding",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Blindness
+AntiTab:Toggle({
+    Title = "Anti Blindness",
+    Desc = "Remove efeito de cegueira",
+    Icon = "eye-off",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Blindness", state, "Blindness")
+        WindUI:Notify({
+            Title = "Anti Blindness",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Burning
+AntiTab:Toggle({
+    Title = "Anti Burning",
+    Desc = "Remove efeito de queimadura",
+    Icon = "flame",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Burning", state, "Burning")
+        WindUI:Notify({
+            Title = "Anti Burning",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Helpless
+AntiTab:Toggle({
+    Title = "Anti Helpless",
+    Desc = "Remove efeito de desamparo",
+    Icon = "user-x",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Helpless", state, "Helpless")
+        WindUI:Notify({
+            Title = "Anti Helpless",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Hemmorhage
+AntiTab:Toggle({
+    Title = "Anti Hemmorhage",
+    Desc = "Remove efeito de hemorragia",
+    Icon = "activity",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Hemmorhage", state, "Hemmorhage")
+        WindUI:Notify({
+            Title = "Anti Hemmorhage",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Nausea
+AntiTab:Toggle({
+    Title = "Anti Nausea",
+    Desc = "Remove efeito de náusea",
+    Icon = "wind",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Nausea", state, "Nausea")
+        WindUI:Notify({
+            Title = "Anti Nausea",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Oblivious
+AntiTab:Toggle({
+    Title = "Anti Oblivious",
+    Desc = "Remove efeito de esquecimento",
+    Icon = "cloud-off",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Oblivious", state, "Oblivious")
+        WindUI:Notify({
+            Title = "Anti Oblivious",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Poisoned
+AntiTab:Toggle({
+    Title = "Anti Poisoned",
+    Desc = "Remove efeito de envenenamento",
+    Icon = "skull",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Poisoned", state, "Poisoned")
+        WindUI:Notify({
+            Title = "Anti Poisoned",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Slowness
+AntiTab:Toggle({
+    Title = "Anti Slowness",
+    Desc = "Remove efeito de lentidão",
+    Icon = "gauge",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Slowness", state, "Slowness")
+        WindUI:Notify({
+            Title = "Anti Slowness",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Stunned
+AntiTab:Toggle({
+    Title = "Anti Stunned",
+    Desc = "Remove efeito de atordoamento",
+    Icon = "zap-off",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Stunned", state, "Stunned")
+        WindUI:Notify({
+            Title = "Anti Stunned",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Weakness
+AntiTab:Toggle({
+    Title = "Anti Weakness",
+    Desc = "Remove efeito de fraqueza",
+    Icon = "trending-down",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        toggleStatusEffect("Weakness", state, "Weakness")
+        WindUI:Notify({
+            Title = "Anti Weakness",
+            Content = state and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Icon = state and "check" or "x",
+        })
+    end
+})
+
+-- Anti Slow (modifica velocidade)
+local antiSlowToggle = false
+local antiSlowConnection = nil
+
+AntiTab:Toggle({
+    Title = "Anti Slow",
+    Desc = "Mantém velocidade normal mesmo com efeitos de lentidão",
+    Icon = "zap",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        antiSlowToggle = state
+        
+        if state then
+            local RunService = game:GetService("RunService")
+            antiSlowConnection = RunService.Heartbeat:Connect(function()
+                if antiSlowToggle then
+                    pcall(function()
+                        local player = game.Players.LocalPlayer
+                        local character = player.Character
+                        if character and character:FindFirstChild("Humanoid") then
+                            local humanoid = character.Humanoid
+                            if humanoid.WalkSpeed < 16 then
+                                humanoid.WalkSpeed = 16
+                            end
+                        end
+                    end)
+                end
+            end)
+            
+            WindUI:Notify({
+                Title = "Anti Slow",
+                Content = "Ativado!",
+                Duration = 2,
+                Icon = "check",
+            })
+        else
+            if antiSlowConnection then
+                antiSlowConnection:Disconnect()
+                antiSlowConnection = nil
+            end
+            
+            WindUI:Notify({
+                Title = "Anti Slow",
+                Content = "Desativado!",
+                Duration = 2,
+                Icon = "x",
+            })
+        end
+    end
+})
+
+-- =============================
 -- CONFIGURAÇÕES TAB
 -- =============================
 local ConfigTab = Window:Tab({
@@ -2423,6 +2828,7 @@ local ConfigTab = Window:Tab({
     Icon = "settings",
     Locked = false,
 })
+
 
 local Keybind = ConfigTab:Keybind({
     Title = "Keybind",

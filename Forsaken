@@ -3,8 +3,6 @@
 -- Não permitido: Copiar o script totalmente , Recriar com KeySystem
 -- Aproveite :)
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/skibidi/refs/heads/main/sahur"))()
-
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 WindUI:Popup({

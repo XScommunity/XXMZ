@@ -1,0 +1,131 @@
+-- what u are doing here?????????????????????????????????????????!
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "XXMZ | Possessor",
+    LoadingTitle = "XXMZ",
+    LoadingSubtitle = "by 29",
+    ConfigurationSaving = { Enabled = false }
+})
+
+-- Ícones corretos da Rayfield (Lucide)
+local PossessorTab = Window:CreateTab("Possessor ESP", "sword")
+local PlayerTab    = Window:CreateTab("Player", "user")
+local CelestialTab = Window:CreateTab("Celestial Helper", "moon")
+
+local highlights = {}
+local espEnabled = false
+local allowJump = false  -- DESATIVADO POR PADRÃO (seguro)
+
+-- POSSESSOR ESP
+local function addHighlight(model, text)
+    if highlights[model] then return end
+    local hl = Instance.new("Highlight")
+    hl.FillColor = Color3.fromRGB(255,0,0)
+    hl.OutlineColor = Color3.fromRGB(255,0,0)
+    hl.FillTransparency = 0.5
+    hl.OutlineTransparency = 0
+    hl.Adornee = model
+    hl.Parent = model
+
+    local bill = Instance.new("BillboardGui")
+    bill.Adornee = model:FindFirstChild("HumanoidRootPart")
+    bill.Parent = model:FindFirstChild("HumanoidRootPart")
+    bill.Size = UDim2.new(0,200,0,50)
+    bill.StudsOffset = Vector3.new(0,3.5,0)
+    bill.AlwaysOnTop = true
+
+    local label = Instance.new("TextLabel", bill)
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1,0,1,0)
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255,0,0)
+    label.TextStrokeTransparency = 0
+    label.TextStrokeColor3 = Color3.new(0,0,0)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 18
+
+    highlights[model] = {hl = hl, bill = bill}
+end
+
+local function removeHighlight(model)
+    if highlights[model] then
+        highlights[model].hl:Destroy()
+        highlights[model].bill:Destroy()
+        highlights[model] = nil
+    end
+end
+
+PossessorTab:CreateToggle({
+    Name = "Possessor ESP",
+    CurrentValue = false,
+    Callback = function(v)
+        espEnabled = v
+        if not v then
+            for m,_ in pairs(highlights) do removeHighlight(m) end
+        end
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if not espEnabled then continue end
+        for m,_ in pairs(highlights) do removeHighlight(m) end
+
+        for _, plr in pairs(game.Players:GetPlayers()) do
+            local real = plr.Character
+            if real then
+                for _, obj in pairs(workspace:GetChildren()) do
+                    if obj:IsA("Model") and obj.Name == plr.Name and obj ~= real and obj:FindFirstChild("HumanoidRootPart") then
+                        addHighlight(obj, "POSSESSOR\n"..plr.Name)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- PLAYER TAB - ATUALIZA SEMPRE
+local targetSpeed = 16
+
+PlayerTab:CreateToggle({
+    Name = "Allow Jump",
+    CurrentValue = false,  -- DESATIVADO POR PADRÃO
+    Callback = function(v)
+        allowJump = v
+    end
+})
+
+PlayerTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 80},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(v)
+        targetSpeed = v
+    end
+})
+
+-- LOOP QUE MANTÉM SEMPRE ATUALIZADO (nunca perde o valor)
+game:GetService("RunService").Heartbeat:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    hum.WalkSpeed = targetSpeed
+    hum.JumpPower = allowJump and 50 or 0
+end)
+
+-- CELESTIAL
+CelestialTab:CreateButton({
+    Name = "120 Minutes Bypass",
+    Callback = function()
+        Rayfield:Notify({Title="Celestial", Content="Enviando 120 minutos...", Duration=3})
+        local remote = game:GetService("ReplicatedStorage"):WaitForChild("_InLib"):WaitForChild("Networking"):WaitForChild("Communication")
+        for i = 1, 120 do
+            remote:FireServer("UpdateMinute")
+        end
+        Rayfield:Notify({Title="Celestial", Content="120 minutos enviados!", Duration=4})
+    end
+})

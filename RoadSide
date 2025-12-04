@@ -1,0 +1,398 @@
+local WindUI = loadstring(game:HttpGet("https://pastefy.app/tkQITzII/raw"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "XXMZ Hub | Road-Side",
+    Icon = "smartphone",
+    Author = "by 29",
+    Folder = "XXMZROADSIDE",
+    Size = UDim2.fromOffset(580, 460),
+    MinSize = Vector2.new(560, 350),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = true,
+})
+
+local Tab = Window:Tab({
+    Title = "Principal",
+    Icon = "home"
+})
+
+local BringTab = Window:Tab({
+    Title = "Bring Items",
+    Icon = "package"
+})
+
+local phoneCode = "4023"
+
+local PhoneInput = Tab:Input({
+    Title = "Código",
+    Desc = "Digite o código do telefone (4 dígitos)",
+    Value = phoneCode,
+    InputIcon = "phone",
+    Type = "Input",
+    Placeholder = "4023",
+    Callback = function(input) 
+        if #input <= 4 then
+            phoneCode = input
+            print("Código alterado para: " .. phoneCode)
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "O código deve ter no máximo 4 caracteres!",
+                Duration = 3,
+                Icon = "alert-circle",
+            })
+        end
+    end
+})
+
+local PhoneButton = Tab:Button({
+    Title = "Inserir código telefone",
+    Desc = "Envia o código para o servidor",
+    Locked = false,
+    Callback = function()
+        local codeTable = {}
+        for i = 1, #phoneCode do
+            table.insert(codeTable, tonumber(phoneCode:sub(i, i)))
+        end
+        
+        local args = {codeTable}
+        
+        local success, err = pcall(function()
+            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PhoneEntered"):FireServer(unpack(args))
+        end)
+        
+        if success then
+            WindUI:Notify({
+                Title = "Sucesso",
+                Content = "Código " .. phoneCode .. " enviado!",
+                Duration = 3,
+                Icon = "check-circle",
+            })
+        else
+            WindUI:Notify({
+                Title = "Erro",
+                Content = "Falha ao enviar código!",
+                Duration = 3,
+                Icon = "x-circle",
+            })
+        end
+    end
+})
+
+local autoWiresEnabled = false
+
+local WiresToggle = Tab:Toggle({
+    Title = "Auto Solve WiresTask",
+    Desc = "Resolve a tarefa dos fios automaticamente",
+    Value = false,
+    Callback = function(enabled)
+        autoWiresEnabled = enabled
+        
+        if enabled then
+            WindUI:Notify({
+                Title = "Auto WiresTask Ativado",
+                Content = "Resolvendo tarefas automaticamente",
+                Duration = 2,
+                Icon = "zap",
+            })
+            
+            spawn(function()
+                while autoWiresEnabled do
+                    pcall(function()
+                        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("WiresTask"):FireServer()
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        else
+            WindUI:Notify({
+                Title = "Auto WiresTask Desativado",
+                Content = "Parou de resolver tarefas",
+                Duration = 2,
+                Icon = "zap-off",
+            })
+        end
+    end
+})
+
+local VisionToggle = Tab:Toggle({
+    Title = "Enable 3p vision",
+    Desc = "Ativa visão em terceira pessoa",
+    Value = false,
+    Callback = function(enabled)
+        local player = game.Players.LocalPlayer
+        
+        if enabled then
+            player.CameraMode = Enum.CameraMode.Classic
+            player.CameraMaxZoomDistance = 50
+            
+            WindUI:Notify({
+                Title = "3P Vision Ativada",
+                Content = "Câmera em terceira pessoa ativada",
+                Duration = 2,
+                Icon = "eye",
+            })
+        else
+            player.CameraMode = Enum.CameraMode.Classic
+            player.CameraMaxZoomDistance = 128
+            
+            WindUI:Notify({
+                Title = "3P Vision Desativada",
+                Content = "Câmera restaurada",
+                Duration = 2,
+                Icon = "eye-off",
+            })
+        end
+    end
+})
+
+local jumpEnabled = false
+local speedEnabled = false
+local speedValue = 16
+
+local JumpToggle = Tab:Toggle({
+    Title = "Enable Jump",
+    Desc = "Ativa o pulo aumentado",
+    Value = false,
+    Callback = function(enabled)
+        jumpEnabled = enabled
+        
+        if enabled then
+            WindUI:Notify({
+                Title = "Jump Ativado",
+                Content = "JumpPower definido para 50",
+                Duration = 2,
+                Icon = "arrow-up",
+            })
+        else
+            WindUI:Notify({
+                Title = "Jump Desativado",
+                Content = "JumpPower restaurado",
+                Duration = 2,
+                Icon = "arrow-down",
+            })
+        end
+    end
+})
+
+local SpeedToggle = Tab:Toggle({
+    Title = "Enable Speed",
+    Desc = "Ativa a velocidade customizada",
+    Value = false,
+    Callback = function(enabled)
+        speedEnabled = enabled
+        
+        if enabled then
+            WindUI:Notify({
+                Title = "Speed Ativado",
+                Content = "Velocidade: " .. speedValue,
+                Duration = 2,
+                Icon = "zap",
+            })
+        else
+            WindUI:Notify({
+                Title = "Speed Desativado",
+                Content = "Velocidade restaurada",
+                Duration = 2,
+                Icon = "zap-off",
+            })
+        end
+    end
+})
+
+local SpeedSlider = Tab:Slider({
+    Title = "Velocidade",
+    Desc = "Ajuste a velocidade de movimento",
+    Step = 1,
+    Value = {
+        Min = 16,
+        Max = 200,
+        Default = 16,
+    },
+    Callback = function(value)
+        speedValue = value
+        if speedEnabled then
+            local player = game.Players.LocalPlayer
+            if player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid.WalkSpeed = speedValue
+            end
+        end
+    end
+})
+
+-- Loop para aplicar as mudanças
+game:GetService("RunService").Heartbeat:Connect(function()
+    local player = game.Players.LocalPlayer
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        local humanoid = player.Character.Humanoid
+        
+        -- Aplicar Jump
+        if jumpEnabled then
+            humanoid.JumpPower = 5
+        else
+            humanoid.JumpPower = 50 -- valor padrão do roblox
+        end
+        
+        -- Aplicar Speed
+        if speedEnabled then
+            humanoid.WalkSpeed = speedValue
+        else
+            humanoid.WalkSpeed = 16 -- valor padrão do roblox
+        end
+    end
+end)
+
+WindUI:Notify({
+    Title = "Script Carregado",
+    Content = "Phone & Movement Hub pronto!",
+    Duration = 3,
+    Icon = "check",
+})
+
+-- Bring Items Tab
+local selectedItems = {}
+
+local ItemDropdown = BringTab:Dropdown({
+    Title = "Selecionar Items",
+    Desc = "Escolha os itens para spawnar",
+    Values = { "Tomato", "Lettuce", "Fries", "Pickles" },
+    Value = {},
+    Multi = true,
+    AllowNone = true,
+    Callback = function(option)
+        selectedItems = option
+        print("Items selecionados: " .. game:GetService("HttpService"):JSONEncode(option))
+    end
+})
+
+local spamSpawnEnabled = false
+
+local SpawnButton = BringTab:Button({
+    Title = "Spawn",
+    Desc = "Spawna os itens selecionados",
+    Locked = false,
+    Callback = function()
+        -- Remove colisão do hitbox
+        pcall(function()
+            local hitbox = workspace.Map.Hitboxes.Global:GetChildren()[67]
+            if hitbox then
+                hitbox.CanCollide = false
+            end
+        end)
+        
+        for _, item in ipairs(selectedItems) do
+            local success, err = pcall(function()
+                local args = {
+                    buffer.fromstring("\f\001"),
+                    {
+                        workspace:WaitForChild("Interactables"):WaitForChild(item .. "StockGiver")
+                    }
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(unpack(args))
+            end)
+            
+            if not success then
+                WindUI:Notify({
+                    Title = "Erro",
+                    Content = "Falha ao spawnar " .. item,
+                    Duration = 2,
+                    Icon = "x-circle",
+                })
+            end
+        end
+        
+        if #selectedItems > 0 then
+            WindUI:Notify({
+                Title = "Sucesso",
+                Content = "Items spawnados!",
+                Duration = 2,
+                Icon = "check-circle",
+            })
+        end
+    end
+})
+
+local SpamSpawnButton = BringTab:Button({
+    Title = "Spam Spawn XD",
+    Desc = "Spawna os itens continuamente",
+    Locked = false,
+    Callback = function()
+        spamSpawnEnabled = not spamSpawnEnabled
+        
+        if spamSpawnEnabled then
+            -- Remove colisão do hitbox
+            pcall(function()
+                local hitbox = workspace.Map.Hitboxes.Global:GetChildren()[67]
+                if hitbox then
+                    hitbox.CanCollide = false
+                end
+            end)
+            
+            WindUI:Notify({
+                Title = "Spam Ativado",
+                Content = "Spawnando items...",
+                Duration = 2,
+                Icon = "zap",
+            })
+            
+            spawn(function()
+                while spamSpawnEnabled do
+                    for _, item in ipairs(selectedItems) do
+                        pcall(function()
+                            local args = {
+                                buffer.fromstring("\f\001"),
+                                {
+                                    workspace:WaitForChild("Interactables"):WaitForChild(item .. "StockGiver")
+                                }
+                            }
+                            game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(unpack(args))
+                        end)
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        else
+            WindUI:Notify({
+                Title = "Spam Desativado",
+                Content = "Parou de spawnar",
+                Duration = 2,
+                Icon = "zap-off",
+            })
+        end
+    end
+})
+
+local VisionToggle = BringTab:Toggle({
+    Title = "Enable 3p vision",
+    Desc = "Ativa visão em terceira pessoa",
+    Value = false,
+    Callback = function(enabled)
+        local player = game.Players.LocalPlayer
+        
+        if enabled then
+            player.CameraMode = Enum.CameraMode.Classic
+            player.CameraMaxZoomDistance = 50
+            
+            WindUI:Notify({
+                Title = "3P Vision Ativada",
+                Content = "Câmera em terceira pessoa ativada",
+                Duration = 2,
+                Icon = "eye",
+            })
+        else
+            player.CameraMode = Enum.CameraMode.Classic
+            player.CameraMaxZoomDistance = 128
+            
+            WindUI:Notify({
+                Title = "3P Vision Desativada",
+                Content = "Câmera restaurada",
+                Duration = 2,
+                Icon = "eye-off",
+            })
+        end
+    end
+})

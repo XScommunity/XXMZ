@@ -4,7 +4,7 @@
 -- Aproveite :)
 
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-
+loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
 WindUI:Popup({
     Title = "XXMZ HUB v2.0",
     Content = "Hub convertido para WindUI. Caso encontre erros, entre em nosso discord e avise.",

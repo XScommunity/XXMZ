@@ -85,146 +85,57 @@ local MainTab = Window:Tab({
     Locked = false,
 })
 
--- Adicione esse botão na aba que quiser (MainTab, AnimationTab, etc)
+local autoFarmEnabled = false
+local autoFarmConnection = nil
 
-local Button = MainTab:Button({
-    Title = "Spam Effect v2",
-    Desc = "Ativa todos os efeitos do personagem equipado",
-    Locked = false,
-    Callback = function()
-        local Players = game:GetService("Players")
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local player = Players.LocalPlayer
+local function autoFarmLoop()
+    while autoFarmEnabled do
+        wait(0.1)
         
-        -- Método 1: Força atualização do personagem
-        pcall(function()
-            local playerData = player:WaitForChild("PlayerData", 3)
-            local equipped = playerData:WaitForChild("Equipped", 3)
-            local killer = equipped:WaitForChild("Killer", 3)
-            local survivor = equipped:WaitForChild("Survivor", 3)
-            
-            -- Força atualização dos efeitos equipados
-            -- Isso geralmente triggera os efeitos visuais
-            for _, item in pairs(killer:GetChildren()) do
-                if item:IsA("StringValue") then
-                    local temp = item.Value
-                    item.Value = ""
-                    wait(0.1)
-                    item.Value = temp
-                end
+        local currencyLocation = workspace.Map.Ingame:FindFirstChild("CurrencyLocations")
+        if not currencyLocation then continue end
+        
+        local allModels = {}
+        for _, v in pairs(currencyLocation:GetChildren()) do
+            if v:IsA("Model") and v.PrimaryPart then
+                table.insert(allModels, v)
             end
-            
-            for _, item in pairs(survivor:GetChildren()) do
-                if item:IsA("StringValue") then
-                    local temp = item.Value
-                    item.Value = ""
-                    wait(0.1)
-                    item.Value = temp
-                end
-            end
-        end)
-        
-        -- Método 2: Tenta disparar RemoteEvents comuns que ativam efeitos
-        pcall(function()
-            local remotes = ReplicatedStorage:WaitForChild("Modules", 3):WaitForChild("Network", 3)
-            local remoteEvent = remotes:FindFirstChild("RemoteEvent")
-            
-            if remoteEvent then
-                -- Tenta alguns eventos comuns que podem ativar efeitos
-                local possibleEvents = {
-                    {"RefreshCharacter"},
-                    {"UpdateEquipped"},
-                    {"LoadCharacter"},
-                    {"SpawnCharacter"}
-                }
-                
-                for _, event in ipairs(possibleEvents) do
-                    pcall(function()
-                        remoteEvent:FireServer(unpack(event))
-                    end)
-                    wait(0.1)
-                end
-            end
-        end)
-        
-        -- Método 3: Força respawn suave (teleporta rapidamente)
-        pcall(function()
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local originalPos = character.HumanoidRootPart.CFrame
-                character.HumanoidRootPart.CFrame = originalPos + Vector3.new(0, 0.1, 0)
-                wait(0.05)
-                character.HumanoidRootPart.CFrame = originalPos
-            end
-        end)
-        
-        -- Método 4: Tenta recarregar aparência/acessórios
-        pcall(function()
-            local character = player.Character
-            if character then
-                -- Força atualização de todos os Attachments e Particles
-                for _, obj in pairs(character:GetDescendants()) do
-                    if obj:IsA("ParticleEmitter") then
-                        obj.Enabled = false
-                        wait(0.05)
-                        obj.Enabled = true
-                    elseif obj:IsA("Beam") or obj:IsA("Trail") then
-                        obj.Enabled = false
-                        wait(0.05)
-                        obj.Enabled = true
-                    end
-                end
-            end
-        end)
-        
-        WindUI:Notify({
-            Title = "Spam effect v2",
-            Content = "Tentando ativar efeitos do personagem...",
-            Duration = 3,
-            Icon = "sparkles",
-        })
-    end
-})
-
--- VERSÃO ALTERNATIVA: Se o método acima não funcionar, tenta respawn completo
-local Button2 = MainTab:Button({
-    Title = "Spam Effect v1 (respawn)",
-    Desc = "Ativa efeitos fazendo respawn (mais efetivo)",
-    Locked = false,
-    Callback = function()
-        local Players = game:GetService("Players")
-        local player = Players.LocalPlayer
-        
-        -- Salva posição atual
-        local character = player.Character
-        local savedPos = nil
-        
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            savedPos = character.HumanoidRootPart.CFrame
         end
         
-        -- Força respawn
-        pcall(function()
-            character:BreakJoints()
-        end)
+        print("Modelos encontrados: " .. #allModels) -- Debug
         
-        -- Espera respawn e teleporta de volta
-        player.CharacterAdded:Connect(function(newChar)
-            if savedPos then
-                wait(0.5) -- Espera carregar
-                local hrp = newChar:WaitForChild("HumanoidRootPart", 5)
-                if hrp then
-                    hrp.CFrame = savedPos
+        for i = 1, #allModels do
+            if not autoFarmEnabled then break end
+            
+            local model = allModels[i]
+            if model and model.Parent and model.PrimaryPart then
+                local player = game.Players.LocalPlayer
+                local character = player.Character
+                
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    print("Teleportando para modelo " .. i) -- Debug
+                    character.HumanoidRootPart.CFrame = model.PrimaryPart.CFrame
+                    wait(2.5)
                 end
             end
-        end)
+        end
+    end
+end
+
+local AutoFarmToggle = MainTab:Toggle({
+    Title = "AutoFarm Sugar",
+    Desc = "Teleporta automaticamente para coletar moedas",
+    Icon = "coins",
+    Type = "Checkbox",
+    Value = false,
+    Callback = function(state)
+        autoFarmEnabled = state
         
-        WindUI:Notify({
-            Title = "Spam Effect v1",
-            Content = "Respawnando para ativar efeitos...",
-            Duration = 3,
-            Icon = "refresh-cw",
-        })
+        if autoFarmEnabled then
+            spawn(autoFarmLoop)
+        else
+            currentTarget = nil
+        end
     end
 })
 
@@ -1628,6 +1539,93 @@ local ESPTab = Window:Tab({
     Title = "ESP",
     Icon = "eye",
     Locked = false,
+})
+
+local espEnabled = false
+local espConnections = {}
+local espHighlights = {}
+
+local function createESP(model)
+    if not model:IsA("Model") or espHighlights[model] then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(138, 43, 226) -- Roxo
+    highlight.OutlineColor = Color3.fromRGB(75, 0, 130) -- Roxo escuro
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = model
+    
+    espHighlights[model] = highlight
+    
+    model.AncestryChanged:Connect(function()
+        if not model:IsDescendantOf(workspace) then
+            if espHighlights[model] then
+                espHighlights[model]:Destroy()
+                espHighlights[model] = nil
+            end
+        end
+    end)
+end
+
+local function removeESP(model)
+    if espHighlights[model] then
+        espHighlights[model]:Destroy()
+        espHighlights[model] = nil
+    end
+end
+
+local function updateESP()
+    local currencyLocation = workspace.Map.Ingame:FindFirstChild("CurrencyLocations")
+    
+    if currencyLocation then
+        for _, model in pairs(currencyLocation:GetChildren()) do
+            if model:IsA("Model") then
+                createESP(model)
+            end
+        end
+    end
+end
+
+local function clearAllESP()
+    for model, highlight in pairs(espHighlights) do
+        highlight:Destroy()
+    end
+    espHighlights = {}
+end
+
+local ESPToggle = ESPTab:Toggle({
+    Title = "ESP Sugar",
+    Desc = "Mostra ESP roxo nos itens de moeda",
+    Icon = "eye",
+    Type = "Checkbox",
+    Value = false,
+    Callback = function(state)
+        espEnabled = state
+        
+        if espEnabled then
+            -- Atualizar ESP continuamente
+            espConnections.updateLoop = game:GetService("RunService").Heartbeat:Connect(function()
+                updateESP()
+            end)
+            
+            -- Detectar quando CurrencyLocations é adicionado
+            espConnections.childAdded = workspace.Map.Ingame.ChildAdded:Connect(function(child)
+                if child.Name == "CurrencyLocations" then
+                    wait(0.1)
+                    updateESP()
+                end
+            end)
+            
+            updateESP()
+        else
+            -- Limpar tudo
+            for _, conn in pairs(espConnections) do
+                conn:Disconnect()
+            end
+            espConnections = {}
+            clearAllESP()
+        end
+    end
 })
 
 local Players = game:GetService("Players")

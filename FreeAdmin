@@ -70,6 +70,8 @@ local MainTab = Window:Tab({
 
 -- Estado do toggle
 local spamPollToggle = false
+local spamAlertToggle = false
+local spamCloneToggle = false
 
 -- Função pra executar a enquete
 local function executePoll()
@@ -92,12 +94,12 @@ local function executePoll()
     local args = {
         {
             ShowResultsTo = "Everyone",
-            VoteTime = "20",
-            Question = "GAME HACKED BY XXMZ",
+            VoteTime = "1",
+            Question = "TEAM XXMZ JOIN TODAY",
             Answers = {
-                "HAHAHAHAHA",
-                "HAHAHAHAHAHA",
-                "HAHAHAHAHAHA"
+                "join gg | YXJ2xaEwP2",
+                "join gg | YXJ2xaEwP2",
+                "join gg | YXJ2xaEwP2"
             },
             PlayerArg = "all",
             Server = "Current"
@@ -117,7 +119,7 @@ local function executePoll()
         return false
     end
 
-    task.wait(0.01) -- Intervalo rápido de 0.01s
+    task.wait(0.01)
 
     local success, result = pcall(function()
         executePoll:InvokeServer()
@@ -157,15 +159,15 @@ local function startSpamPoll()
                 MainTab:Find("SpamPollToggle"):Set(false)
                 break
             end
-            task.wait(0.01) -- Intervalo rápido de 0.01s
+            task.wait(0.01)
         end
     end)
 end
 
--- Toggle na WindUI
+-- Toggle Spam Poll na WindUI
 local Toggle = MainTab:Toggle({
     Title = "Spam Poll",
-    Desc = "Spamma enquete com GAME HACKED BY XXMZ",
+    Desc = "Não tem rate limit",
     Icon = "vote",
     Type = "Checkbox",
     Default = false,
@@ -205,6 +207,347 @@ local Toggle = MainTab:Toggle({
     end
 })
 
+-- Função pra executar Oppenheimer Destroyer
+local function executeOppenheimer()
+    local playerList = Players:GetPlayers()
+    if #playerList == 0 then
+        WindUI:Notify({
+            Title = "Oppenheimer Destroyer",
+            Content = "Nenhum jogador encontrado no servidor!",
+            Duration = 3,
+            Icon = "alert-triangle"
+        })
+        print("Oppenheimer: Nenhum jogador encontrado")
+        return false
+    end
+
+    local success, requestCommand = pcall(function()
+        return ReplicatedStorage:WaitForChild("HDAdminClient", 5):WaitForChild("Signals", 5):WaitForChild("RequestCommand", 5)
+    end)
+    if not success or not requestCommand then
+        WindUI:Notify({
+            Title = "Oppenheimer Destroyer",
+            Content = "RemoteFunction 'RequestCommand' não encontrado!",
+            Duration = 3,
+            Icon = "alert-triangle"
+        })
+        print("Oppenheimer: RemoteFunction 'RequestCommand' não encontrado")
+        return false
+    end
+
+    -- Constrói o comando na ordem: poop, explode, freeze para cada jogador
+    local commandParts = {}
+    for _, player in ipairs(playerList) do
+        table.insert(commandParts, ":poop " .. player.Name)
+        table.insert(commandParts, ":explode " .. player.Name)
+        table.insert(commandParts, ":freeze " .. player.Name)
+    end
+    
+    -- Junta tudo com espaços em uma linha só
+    local commandString = table.concat(commandParts, " ")
+
+    local args = { commandString }
+    local success, result = pcall(function()
+        requestCommand:InvokeServer(unpack(args))
+    end)
+    if not success then
+        WindUI:Notify({
+            Title = "Oppenheimer Destroyer",
+            Content = "Erro ao executar: " .. result,
+            Duration = 3,
+            Icon = "alert-triangle"
+        })
+        print("Oppenheimer: Erro ao executar:", result)
+        return false
+    end
+
+    return true
+end
+
+-- Função pra iniciar o Oppenheimer em loop
+local function startOppenheimer()
+    task.spawn(function()
+        local attemptCount = 0
+        while oppenheimerToggle do
+            if executeOppenheimer() then
+                attemptCount = attemptCount + 1
+                if attemptCount % 5 == 0 then
+                    WindUI:Notify({
+                        Title = "Oppenheimer Destroyer",
+                        Content = "💀 DESTRUIÇÃO ATIVA! Ciclos: " .. attemptCount,
+                        Duration = 2,
+                        Icon = "skull"
+                    })
+                    print("Oppenheimer - Ciclos:", attemptCount)
+                end
+            else
+                oppenheimerToggle = false
+                break
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- Toggle Oppenheimer na WindUI
+local OppenheimerToggle = MainTab:Toggle({
+    Title = "☢️ Oppenheimer Destroyer",
+    Desc = "Danos permanentes no servidor e deixa injogavel",
+    Icon = "bomb",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        oppenheimerToggle = state
+        if state then
+            if executeOppenheimer() then
+                startOppenheimer()
+                WindUI:Notify({
+                    Title = "☢️ Oppenheimer Destroyer",
+                    Content = "DESTRUIÇÃO ATIVADA! Prepare-se para o caos!",
+                    Duration = 4,
+                    Icon = "skull"
+                })
+                print("Oppenheimer Destroyer ativado")
+            else
+                oppenheimerToggle = false
+                OppenheimerToggle:Set(false)
+                WindUI:Notify({
+                    Title = "Oppenheimer Destroyer",
+                    Content = "Falha ao iniciar destruição!",
+                    Duration = 3,
+                    Icon = "alert-triangle"
+                })
+                print("Falha ao iniciar Oppenheimer")
+            end
+        else
+            oppenheimerToggle = false
+            WindUI:Notify({
+                Title = "Oppenheimer Destroyer",
+                Content = "Destruição desativada... por enquanto.",
+                Duration = 2,
+                Icon = "shield"
+            })
+            print("Oppenheimer Destroyer desativado")
+        end
+    end
+})
+
+-- Função pra executar alert em todos os jogadores
+local function executeAlertAll()
+    local playerList = Players:GetPlayers()
+    if #playerList == 0 then
+        WindUI:Notify({
+            Title = "Spam Alert",
+            Content = "Nenhum jogador encontrado no servidor!",
+            Duration = 3,
+            Icon = "alert-triangle"
+        })
+        print("Spam Alert: Nenhum jogador encontrado")
+        return false
+    end
+
+    local success, requestCommand = pcall(function()
+        return ReplicatedStorage:WaitForChild("HDAdminClient", 5):WaitForChild("Signals", 5):WaitForChild("RequestCommand", 5)
+    end)
+    if not success or not requestCommand then
+        WindUI:Notify({
+            Title = "Spam Alert",
+            Content = "RemoteFunction 'RequestCommand' não encontrado!",
+            Duration = 3,
+            Icon = "alert-triangle"
+        })
+        print("Spam Alert: RemoteFunction 'RequestCommand' não encontrado")
+        return false
+    end
+
+    for _, player in ipairs(playerList) do
+        local commandString = ":alert " .. player.Name .. " XXMZ JOIN TODAY"
+        local args = { commandString }
+        pcall(function()
+            requestCommand:InvokeServer(unpack(args))
+        end)
+        task.wait(0.01)
+    end
+
+    return true
+end
+
+-- Função pra iniciar o spam de alert
+local function startSpamAlert()
+    task.spawn(function()
+        local attemptCount = 0
+        while spamAlertToggle do
+            if executeAlertAll() then
+                attemptCount = attemptCount + 1
+                if attemptCount % 10 == 0 then
+                    WindUI:Notify({
+                        Title = "Spam Alert",
+                        Content = "Spam ativo! Ciclos: " .. attemptCount,
+                        Duration = 2,
+                        Icon = "check"
+                    })
+                    print("Spam Alert - Ciclos:", attemptCount)
+                end
+            else
+                spamAlertToggle = false
+                break
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- Toggle Spam Alert na WindUI
+local AlertToggle = MainTab:Toggle({
+    Title = "Spam Alert",
+    Desc = "tem rate limit",
+    Icon = "bell",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        spamAlertToggle = state
+        if state then
+            if executeAlertAll() then
+                startSpamAlert()
+                WindUI:Notify({
+                    Title = "Spam Alert",
+                    Content = "Spam de alert ativado!",
+                    Duration = 3,
+                    Icon = "check"
+                })
+                print("Spam Alert ativado")
+            else
+                spamAlertToggle = false
+                AlertToggle:Set(false)
+                WindUI:Notify({
+                    Title = "Spam Alert",
+                    Content = "Falha ao iniciar spam!",
+                    Duration = 3,
+                    Icon = "alert-triangle"
+                })
+                print("Falha ao iniciar Spam Alert")
+            end
+        else
+            spamAlertToggle = false
+            WindUI:Notify({
+                Title = "Spam Alert",
+                Content = "Spam de alert desativado!",
+                Duration = 2,
+                Icon = "x"
+            })
+            print("Spam Alert desativado")
+        end
+    end
+})
+
+-- Função pra executar clone em todos os jogadores
+local function executeCloneAll()
+    local playerList = Players:GetPlayers()
+    if #playerList == 0 then
+        WindUI:Notify({
+            Title = "Spam Clone",
+            Content = "Nenhum jogador encontrado no servidor!",
+            Duration = 3,
+            Icon = "alert-triangle"
+        })
+        print("Spam Clone: Nenhum jogador encontrado")
+        return false
+    end
+
+    local success, requestCommand = pcall(function()
+        return ReplicatedStorage:WaitForChild("HDAdminClient", 5):WaitForChild("Signals", 5):WaitForChild("RequestCommand", 5)
+    end)
+    if not success or not requestCommand then
+        WindUI:Notify({
+            Title = "Spam Clone",
+            Content = "RemoteFunction 'RequestCommand' não encontrado!",
+            Duration = 3,
+            Icon = "alert-triangle"
+        })
+        print("Spam Clone: RemoteFunction 'RequestCommand' não encontrado")
+        return false
+    end
+
+    for _, player in ipairs(playerList) do
+        local commandString = ":clone " .. player.Name
+        local args = { commandString }
+        pcall(function()
+            requestCommand:InvokeServer(unpack(args))
+        end)
+        task.wait(0.01)
+    end
+
+    return true
+end
+
+-- Função pra iniciar o spam de clone
+local function startSpamClone()
+    task.spawn(function()
+        local attemptCount = 0
+        while spamCloneToggle do
+            if executeCloneAll() then
+                attemptCount = attemptCount + 1
+                if attemptCount % 10 == 0 then
+                    WindUI:Notify({
+                        Title = "Spam Clone",
+                        Content = "Spam ativo! Ciclos: " .. attemptCount,
+                        Duration = 2,
+                        Icon = "check"
+                    })
+                    print("Spam Clone - Ciclos:", attemptCount)
+                end
+            else
+                spamCloneToggle = false
+                break
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- Toggle Spam Clone na WindUI
+local CloneToggle = MainTab:Toggle({
+    Title = "Spam Clone",
+    Desc = "Clona todos os jogadores continuamente",
+    Icon = "copy",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        spamCloneToggle = state
+        if state then
+            if executeCloneAll() then
+                startSpamClone()
+                WindUI:Notify({
+                    Title = "Spam Clone",
+                    Content = "Spam de clone ativado!",
+                    Duration = 3,
+                    Icon = "check"
+                })
+                print("Spam Clone ativado")
+            else
+                spamCloneToggle = false
+                CloneToggle:Set(false)
+                WindUI:Notify({
+                    Title = "Spam Clone",
+                    Content = "Falha ao iniciar spam!",
+                    Duration = 3,
+                    Icon = "alert-triangle"
+                })
+                print("Falha ao iniciar Spam Clone")
+            end
+        else
+            spamCloneToggle = false
+            WindUI:Notify({
+                Title = "Spam Clone",
+                Content = "Spam de clone desativado!",
+                Duration = 2,
+                Icon = "x"
+            })
+            print("Spam Clone desativado")
+        end
+    end
+})
+
 -- Função pra coletar nomes dos jogadores e formatar o comando
 local function executeCommandAll(inputCommand)
     if not inputCommand or inputCommand == "" then
@@ -215,6 +558,18 @@ local function executeCommandAll(inputCommand)
             Icon = "alert-triangle"
         })
         print("Command All: Comando inválido")
+        return false
+    end
+
+    -- Verifica se tem <all> no comando
+    if not string.find(string.lower(inputCommand), "<all>") then
+        WindUI:Notify({
+            Title = "Command All",
+            Content = "Use <all> no lugar dos jogadores! Ex: :size <all> 15",
+            Duration = 4,
+            Icon = "alert-triangle"
+        })
+        print("Command All: <all> não encontrado no comando")
         return false
     end
 
@@ -246,7 +601,9 @@ local function executeCommandAll(inputCommand)
 
     local commandString = ""
     for i, player in ipairs(playerList) do
-        commandString = commandString .. inputCommand .. " " .. player.Name
+        -- Substitui <all> pelo nome do jogador (case insensitive)
+        local playerCommand = string.gsub(inputCommand, "<[Aa][Ll][Ll]>", player.Name)
+        commandString = commandString .. playerCommand
         if i < #playerList then
             commandString = commandString .. " "
         end
@@ -269,7 +626,7 @@ local function executeCommandAll(inputCommand)
 
     WindUI:Notify({
         Title = "Command All",
-        Content = "Comando executado: " .. commandString,
+        Content = "Comando executado em " .. #playerList .. " jogadores!",
         Duration = 5,
         Icon = "check"
     })
@@ -280,9 +637,9 @@ end
 -- Input na WindUI
 local Input = MainTab:Input({
     Title = "Command All",
-    Desc = "Digite um comando para executar em todos os jogadores (ex.: :poop)",
+    Desc = "Use <all> para substituir pelos jogadores. Ex: :size <all> 15",
     Icon = "terminal",
-    Placeholder = ":poop",
+    Placeholder = ":poop <all>",
     Default = "",
     Callback = function(value)
         executeCommandAll(value)

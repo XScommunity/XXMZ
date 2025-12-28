@@ -1,0 +1,313 @@
+local Starlight = loadstring(game:HttpGet("https://raw.nebulasoftworks.xyz/starlight"))()
+local NebulaIcons = loadstring(game:HttpGet("https://raw.nebulasoftworks.xyz/nebula-icon-library-loader"))()
+
+local Window = Starlight:CreateWindow({
+   Name = "XXMZ HUB",
+   Subtitle = "Notoriety",
+   Icon = 104513617513425,
+   LoadingSettings = {
+      Title = "Notoriety Hub",
+      Subtitle = "Carregando...",
+   },
+   FileSettings = {
+      ConfigFolder = "NotorietyHub"
+   },
+})
+
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Variables
+local selectedGun = "M16"
+local selectedClass = "Class 1"
+local instantInteractEnabled = false
+
+-- Player Mod
+local infiniteStaminaEnabled = false
+local walkSpeedEnabled = false
+local walkSpeedValue = 50
+local infiniteJumpEnabled = false
+local noclipEnabled = false
+local gravityValue = 196.2
+local customGravityEnabled = false
+local infJumpConnection = nil
+
+-- ESP
+local cameraESPEnabled = false
+local guardESPEnabled = false
+local civilianESPEnabled = false
+local cameraHighlights = {}
+local guardHighlights = {}
+local civilianHighlights = {}
+
+local function getRS()
+   return ReplicatedStorage:WaitForChild("RS_Package")
+end
+
+local function notify(title, content)
+   Starlight:Notification({
+      Title = title,
+      Icon = NebulaIcons:GetIcon('sparkle', 'Material'),
+      Content = content,
+   }, "1")
+end
+
+-- Highlight ESP
+local function addHighlight(char, color)
+   local hl = Instance.new("Highlight")
+   hl.FillColor = color
+   hl.OutlineColor = color
+   hl.FillTransparency = 0.4
+   hl.OutlineTransparency = 0
+   hl.Adornee = char
+   hl.Parent = char
+   return hl
+end
+
+local function removeHighlights(tbl)
+   for _, hl in pairs(tbl) do
+      if hl then hl:Destroy() end
+   end
+   tbl = {}
+end
+
+-- ÚNICO TabSection "Features"
+local FeaturesSection = Window:CreateTabSection("Features", "1")
+
+-- Weapons
+local WeaponsTab = FeaturesSection:CreateTab({Name = "Weapons", Icon = NebulaIcons:GetIcon('swords', 'Lucide'), Columns = 2}, "1")
+local WeaponsGB = WeaponsTab:CreateGroupbox({Name = "Armas", Column = 1}, "1")
+
+WeaponsGB:CreateInput({Name = "Gun Name", Icon = NebulaIcons:GetIcon('gun', 'Lucide'), CurrentValue = "", PlaceholderText = "M16", Callback = function(t) selectedGun = t end}, "1")
+WeaponsGB:CreateInput({Name = "Class Name", Icon = NebulaIcons:GetIcon('badge', 'Lucide'), CurrentValue = "", PlaceholderText = "Class 1", Callback = function(t) selectedClass = t end}, "1")
+WeaponsGB:CreateButton({Name = "Get Gun Data", Callback = function() pcall(function() getRS().Remotes.GetGunData:InvokeServer(selectedGun) end) end}, "1")
+WeaponsGB:CreateButton({Name = "Set Gun Class", Callback = function() pcall(function() getRS().Remotes.SetGunForClass:FireServer(selectedClass, selectedGun, 0) end) end}, "1")
+WeaponsGB:CreateButton({Name = "Ativar Class", Callback = function() pcall(function() getRS().Remotes.SetClass:FireServer(selectedClass) end) end}, "1")
+
+-- Interações
+local InteractTab = FeaturesSection:CreateTab({Name = "Interações", Icon = NebulaIcons:GetIcon('hand', 'Lucide'), Columns = 1}, "1")
+local InteractGB = InteractTab:CreateGroupbox({Name = "Ações", Column = 1}, "1")
+
+InteractGB:CreateToggle({Name = "Instant Interact", CurrentValue = false, Style = 2, Callback = function(v)
+   instantInteractEnabled = v
+   if v then
+      for _, p in workspace:GetDescendants() do if p:IsA("ProximityPrompt") then p.HoldDuration = 0 end end
+      workspace.DescendantAdded:Connect(function(d) if d:IsA("ProximityPrompt") and instantInteractEnabled then d.HoldDuration = 0 end end)
+   end
+end}, "1")
+
+InteractGB:CreateButton({Name = "Jogar Bag", Callback = function() pcall(function() getRS().Remotes.ThrowBag:FireServer(Vector3.new(-0.98,-0.16,0.07)) end) end}, "1")
+InteractGB:CreateButton({Name = "Gritar NPCs", Callback = function() pcall(function() local c = workspace:FindFirstChild("Citizens") if c then local t={} for _,v in c:GetChildren() do table.insert(t,v) end getRS().Remotes.PlayerYell:FireServer(t) end end) end}, "1")
+
+-- Destruição
+local DestructionTab = FeaturesSection:CreateTab({Name = "Destruição", Icon = NebulaIcons:GetIcon('bomb', 'Lucide'), Columns = 1}, "1")
+local DestructionGB = DestructionTab:CreateGroupbox({Name = "Quebrar", Column = 1}, "1")
+
+DestructionGB:CreateButton({Name = "Quebrar Vidros", Callback = function()
+   spawn(function()
+      local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(selectedGun)
+      if gun and workspace:FindFirstChild("Glass") then
+         for _, g in workspace.Glass:GetChildren() do
+            if g.Name == "Glass" then
+               for i=1,5 do
+                  getRS().Assets.Remotes.HitObject:FireServer(gun, g, false, Vector3.new(0,0,0), 72, g.Position)
+                  wait(0.02)
+               end
+            end
+         end
+      end
+   end)
+end}, "1")
+
+DestructionGB:CreateButton({Name = "Quebrar Câmeras", Callback = function()
+   spawn(function()
+      local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(selectedGun)
+      if gun then
+         for _, f in {"Cameras","BrokenCameras"} do
+            local folder = workspace:FindFirstChild(f)
+            if folder then
+               for _, c in folder:GetChildren() do
+                  local u = c:FindFirstChild("Union")
+                  if u then getRS().Assets.Remotes.HitObject:FireServer(gun, u, false, Vector3.new(0,0,0), 72, u.Position) end
+               end
+            end
+         end
+      end
+   end)
+end}, "1")
+
+-- Player Mod
+local PlayerModTab = FeaturesSection:CreateTab({Name = "Player Mod", Icon = NebulaIcons:GetIcon('person-standing', 'Lucide'), Columns = 2}, "1")
+local MovementGB = PlayerModTab:CreateGroupbox({Name = "Movimento", Column = 1}, "1")
+local StatsGB = PlayerModTab:CreateGroupbox({Name = "Stats", Column = 2}, "1")
+
+StatsGB:CreateToggle({Name = "Stamina Infinita", CurrentValue = false, Style = 2, Callback = function(v)
+   infiniteStaminaEnabled = v
+   if v then
+      spawn(function()
+         while infiniteStaminaEnabled do
+            pcall(function()
+               local crim = workspace:FindFirstChild("Criminals")
+               if crim and crim:FindFirstChild(LocalPlayer.Name) then
+                  local p = crim[LocalPlayer.Name]
+                  if p.Stamina then p.Stamina.Value = 90000 end
+                  if p.MaxStamina then p.MaxStamina.Value = 90000 end
+               end
+            end)
+            wait(0.3)
+         end
+      end)
+   end
+end}, "1")
+
+MovementGB:CreateSlider({Name = "Velocidade", Range = {16,200}, Increment = 5, CurrentValue = 50, Callback = function(v) walkSpeedValue = v if walkSpeedEnabled then pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed = v end) end end}, "1")
+MovementGB:CreateToggle({Name = "Ativar Speed", CurrentValue = false, Style = 2, Callback = function(v)
+   walkSpeedEnabled = v
+   if v then
+      spawn(function()
+         while walkSpeedEnabled do
+            pcall(function() if LocalPlayer.Character and LocalPlayer.Character.Humanoid then LocalPlayer.Character.Humanoid.WalkSpeed = walkSpeedValue end end)
+            wait()
+         end
+         pcall(function() if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = 16 end end)
+      end)
+   else
+      pcall(function() if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = 16 end end)
+   end
+end}, "1")
+
+MovementGB:CreateToggle({Name = "Jump Infinito", CurrentValue = false, Style = 2, Callback = function(v)
+   infiniteJumpEnabled = v
+   if v then
+      if infJumpConnection then infJumpConnection:Disconnect() end
+      infJumpConnection = UserInputService.JumpRequest:Connect(function()
+         if infiniteJumpEnabled and LocalPlayer.Character then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+         end
+      end)
+   else
+      if infJumpConnection then infJumpConnection:Disconnect() end
+   end
+end}, "1")
+
+MovementGB:CreateSlider({Name = "Gravidade", Range = {0,196.2}, Increment = 10, CurrentValue = 196.2, Callback = function(v) gravityValue = v if customGravityEnabled then workspace.Gravity = v end end}, "1")
+MovementGB:CreateToggle({Name = "Ativar Gravidade", CurrentValue = false, Style = 2, Callback = function(v)
+   customGravityEnabled = v
+   if v then
+      spawn(function()
+         while customGravityEnabled do workspace.Gravity = gravityValue wait() end
+         workspace.Gravity = 196.2
+      end)
+   else
+      workspace.Gravity = 196.2
+   end
+end}, "1")
+
+MovementGB:CreateToggle({Name = "Noclip", CurrentValue = false, Style = 2, Callback = function(v)
+   noclipEnabled = v
+   if v then
+      spawn(function()
+         while noclipEnabled do
+            pcall(function()
+               for _, part in LocalPlayer.Character:GetDescendants() do
+                  if part:IsA("BasePart") then part.CanCollide = false end
+               end
+            end)
+            RunService.Stepped:Wait()
+         end
+      end)
+   else
+      pcall(function()
+         for _, part in LocalPlayer.Character:GetDescendants() do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = true end
+         end
+      end)
+   end
+end}, "1")
+
+-- ESP
+local ESPTab = FeaturesSection:CreateTab({Name = "ESP", Icon = NebulaIcons:GetIcon('eye', 'Lucide'), Columns = 1}, "1")
+local ESPGB = ESPTab:CreateGroupbox({Name = "ESP (Highlight)", Column = 1}, "1")
+
+ESPGB:CreateToggle({Name = "Camera ESP", CurrentValue = false, Style = 2, Callback = function(v)
+   cameraESPEnabled = v
+   if v then
+      spawn(function()
+         while cameraESPEnabled do
+            removeHighlights(cameraHighlights)
+            pcall(function()
+               for _, folderName in {"Cameras", "BrokenCameras"} do
+                  local folder = workspace:FindFirstChild(folderName)
+                  if folder then
+                     for _, cam in folder:GetChildren() do
+                        if cam then
+                           local color = folderName == "BrokenCameras" and Color3.fromRGB(255,165,0) or Color3.fromRGB(255,0,0)
+                           table.insert(cameraHighlights, addHighlight(cam, color))
+                        end
+                     end
+                  end
+               end
+            end)
+            wait(1)
+         end
+         removeHighlights(cameraHighlights)
+      end)
+   else
+      removeHighlights(cameraHighlights)
+   end
+end}, "1")
+
+ESPGB:CreateToggle({Name = "Guard ESP", CurrentValue = false, Style = 2, Callback = function(v)
+   guardESPEnabled = v
+   if v then
+      spawn(function()
+         while guardESPEnabled do
+            removeHighlights(guardHighlights)
+            pcall(function()
+               local guards = workspace:FindFirstChild("Guards")
+               if guards then
+                  for _, g in guards:GetChildren() do
+                     if g then
+                        table.insert(guardHighlights, addHighlight(g, Color3.fromRGB(0,0,255)))
+                     end
+                  end
+               end
+            end)
+            wait(1)
+         end
+         removeHighlights(guardHighlights)
+      end)
+   else
+      removeHighlights(guardHighlights)
+   end
+end}, "1")
+
+ESPGB:CreateToggle({Name = "Civilian ESP", CurrentValue = false, Style = 2, Callback = function(v)
+   civilianESPEnabled = v
+   if v then
+      spawn(function()
+         while civilianESPEnabled do
+            removeHighlights(civilianHighlights)
+            pcall(function()
+               local citizens = workspace:FindFirstChild("Citizens")
+               if citizens then
+                  for _, c in citizens:GetChildren() do
+                     if c then
+                        local color = string.find(c.Name, "Tied") and Color3.fromRGB(255,255,0) or Color3.fromRGB(0,255,0)
+                        table.insert(civilianHighlights, addHighlight(c, color))
+                     end
+                  end
+               end
+            end)
+            wait(1)
+         end
+         removeHighlights(civilianHighlights)
+      end)
+   else
+      removeHighlights(civilianHighlights)
+   end
+end}, "1")

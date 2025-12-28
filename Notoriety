@@ -6,8 +6,8 @@ local Window = Starlight:CreateWindow({
    Subtitle = "Notoriety",
    Icon = 104513617513425,
    LoadingSettings = {
-      Title = "Notoriety Hub",
-      Subtitle = "Carregando...",
+      Title = "XXMZ HUBBB",
+      Subtitle = "by 29 :)",
    },
    FileSettings = {
       ConfigFolder = "NotorietyHub"

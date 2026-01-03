@@ -340,76 +340,75 @@ Tabs.Interact:AddButton({
 })
 
 -- ==================== DESTRUCTION TAB ====================
-local DestructionSection = Tabs.Destruction:AddSection("Quebrar Objetos")
+
+local function getTool()
+    local char = game:GetService("Players").LocalPlayer.Character
+    return char and char:FindFirstChildOfClass("Tool")
+end
+
+-- Função para disparar o HitObject do jeito que o jogo gosta
+local function fireHit(tool, hitPart)
+    if not tool or not hitPart then return end
+    
+    -- Criamos a tabela exatamente como o log que você achou
+    local args = {}
+    args[1] = tool
+    args[2] = hitPart
+    args[3] = false
+    -- O 4 e 5 o jogo parece ignorar ou não usa no seu log, então pulamos
+    args[6] = Vector3.new(0, 0, 0)
+    args[7] = 90
+    args[9] = hitPart.Position
+
+    pcall(function()
+        game:GetService("ReplicatedStorage").RS_Package.Assets.Remotes.HitObject:FireServer(unpack(args, 1, 9))
+    end)
+end
 
 Tabs.Destruction:AddButton({
     Title = "Quebrar Vidros",
-    Description = "Quebra todos os vidros do mapa",
+    Description = "Destrói todos os vidros do mapa",
     Callback = function()
-        spawn(function()
-            local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(selectedGun)
-            if gun and workspace:FindFirstChild("Glass") then
-                local count = 0
-                for _, glass in pairs(workspace.Glass:GetChildren()) do
-                    if glass.Name == "Glass" then
-                        for i = 1, 5 do
-                            pcall(function()
-                                getRS().Assets.Remotes.HitObject:FireServer(
-                                    gun,
-                                    glass,
-                                    false,
-                                    Vector3.new(0, 0, 0),
-                                    72,
-                                    glass.Position
-                                )
-                            end)
-                            wait(0.02)
-                        end
-                        count = count + 1
-                    end
+        local tool = getTool()
+        if not tool then return notify("Erro", "Segure uma arma!") end
+        
+        local glassFolder = workspace:FindFirstChild("Glass")
+        if glassFolder then
+            local count = 0
+            for _, v in pairs(glassFolder:GetChildren()) do
+                if v:IsA("BasePart") then
+                    fireHit(tool, v)
+                    count = count + 1
                 end
-                notify("Destruction", "Quebrados " .. count .. " vidros")
-            else
-                notify("Destruction", "Arma não encontrada ou sem vidros")
+                if count % 20 == 0 then task.wait() end -- Anti-lag
             end
-        end)
+            notify("Destruction", count .. " vidros quebrados!")
+        end
     end
 })
 
 Tabs.Destruction:AddButton({
     Title = "Quebrar Câmeras",
-    Description = "Quebra todas as câmeras do mapa",
+    Description = "Destrói câmeras em 'Cameras' e 'BrokenCameras'",
     Callback = function()
-        spawn(function()
-            local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(selectedGun)
-            if gun then
-                local count = 0
-                for _, folderName in pairs({"Cameras", "BrokenCameras"}) do
-                    local folder = workspace:FindFirstChild(folderName)
-                    if folder then
-                        for _, camera in pairs(folder:GetChildren()) do
-                            local union = camera:FindFirstChild("Union")
-                            if union then
-                                pcall(function()
-                                    getRS().Assets.Remotes.HitObject:FireServer(
-                                        gun,
-                                        union,
-                                        false,
-                                        Vector3.new(0, 0, 0),
-                                        72,
-                                        union.Position
-                                    )
-                                end)
-                                count = count + 1
-                            end
-                        end
+        local tool = getTool()
+        if not tool then return notify("Erro", "Segure uma arma!") end
+        
+        local count = 0
+        for _, folderName in pairs({"Cameras", "BrokenCameras"}) do
+            local folder = workspace:FindFirstChild(folderName)
+            if folder then
+                for _, cam in pairs(folder:GetChildren()) do
+                    -- Procura a parte sensível da câmera
+                    local part = cam:FindFirstChild("Union") or cam:FindFirstChild("Head") or cam:FindFirstChildOfClass("MeshPart")
+                    if part then
+                        fireHit(tool, part)
+                        count = count + 1
                     end
                 end
-                notify("Destruction", "Quebradas " .. count .. " câmeras")
-            else
-                notify("Destruction", "Arma não encontrada")
             end
-        end)
+        end
+        notify("Destruction", count .. " câmeras atingidas!")
     end
 })
 

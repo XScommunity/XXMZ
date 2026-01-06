@@ -10,7 +10,6 @@
     - Performance otimizada
     - Código mais limpo e organizado
 ]]
-loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
 
 -- ==================== INICIALIZAÇÃO ====================
 local Fluent = nil
@@ -82,6 +81,18 @@ local cameraHighlights = {}
 local policeHighlights = {}
 local civilianHighlights = {}
 local espLoops = {}
+
+-- Map-Specific ESP
+local selectedMap = "The Ozela Heist"
+local ropeESPEnabled = false
+local hookESPEnabled = false
+local codeTableESPEnabled = false
+local ropeHighlights = {}
+local hookHighlights = {}
+local codeTableHighlights = {}
+local ropeESPLoop = nil
+local hookESPLoop = nil
+local codeTableESPLoop = nil
 
 -- Aim
 local aimEnabled = false
@@ -382,7 +393,9 @@ local Tabs = {
     Destruction = Window:AddTab({ Title = "Destruição", Icon = "bomb" }),
     Player = Window:AddTab({ Title = "Player Mod", Icon = "user" }),
     Aim = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
-    ESP = Window:AddTab({ Title = "ESP", Icon = "eye" })
+    ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
+    Maps = Window:AddTab({ Title = "Specific Maps", Icon = "map" }),
+    Stats = Window:AddTab({ Title = "Game Stats", Icon = "bar-chart" })
 }
 
 -- ==================== WEAPONS TAB ====================
@@ -1094,6 +1107,416 @@ Tabs.ESP:AddToggle("CivilianESP", {
     end
 })
 
+-- ==================== SPECIFIC MAPS TAB ====================
+Tabs.Maps:AddSection("Seleção de Mapa")
+
+local mapESPSection = nil
+local mapTeleportSection = nil
+
+Tabs.Maps:AddDropdown("MapSelect", {
+    Title = "🗺️ Selecionar Mapa",
+    Description = "Escolha o mapa para features específicas",
+    Values = {"The Ozela Heist"},
+    Default = 1,
+    Callback = function(value)
+        selectedMap = value
+    end
+})
+
+Tabs.Maps:AddButton({
+    Title = "✅ Confirmar Mapa",
+    Description = "Carrega as features do mapa selecionado",
+    Callback = function()
+        if selectedMap == "The Ozela Heist" then
+            -- Remove seções antigas se existirem
+            if mapESPSection then
+                pcall(function() mapESPSection:Destroy() end)
+            end
+            if mapTeleportSection then
+                pcall(function() mapTeleportSection:Destroy() end)
+            end
+            
+            -- Cria novas seções
+            Tabs.Maps:AddSection("ESP - " .. selectedMap)
+            
+            Tabs.Maps:AddToggle("RopeESP", {
+                Title = "🪢 Rope ESP",
+                Description = "Destaca cordas (amarelo)",
+                Default = false,
+                Callback = function(value)
+                    ropeESPEnabled = value
+                    
+                    if ropeESPLoop then
+                        ropeESPLoop:Disconnect()
+                        ropeESPLoop = nil
+                    end
+                    
+                    if value then
+                        task.spawn(function()
+                            while ropeESPEnabled do
+                                clearHighlights(ropeHighlights)
+                                
+                                safeCall(function()
+                                    local mapEntities = Workspace:FindFirstChild("mapEntities")
+                                    if mapEntities then
+                                        local missionItems = mapEntities:FindFirstChild("missionItems")
+                                        if missionItems then
+                                            local ropes = missionItems:FindFirstChild("Ropes")
+                                            if ropes then
+                                                for _, rope in pairs(ropes:GetChildren()) do
+                                                    local hl = createHighlight(rope, Color3.fromRGB(255, 255, 0))
+                                                    if hl then
+                                                        table.insert(ropeHighlights, hl)
+                                                    end
+                                                end
+                                            end
+                                        end
+                                    end
+                                end)
+                                
+                                task.wait(2)
+                            end
+                            clearHighlights(ropeHighlights)
+                        end)
+                        notify("Rope ESP", "Ativado!", 2)
+                    else
+                        clearHighlights(ropeHighlights)
+                        notify("Rope ESP", "Desativado", 2)
+                    end
+                end
+            })
+            
+            Tabs.Maps:AddToggle("HookESP", {
+                Title = "🪝 Hook ESP",
+                Description = "Destaca ganchos (verde limão)",
+                Default = false,
+                Callback = function(value)
+                    hookESPEnabled = value
+                    
+                    if hookESPLoop then
+                        hookESPLoop:Disconnect()
+                        hookESPLoop = nil
+                    end
+                    
+                    if value then
+                        task.spawn(function()
+                            while hookESPEnabled do
+                                clearHighlights(hookHighlights)
+                                
+                                safeCall(function()
+                                    local mapEntities = Workspace:FindFirstChild("mapEntities")
+                                    if mapEntities then
+                                        local missionItems = mapEntities:FindFirstChild("missionItems")
+                                        if missionItems then
+                                            local hooks = missionItems:FindFirstChild("Hooks")
+                                            if hooks then
+                                                for _, hook in pairs(hooks:GetChildren()) do
+                                                    local hl = createHighlight(hook, Color3.fromRGB(0, 255, 100))
+                                                    if hl then
+                                                        table.insert(hookHighlights, hl)
+                                                    end
+                                                end
+                                            end
+                                        end
+                                    end
+                                end)
+                                
+                                task.wait(2)
+                            end
+                            clearHighlights(hookHighlights)
+                        end)
+                        notify("Hook ESP", "Ativado!", 2)
+                    else
+                        clearHighlights(hookHighlights)
+                        notify("Hook ESP", "Desativado", 2)
+                    end
+                end
+            })
+            
+            Tabs.Maps:AddToggle("CodeTableESP", {
+                Title = "📋 Code Table ESP",
+                Description = "Destaca mesa de códigos (roxo)",
+                Default = false,
+                Callback = function(value)
+                    codeTableESPEnabled = value
+                    
+                    if codeTableESPLoop then
+                        codeTableESPLoop:Disconnect()
+                        codeTableESPLoop = nil
+                    end
+                    
+                    if value then
+                        task.spawn(function()
+                            while codeTableESPEnabled do
+                                clearHighlights(codeTableHighlights)
+                                
+                                safeCall(function()
+                                    local blueprints = Workspace:FindFirstChild("Blueprints")
+                                    if blueprints then
+                                        local stadiumBlueprint = blueprints:FindFirstChild("prop_stadium_blueprintTableRNG")
+                                        if stadiumBlueprint then
+                                            local codeTable = stadiumBlueprint:FindFirstChild("prop_office_TablePlastic")
+                                            if codeTable then
+                                                local hl = createHighlight(codeTable, Color3.fromRGB(200, 0, 255))
+                                                if hl then
+                                                    table.insert(codeTableHighlights, hl)
+                                                end
+                                            end
+                                        end
+                                    end
+                                end)
+                                
+                                task.wait(2)
+                            end
+                            clearHighlights(codeTableHighlights)
+                        end)
+                        notify("Code Table ESP", "Ativado!", 2)
+                    else
+                        clearHighlights(codeTableHighlights)
+                        notify("Code Table ESP", "Desativado", 2)
+                    end
+                end
+            })
+            
+            -- Seção de Teleporte
+            Tabs.Maps:AddSection("Teleporte - " .. selectedMap)
+            
+            Tabs.Maps:AddButton({
+                Title = "📍 TP para Rope mais próxima",
+                Description = "Teleporta para a corda mais perto",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleporte", "Personagem não encontrado!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        local mapEntities = Workspace:FindFirstChild("mapEntities")
+                        
+                        if mapEntities then
+                            local missionItems = mapEntities:FindFirstChild("missionItems")
+                            if missionItems then
+                                local ropes = missionItems:FindFirstChild("Ropes")
+                                if ropes then
+                                    local closest = nil
+                                    local shortestDist = math.huge
+                                    
+                                    for _, rope in pairs(ropes:GetChildren()) do
+                                        if rope:IsA("Model") or rope:IsA("Part") then
+                                            local ropePart = rope:IsA("Part") and rope or rope:FindFirstChildOfClass("Part")
+                                            if ropePart then
+                                                local dist = (hrp.Position - ropePart.Position).Magnitude
+                                                if dist < shortestDist then
+                                                    closest = ropePart
+                                                    shortestDist = dist
+                                                end
+                                            end
+                                        end
+                                    end
+                                    
+                                    if closest then
+                                        hrp.CFrame = closest.CFrame + Vector3.new(0, 3, 0)
+                                        notify("Teleporte", "Teleportado para Rope!", 2)
+                                    else
+                                        notify("Teleporte", "Nenhuma Rope encontrada!")
+                                    end
+                                else
+                                    notify("Teleporte", "Pasta Ropes não encontrada!")
+                                end
+                            end
+                        end
+                    end, "Erro ao teleportar")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "📍 TP para Hook mais próximo",
+                Description = "Teleporta para o gancho mais perto",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleporte", "Personagem não encontrado!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        local mapEntities = Workspace:FindFirstChild("mapEntities")
+                        
+                        if mapEntities then
+                            local missionItems = mapEntities:FindFirstChild("missionItems")
+                            if missionItems then
+                                local hooks = missionItems:FindFirstChild("Hooks")
+                                if hooks then
+                                    local closest = nil
+                                    local shortestDist = math.huge
+                                    
+                                    for _, hook in pairs(hooks:GetChildren()) do
+                                        if hook:IsA("Model") or hook:IsA("Part") then
+                                            local hookPart = hook:IsA("Part") and hook or hook:FindFirstChildOfClass("Part")
+                                            if hookPart then
+                                                local dist = (hrp.Position - hookPart.Position).Magnitude
+                                                if dist < shortestDist then
+                                                    closest = hookPart
+                                                    shortestDist = dist
+                                                end
+                                            end
+                                        end
+                                    end
+                                    
+                                    if closest then
+                                        hrp.CFrame = closest.CFrame + Vector3.new(0, 3, 0)
+                                        notify("Teleporte", "Teleportado para Hook!", 2)
+                                    else
+                                        notify("Teleporte", "Nenhum Hook encontrado!")
+                                    end
+                                else
+                                    notify("Teleporte", "Pasta Hooks não encontrada!")
+                                end
+                            end
+                        end
+                    end, "Erro ao teleportar")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "📍 TP para Code Table",
+                Description = "Teleporta para a mesa de códigos",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleporte", "Personagem não encontrado!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        local blueprints = Workspace:FindFirstChild("Blueprints")
+                        
+                        if blueprints then
+                            local stadiumBlueprint = blueprints:FindFirstChild("prop_stadium_blueprintTableRNG")
+                            if stadiumBlueprint then
+                                local codeTable = stadiumBlueprint:FindFirstChild("prop_office_TablePlastic")
+                                if codeTable then
+                                    local tablePart = codeTable:IsA("Part") and codeTable or codeTable:FindFirstChildOfClass("Part")
+                                    if tablePart then
+                                        hrp.CFrame = tablePart.CFrame + Vector3.new(0, 5, 0)
+                                        notify("Teleporte", "Teleportado para Code Table!", 2)
+                                    else
+                                        notify("Teleporte", "Parte da mesa não encontrada!")
+                                    end
+                                else
+                                    notify("Teleporte", "Code Table não encontrada!")
+                                end
+                            else
+                                notify("Teleporte", "Stadium Blueprint não encontrado!")
+                            end
+                        else
+                            notify("Teleporte", "Pasta Blueprints não encontrada!")
+                        end
+                    end, "Erro ao teleportar")
+                end
+            })
+            
+            notify("Specific Maps", "Features do mapa " .. selectedMap .. " carregadas!", 3)
+        end
+    end
+})
+
+-- ==================== GAME STATS TAB ====================
+Tabs.Stats:AddSection("Estatísticas do Jogador")
+
+local statsParagraph = Tabs.Stats:AddParagraph({
+    Title = "📊 Suas Estatísticas",
+    Content = "Clique no botão abaixo para carregar suas stats."
+})
+
+Tabs.Stats:AddButton({
+    Title = "🔄 Atualizar Estatísticas",
+    Description = "Carrega suas stats do servidor",
+    Callback = function()
+        safeCall(function()
+            local rs = getRS()
+            if not rs then
+                notify("Stats", "Erro ao acessar ReplicatedStorage!")
+                return
+            end
+            
+            notify("Stats", "Carregando estatísticas...", 2)
+            
+            local stats = rs.Remotes.GetStats:InvokeServer()
+            
+            if stats then
+                local statsText = "📊 Suas Estatísticas:\n\n"
+                
+                -- Formatação bonita das stats
+                statsText = statsText .. "🎯 Kills:\n"
+                statsText = statsText .. "  • Policiais Mortos: " .. (stats.PoliceKills or 0) .. "\n"
+                statsText = statsText .. "  • Civis Mortos: " .. (stats.CivilianKills or 0) .. "\n"
+                statsText = statsText .. "  • Headshots: " .. (stats.Headshots or 0) .. "\n\n"
+                
+                statsText = statsText .. "💰 Dinheiro:\n"
+                statsText = statsText .. "  • Cash Instantâneo: $" .. (stats.InstantCash or 0) .. "\n\n"
+                
+                statsText = statsText .. "🏥 Suporte:\n"
+                statsText = statsText .. "  • Revives: " .. (stats.Revives or 0) .. "\n"
+                statsText = statsText .. "  • Downs (Derrubado): " .. (stats.Downs or 0) .. "\n\n"
+                
+                statsText = statsText .. "🔫 Stats de Armas:\n"
+                if stats.GunStats and type(stats.GunStats) == "table" then
+                    local hasGunStats = false
+                    for gunName, gunData in pairs(stats.GunStats) do
+                        if type(gunData) == "table" then
+                            hasGunStats = true
+                            statsText = statsText .. "  • " .. gunName .. ":\n"
+                            if gunData.Kills then
+                                statsText = statsText .. "    - Kills: " .. gunData.Kills .. "\n"
+                            end
+                            if gunData.Shots then
+                                statsText = statsText .. "    - Shots: " .. gunData.Shots .. "\n"
+                            end
+                            if gunData.Headshots then
+                                statsText = statsText .. "    - Headshots: " .. gunData.Headshots .. "\n"
+                            end
+                        end
+                    end
+                    if not hasGunStats then
+                        statsText = statsText .. "  • Nenhuma stat de arma registrada\n"
+                    end
+                else
+                    statsText = statsText .. "  • Nenhuma stat de arma disponível\n"
+                end
+                
+                statsText = statsText .. "\n🎮 Interações:\n"
+                statsText = statsText .. "  • Total: " .. (stats.Interactions or 0)
+                
+                statsParagraph:SetDesc(statsText)
+                notify("Stats", "Estatísticas carregadas com sucesso!", 3)
+            else
+                statsParagraph:SetDesc("❌ Erro ao carregar estatísticas.\n\nTente novamente em alguns segundos.")
+                notify("Stats", "Falha ao carregar stats!")
+            end
+        end, "Erro ao carregar estatísticas")
+    end
+})
+
+Tabs.Stats:AddSection("Informações Adicionais")
+
+Tabs.Stats:AddParagraph({
+    Title = "ℹ️ Sobre as Stats",
+    Content = "As estatísticas são carregadas diretamente do servidor do jogo.\n\n" ..
+              "• PoliceKills: Total de policiais eliminados\n" ..
+              "• CivilianKills: Total de civis eliminados\n" ..
+              "• Headshots: Total de tiros na cabeça\n" ..
+              "• InstantCash: Dinheiro ganho instantaneamente\n" ..
+              "• Revives: Quantas vezes você reviveu aliados\n" ..
+              "• Downs: Quantas vezes você foi derrubado\n" ..
+              "• GunStats: Estatísticas por arma\n" ..
+              "• Interactions: Total de interações no jogo"
+})
+
 -- ==================== INPUT HANDLING ====================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -1171,6 +1594,9 @@ local function cleanup()
     clearHighlights(cameraHighlights)
     clearHighlights(policeHighlights)
     clearHighlights(civilianHighlights)
+    clearHighlights(ropeHighlights)
+    clearHighlights(hookHighlights)
+    clearHighlights(codeTableHighlights)
     
     -- Limpar FOV Circle
     if FOVCircle then
@@ -1184,6 +1610,9 @@ local function cleanup()
     if gravityLoop then gravityLoop:Disconnect() end
     if infiniteStaminaLoop then infiniteStaminaLoop:Disconnect() end
     if instantInteractConnection then instantInteractConnection:Disconnect() end
+    if ropeESPLoop then ropeESPLoop:Disconnect() end
+    if hookESPLoop then hookESPLoop:Disconnect() end
+    if codeTableESPLoop then codeTableESPLoop:Disconnect() end
     
     -- Resetar valores
     Workspace.Gravity = 196.2

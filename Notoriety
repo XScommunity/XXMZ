@@ -1,33 +1,44 @@
 --[[
     XXMZ HUB - Notoriety
-    Versão Corrigida com Fluent UI
+    Versão Melhorada v2.0
     By 29 :)
+    
+    Melhorias:
+    - Kill Aura corrigido e otimizado
+    - Bug do TP Walk ao carregar resolvido
+    - Sistema de segurança melhorado
+    - Performance otimizada
+    - Código mais limpo e organizado
 ]]
 
--- Carregamento da Fluent Library
+-- ==================== INICIALIZAÇÃO ====================
 local Fluent = nil
 local Success, Result = pcall(function()
     return game:HttpGet("https://twix.cyou/Fluent.txt", true)
 end)
+
 if Success and typeof(Result) == "string" and string.find(Result, "dawid") then
     Fluent = getfenv().loadstring(Result)()
 else
     Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end
 
--- Services
+-- ==================== SERVICES ====================
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
+local Camera = Workspace.CurrentCamera
 
--- Window Creation
+-- ==================== WINDOW CREATION ====================
 local Window = Fluent:CreateWindow({
-    Title = "XXMZ HUB - Notoriety",
-    SubTitle = "by 29 :)",
+    Title = "XXMZ HUB - Notoriety v2.0",
+    SubTitle = "by 29 :) - Versão Melhorada",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Theme = "VSC Dark High Contrast",
@@ -35,32 +46,44 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.RightShift
 })
 
--- Variables
+-- ==================== VARIABLES ====================
+-- Weapons
 local selectedGun = "M16"
 local selectedClass = "Class 1"
-local instantInteractEnabled = false
 
--- Player Mod Variables
+-- Interact
+local instantInteractEnabled = false
+local instantInteractConnection = nil
+
+-- Player Mod
 local infiniteStaminaEnabled = false
+local infiniteStaminaLoop = nil
+
 local walkSpeedEnabled = false
 local walkSpeedValue = 50
+local tpWalkConnection = nil
+
 local infiniteJumpEnabled = false
-local noclipEnabled = false
-local gravityValue = 196.2
-local customGravityEnabled = false
 local infJumpConnection = nil
 
--- ESP Variables
+local noclipEnabled = false
+local noclipLoop = nil
+
+local gravityValue = 196.2
+local customGravityEnabled = false
+local gravityLoop = nil
+
+-- ESP
 local cameraESPEnabled = false
 local policeESPEnabled = false
 local civilianESPEnabled = false
 local cameraHighlights = {}
 local policeHighlights = {}
 local civilianHighlights = {}
+local espLoops = {}
 
--- Aim Variables
+-- Aim
 local aimEnabled = false
-local aimKey = "RMB"
 local aimPart = "Head"
 local aimFOV = 200
 local aimSensitivity = 50
@@ -69,44 +92,67 @@ local fovCircleEnabled = false
 local currentTarget = nil
 local aiming = false
 
--- Helper Functions
+-- Kill Aura
+local kaEnabled = false
+local kaRange = 70
+local kaDelay = 0.1
+local lastKaTime = 0
+local kaAutoAim = true
+
+-- Kill All
+local killAllEnabled = false
+local killAllDelay = 0.5
+local killAllNotifyDelay = 5
+local lastKillAllNotify = 0
+
+-- ==================== UTILITY FUNCTIONS ====================
 local function getRS()
-    return ReplicatedStorage:WaitForChild("RS_Package")
+    return ReplicatedStorage:WaitForChild("RS_Package", 5)
 end
 
-local function notify(title, content)
+local function notify(title, content, duration)
     Fluent:Notify({
         Title = title,
         Content = content,
-        Duration = 3
+        Duration = duration or 3
     })
 end
 
--- Highlight ESP Functions
-local function addHighlight(char, color)
-    if not char then return nil end
-    local hl = Instance.new("Highlight")
-    hl.FillColor = color
-    hl.OutlineColor = color
-    hl.FillTransparency = 0.4
-    hl.OutlineTransparency = 0
-    hl.Adornee = char
-    hl.Parent = char
-    return hl
+local function safeCall(func, errorMsg)
+    local success, err = pcall(func)
+    if not success and errorMsg then
+        warn(errorMsg .. ": " .. tostring(err))
+    end
+    return success
 end
 
-local function removeHighlights(tbl)
-    for i, hl in pairs(tbl) do
-        if hl then
-            pcall(function() hl:Destroy() end)
+-- ==================== HIGHLIGHT FUNCTIONS ====================
+local function createHighlight(object, color)
+    if not object or not object:IsDescendantOf(Workspace) then return nil end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = color
+    highlight.OutlineColor = color
+    highlight.FillTransparency = 0.4
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = object
+    highlight.Parent = object
+    
+    return highlight
+end
+
+local function clearHighlights(table)
+    for i = #table, 1, -1 do
+        if table[i] then
+            safeCall(function()
+                table[i]:Destroy()
+            end)
         end
-    end
-    for k in pairs(tbl) do
-        tbl[k] = nil
+        table[i] = nil
     end
 end
 
--- FOV Circle
+-- ==================== FOV CIRCLE ====================
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
 FOVCircle.NumSides = 100
@@ -116,29 +162,81 @@ FOVCircle.Visible = false
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
 FOVCircle.Transparency = 1
 
--- Aim Functions
+-- ==================== WEAPON FUNCTIONS ====================
+local function getEquippedWeapon()
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    
+    local tool = character:FindFirstChildOfClass("Tool")
+    return tool
+end
+
+local function buffCurrentWeapon()
+    safeCall(function()
+        local charFolder = Workspace.Criminals:FindFirstChild(LocalPlayer.Name)
+        if not charFolder then 
+            notify("Erro", "Você não está em Criminals!")
+            return 
+        end
+        
+        local buffed = 0
+        for _, obj in pairs(charFolder:GetChildren()) do
+            local dataModule = obj:FindFirstChild("Data")
+            if dataModule and dataModule:IsA("ModuleScript") then
+                local weaponData = require(dataModule)
+                
+                -- Super buffs
+                weaponData["Damage"] = 9999
+                weaponData["FireDelay"] = 0.01
+                weaponData["MagazineSize"] = 999
+                weaponData["AmmoMax"] = 999
+                weaponData["RecoilSpeed"] = 0
+                weaponData["Accuracy"] = 100
+                weaponData["ShakeMagnitude"] = 0
+                weaponData["ShakeRoughness"] = 0
+                weaponData["RecoilDirectionPattern"] = {Vector2.new(0,0)}
+                weaponData["RecoilCameraDirectionPattern"] = {Vector2.new(0,0)}
+                weaponData["BulletSpeed"] = 5000
+                weaponData["ReloadTime"] = 0.1
+                weaponData["LongerReloadTime"] = 0.1
+                
+                buffed = buffed + 1
+            end
+        end
+        
+        if buffed > 0 then
+            notify("Arma Modificada", buffed .. " arma(s) buffada(s)!", 4)
+        else
+            notify("Aviso", "Nenhuma arma encontrada para modificar")
+        end
+    end, "Erro ao modificar arma")
+end
+
+-- ==================== AIM FUNCTIONS ====================
 local function getClosestPolice()
     local closest = nil
     local shortestDistance = aimFOV
     
-    local police = workspace:FindFirstChild("Police")
-    if not police then return nil end
-    
-    for _, npc in pairs(police:GetChildren()) do
-        if npc and npc:FindFirstChild(aimPart) and npc:FindFirstChildOfClass("Humanoid") then
-            local humanoid = npc:FindFirstChildOfClass("Humanoid")
-            if humanoid.Health > 0 then
-                local part = npc:FindFirstChild(aimPart)
-                local screenPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(part.Position)
-                
-                if onScreen then
-                    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
-                    local targetPos = Vector2.new(screenPos.X, screenPos.Y)
-                    local distance = (mousePos - targetPos).Magnitude
-                    
-                    if distance < shortestDistance then
-                        closest = npc
-                        shortestDistance = distance
+    for _, folderName in ipairs({"Police", "Bodies"}) do
+        local folder = Workspace:FindFirstChild(folderName)
+        if folder then
+            for _, npc in pairs(folder:GetChildren()) do
+                if npc and npc:FindFirstChild(aimPart) then
+                    local humanoid = npc:FindFirstChildOfClass("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        local targetPart = npc:FindFirstChild(aimPart)
+                        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                        
+                        if onScreen then
+                            local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+                            local targetPos = Vector2.new(screenPos.X, screenPos.Y)
+                            local distance = (mousePos - targetPos).Magnitude
+                            
+                            if distance < shortestDistance then
+                                closest = npc
+                                shortestDistance = distance
+                            end
+                        end
                     end
                 end
             end
@@ -152,600 +250,666 @@ local function aimAtTarget(target)
     if not target or not target:FindFirstChild(aimPart) then return end
     
     local targetPart = target:FindFirstChild(aimPart)
-    local camera = workspace.CurrentCamera
+    if not targetPart then return end
+    
+    local targetPos = targetPart.Position
+    local cameraPos = Camera.CFrame.Position
     
     if useSensitivity then
-        local targetCFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
-        local tween = TweenService:Create(
-            camera,
-            TweenInfo.new(aimSensitivity / 100, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-            {CFrame = targetCFrame}
-        )
-        tween:Play()
+        local lookAt = CFrame.new(cameraPos, targetPos)
+        local lerpAmount = aimSensitivity / 100
+        Camera.CFrame = Camera.CFrame:Lerp(lookAt, lerpAmount)
     else
-        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+        Camera.CFrame = CFrame.new(cameraPos, targetPos)
     end
 end
 
--- Tabs Creation
+-- ==================== KILL AURA FUNCTIONS ====================
+local function executeKillAura(target)
+    if not target then return false end
+    
+    local humanoid = target:FindFirstChild("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+    
+    local weapon = getEquippedWeapon()
+    if not weapon then return false end
+    
+    local targetPart = target:FindFirstChild("Head") or target:FindFirstChild("UpperTorso") or target:FindFirstChild("Torso")
+    if not targetPart then return false end
+    
+    local success = safeCall(function()
+        local rs = getRS()
+        if not rs then return end
+        
+        -- Método 1: Damage direto
+        local damageArgs = {
+            "Damage",
+            weapon,
+            humanoid,
+            150, -- Dano aumentado
+            targetPart,
+            weapon.Name,
+            Vector3.new(0, 0, 0),
+            {}
+        }
+        
+        rs.Assets.Remotes.Damage:FireServer(unpack(damageArgs))
+        
+        -- Método 2: Backup com múltiplos hits
+        task.wait(0.01)
+        rs.Assets.Remotes.Damage:FireServer(unpack(damageArgs))
+    end)
+    
+    return success
+end
+
+local function killAllPolice()
+    local weapon = getEquippedWeapon()
+    if not weapon then 
+        notify("Kill All", "Segure uma arma primeiro!")
+        return 
+    end
+    
+    local killedCount = 0
+    local totalPolice = 0
+    local batchSize = 3 -- Processa 3 policiais por vez
+    
+    for _, folderName in ipairs({"Police", "Bodies"}) do
+        local folder = Workspace:FindFirstChild(folderName)
+        if folder then
+            for _, npc in pairs(folder:GetChildren()) do
+                if npc and npc:FindFirstChildOfClass("Humanoid") then
+                    local humanoid = npc:FindFirstChildOfClass("Humanoid")
+                    if humanoid.Health > 0 then
+                        totalPolice = totalPolice + 1
+                        
+                        if executeKillAura(npc) then
+                            killedCount = killedCount + 1
+                        end
+                        
+                        -- Delay a cada batch para reduzir lag
+                        if killedCount % batchSize == 0 then
+                            task.wait(0.03)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Notificação apenas a cada 5 segundos quando em loop
+    local currentTime = tick()
+    if not killAllEnabled or (currentTime - lastKillAllNotify >= killAllNotifyDelay) then
+        if totalPolice > 0 then
+            notify("Kill All", string.format("%d/%d alvos atacados", killedCount, totalPolice), 2)
+        else
+            notify("Kill All", "Nenhum policial encontrado", 2)
+        end
+        lastKillAllNotify = currentTime
+    end
+end
+
+-- ==================== DESTRUCTION FUNCTIONS ====================
+local function getTool()
+    return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+end
+
+local function fireHit(tool, hitPart)
+    if not tool or not hitPart then return false end
+    
+    return safeCall(function()
+        local rs = getRS()
+        if not rs then return end
+        
+        local args = {
+            [1] = tool,
+            [2] = hitPart,
+            [3] = false,
+            [6] = Vector3.new(0, 0, 0),
+            [7] = 90,
+            [9] = hitPart.Position
+        }
+        
+        rs.Assets.Remotes.HitObject:FireServer(unpack(args, 1, 9))
+    end)
+end
+
+-- ==================== TABS ====================
 local Tabs = {
     Weapons = Window:AddTab({ Title = "Weapons", Icon = "target" }),
     Interact = Window:AddTab({ Title = "Interações", Icon = "hand" }),
     Destruction = Window:AddTab({ Title = "Destruição", Icon = "bomb" }),
     Player = Window:AddTab({ Title = "Player Mod", Icon = "user" }),
-    Aim = Window:AddTab({ Title = "Aimbot", Icon = "crosshair" }),
+    Aim = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
     ESP = Window:AddTab({ Title = "ESP", Icon = "eye" })
 }
 
 -- ==================== WEAPONS TAB ====================
-local WeaponsSection = Tabs.Weapons:AddSection("Armas")
+Tabs.Weapons:AddSection("Modificar Armas")
 
-local function buffCurrentWeapon()
-    pcall(function()
-        local charFolder = workspace.Criminals:FindFirstChild(LocalPlayer.Name)
-        if not charFolder then return end
-        
-        -- Busca a arma que está atualmente no personagem
-        for _, obj in pairs(charFolder:GetChildren()) do
-            local dataModule = obj:FindFirstChild("Data")
-            if dataModule and dataModule:IsA("ModuleScript") then
-                -- Requer o módulo para editar a tabela na memória
-                local weaponData = require(dataModule)
-                
-                -- Modificações de Performance
-                weaponData["Damage"] = 9999 -- Dano máximo
-                weaponData["FireDelay"] = 0.01 -- Atira muito mais rápido
-                weaponData["MagazineSize"] = 999 -- Pente gigante
-                weaponData["AmmoMax"] = 999 -- Munição reserva infinita
-                
-                -- Remoção de Recuo e Precisão
-                weaponData["RecoilSpeed"] = 0
-                weaponData["Accuracy"] = 100
-                weaponData["ShakeMagnitude"] = 0
-                weaponData["ShakeRoughness"] = 0
-                weaponData["RecoilDirectionPattern"] = {Vector2.new(0,0)}
-                weaponData["RecoilCameraDirectionPattern"] = {Vector2.new(0,0)}
-                
-                -- Velocidade (Tiro Instantâneo)
-                weaponData["BulletSpeed"] = 5000 
-                weaponData["ReloadTime"] = 0.1
-                weaponData["LongerReloadTime"] = 0.1
-                
-                notify("Arma Modificada", "Buffs aplicados em: " .. obj.Name)
-            end
-        end
-    end)
-end
-
--- Adicionar botão na aba Weapons do seu Fluent
 Tabs.Weapons:AddButton({
-    Title = "Modificar Arma Atual (OP)",
-    Description = "Dano 100, Sem Recuo e Fast Fire",
-    Callback = function()
-        buffCurrentWeapon()
-    end
+    Title = "🔥 Modificar Arma Atual (OP)",
+    Description = "Dano 9999, Sem Recuo, Fire Rate Máximo",
+    Callback = buffCurrentWeapon
 })
 
+Tabs.Weapons:AddSection("Obter Armas")
+
 Tabs.Weapons:AddInput("GunName", {
-    Title = "Gun Name",
+    Title = "Nome da Arma",
     Default = "M16",
-    Placeholder = "M16",
+    Placeholder = "Ex: M16, AK47, Shotgun",
     Callback = function(value)
         selectedGun = value
     end
 })
 
 Tabs.Weapons:AddInput("ClassName", {
-    Title = "Class Name",
+    Title = "Nome da Classe",
     Default = "Class 1",
-    Placeholder = "Class 1",
+    Placeholder = "Ex: Class 1, Class 2",
     Callback = function(value)
         selectedClass = value
     end
 })
 
 Tabs.Weapons:AddButton({
-    Title = "Get Gun Data",
-    Description = "Obtém dados da arma",
+    Title = "Obter Dados da Arma",
+    Description = "Pega informações da arma",
     Callback = function()
-        pcall(function()
-            getRS().Remotes.GetGunData:InvokeServer(selectedGun)
-            notify("Weapons", "Gun data obtido: " .. selectedGun)
-        end)
+        safeCall(function()
+            local rs = getRS()
+            if rs then
+                rs.Remotes.GetGunData:InvokeServer(selectedGun)
+                notify("Weapons", "Dados obtidos: " .. selectedGun)
+            end
+        end, "Erro ao obter dados")
     end
 })
 
 Tabs.Weapons:AddButton({
-    Title = "Set Gun Class",
-    Description = "Define arma para a classe",
+    Title = "Definir Arma para Classe",
+    Description = "Atribui a arma à classe selecionada",
     Callback = function()
-        pcall(function()
-            getRS().Remotes.SetGunForClass:FireServer(selectedClass, selectedGun, 0)
-            notify("Weapons", "Arma definida para " .. selectedClass)
-        end)
+        safeCall(function()
+            local rs = getRS()
+            if rs then
+                rs.Remotes.SetGunForClass:FireServer(selectedClass, selectedGun, 0)
+                notify("Weapons", selectedGun .. " → " .. selectedClass)
+            end
+        end, "Erro ao definir arma")
     end
 })
 
 Tabs.Weapons:AddButton({
-    Title = "Ativar Class",
-    Description = "Ativa a classe selecionada",
+    Title = "Ativar Classe",
+    Description = "Equipa a classe selecionada",
     Callback = function()
-        pcall(function()
-            getRS().Remotes.SetClass:FireServer(selectedClass)
-            notify("Weapons", "Classe ativada: " .. selectedClass)
-        end)
+        safeCall(function()
+            local rs = getRS()
+            if rs then
+                rs.Remotes.SetClass:FireServer(selectedClass)
+                notify("Weapons", "Classe ativada: " .. selectedClass)
+            end
+        end, "Erro ao ativar classe")
     end
 })
 
 -- ==================== INTERACT TAB ====================
-local InteractSection = Tabs.Interact:AddSection("Ações Rápidas")
+Tabs.Interact:AddSection("Interações Rápidas")
 
 Tabs.Interact:AddToggle("InstantInteract", {
-    Title = "Instant Interact",
+    Title = "⚡ Instant Interact",
+    Description = "Remove tempo de segurar em todos os prompts",
     Default = false,
     Callback = function(value)
         instantInteractEnabled = value
+        
+        -- Limpa conexão anterior
+        if instantInteractConnection then
+            instantInteractConnection:Disconnect()
+            instantInteractConnection = nil
+        end
+        
         if value then
-            -- Aplica instant interact apenas quando necessário
-            local function applyInstant(prompt)
-                if prompt:IsA("ProximityPrompt") then
-                    prompt.HoldDuration = 0
+            -- Aplica em todos os prompts existentes
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") then
+                    obj.HoldDuration = 0
+                    obj.MaxActivationDistance = 20
+                    obj.RequiresLineOfSight = false
                 end
             end
             
-            for _, descendant in pairs(workspace:GetDescendants()) do
-                applyInstant(descendant)
-            end
-            
-            workspace.DescendantAdded:Connect(function(descendant)
-                if instantInteractEnabled then
-                    applyInstant(descendant)
+            -- Escuta novos prompts
+            instantInteractConnection = Workspace.DescendantAdded:Connect(function(obj)
+                if instantInteractEnabled and obj:IsA("ProximityPrompt") then
+                    task.wait()
+                    obj.HoldDuration = 0
+                    obj.MaxActivationDistance = 20
+                    obj.RequiresLineOfSight = false
                 end
             end)
             
-            notify("Interact", "Instant Interact ativado")
+            notify("Interact", "Instant Interact ATIVADO!", 2)
         else
-            notify("Interact", "Instant Interact desativado")
+            notify("Interact", "Instant Interact desativado", 2)
         end
     end
 })
 
 Tabs.Interact:AddButton({
-    Title = "Jogar Bag",
-    Description = "Joga a bag no chão",
+    Title = "Aplicar Instant Interact Agora",
+    Description = "Força aplicação imediata",
     Callback = function()
-        pcall(function()
-            getRS().Remotes.ThrowBag:FireServer(Vector3.new(-0.98, -0.16, 0.07))
-            notify("Interact", "Bag jogada")
-        end)
+        local count = 0
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+                obj.HoldDuration = 0
+                obj.MaxActivationDistance = 20
+                obj.RequiresLineOfSight = false
+                count = count + 1
+            end
+        end
+        notify("Interact", count .. " prompts modificados!", 3)
+    end
+})
+
+Tabs.Interact:AddSection("Ações NPCs")
+
+Tabs.Interact:AddButton({
+    Title = "Jogar Bag no Chão",
+    Description = "Joga a bag que você está segurando",
+    Callback = function()
+        safeCall(function()
+            local rs = getRS()
+            if rs then
+                rs.Remotes.ThrowBag:FireServer(Vector3.new(-0.98, -0.16, 0.07))
+                notify("Interact", "Bag jogada!")
+            end
+        end, "Erro ao jogar bag")
     end
 })
 
 Tabs.Interact:AddButton({
-    Title = "Gritar NPCs",
-    Description = "Grita em todos os civis",
+    Title = "Gritar em Todos os Civis",
+    Description = "Intimida todos os NPCs civis",
     Callback = function()
-        pcall(function()
-            local citizens = workspace:FindFirstChild("Citizens")
+        safeCall(function()
+            local citizens = Workspace:FindFirstChild("Citizens")
             if citizens then
                 local targetList = {}
                 for _, citizen in pairs(citizens:GetChildren()) do
                     table.insert(targetList, citizen)
                 end
-                getRS().Remotes.PlayerYell:FireServer(targetList)
-                notify("Interact", "Gritando em " .. #targetList .. " civis")
+                
+                local rs = getRS()
+                if rs then
+                    rs.Remotes.PlayerYell:FireServer(targetList)
+                    notify("Interact", "Gritando em " .. #targetList .. " civis")
+                end
+            else
+                notify("Interact", "Nenhum civil encontrado!")
             end
-        end)
+        end, "Erro ao gritar")
     end
 })
 
 -- ==================== DESTRUCTION TAB ====================
-
-local function getTool()
-    local char = game:GetService("Players").LocalPlayer.Character
-    return char and char:FindFirstChildOfClass("Tool")
-end
-
--- Função para disparar o HitObject do jeito que o jogo gosta
-local function fireHit(tool, hitPart)
-    if not tool or not hitPart then return end
-    
-    -- Criamos a tabela exatamente como o log que você achou
-    local args = {}
-    args[1] = tool
-    args[2] = hitPart
-    args[3] = false
-    -- O 4 e 5 o jogo parece ignorar ou não usa no seu log, então pulamos
-    args[6] = Vector3.new(0, 0, 0)
-    args[7] = 90
-    args[9] = hitPart.Position
-
-    pcall(function()
-        game:GetService("ReplicatedStorage").RS_Package.Assets.Remotes.HitObject:FireServer(unpack(args, 1, 9))
-    end)
-end
+Tabs.Destruction:AddSection("Destruição")
 
 Tabs.Destruction:AddButton({
-    Title = "Quebrar Vidros",
+    Title = "💥 Quebrar Todos os Vidros",
     Description = "Destrói todos os vidros do mapa",
     Callback = function()
         local tool = getTool()
-        if not tool then return notify("Erro", "Segure uma arma!") end
+        if not tool then 
+            notify("Erro", "Segure uma arma!")
+            return 
+        end
         
-        local glassFolder = workspace:FindFirstChild("Glass")
+        local glassFolder = Workspace:FindFirstChild("Glass")
         if glassFolder then
             local count = 0
-            for _, v in pairs(glassFolder:GetChildren()) do
-                if v:IsA("BasePart") then
-                    fireHit(tool, v)
-                    count = count + 1
+            for _, glass in pairs(glassFolder:GetChildren()) do
+                if glass:IsA("BasePart") then
+                    if fireHit(tool, glass) then
+                        count = count + 1
+                    end
                 end
-                if count % 20 == 0 then task.wait() end -- Anti-lag
+                
+                if count % 20 == 0 then 
+                    task.wait(0.05) 
+                end
             end
-            notify("Destruction", count .. " vidros quebrados!")
+            notify("Destruction", count .. " vidros quebrados!", 4)
+        else
+            notify("Destruction", "Nenhum vidro encontrado!")
         end
     end
 })
 
 Tabs.Destruction:AddButton({
-    Title = "Quebrar Câmeras",
-    Description = "Destrói câmeras em 'Cameras' e 'BrokenCameras'",
+    Title = "📹 Destruir Todas as Câmeras",
+    Description = "Quebra câmeras ativas e já quebradas",
     Callback = function()
         local tool = getTool()
-        if not tool then return notify("Erro", "Segure uma arma!") end
+        if not tool then 
+            notify("Erro", "Segure uma arma!")
+            return 
+        end
         
         local count = 0
-        for _, folderName in pairs({"Cameras", "BrokenCameras"}) do
-            local folder = workspace:FindFirstChild(folderName)
+        for _, folderName in ipairs({"Cameras", "BrokenCameras"}) do
+            local folder = Workspace:FindFirstChild(folderName)
             if folder then
                 for _, cam in pairs(folder:GetChildren()) do
-                    -- Procura a parte sensível da câmera
-                    local part = cam:FindFirstChild("Union") or cam:FindFirstChild("Head") or cam:FindFirstChildOfClass("MeshPart")
+                    local part = cam:FindFirstChild("Union") 
+                              or cam:FindFirstChild("Head") 
+                              or cam:FindFirstChildOfClass("MeshPart")
+                    
                     if part then
-                        fireHit(tool, part)
-                        count = count + 1
+                        if fireHit(tool, part) then
+                            count = count + 1
+                        end
                     end
                 end
             end
         end
-        notify("Destruction", count .. " câmeras atingidas!")
+        
+        notify("Destruction", count .. " câmeras destruídas!", 4)
     end
 })
 
 -- ==================== PLAYER MOD TAB ====================
-local MovementSection = Tabs.Player:AddSection("Movimento")
-local StatsSection = Tabs.Player:AddSection("Stats")
+Tabs.Player:AddSection("Movimento")
 
-
-
--- Stats
 Tabs.Player:AddToggle("InfiniteStamina", {
-    Title = "Stamina Infinita",
+    Title = "♾️ Stamina Infinita",
+    Description = "Nunca fique cansado",
     Default = false,
     Callback = function(value)
         infiniteStaminaEnabled = value
+        
+        if infiniteStaminaLoop then
+            infiniteStaminaLoop:Disconnect()
+            infiniteStaminaLoop = nil
+        end
+        
         if value then
-            spawn(function()
-                while infiniteStaminaEnabled do
-                    pcall(function()
-                        local criminals = workspace:FindFirstChild("Criminals")
-                        if criminals and criminals:FindFirstChild(LocalPlayer.Name) then
-                            local player = criminals[LocalPlayer.Name]
-                            if player:FindFirstChild("Stamina") then
-                                player.Stamina.Value = 90000
-                            end
-                            if player:FindFirstChild("MaxStamina") then
-                                player.MaxStamina.Value = 90000
-                            end
+            infiniteStaminaLoop = RunService.Heartbeat:Connect(function()
+                safeCall(function()
+                    local criminals = Workspace:FindFirstChild("Criminals")
+                    if criminals then
+                        local playerModel = criminals:FindFirstChild(LocalPlayer.Name)
+                        if playerModel then
+                            local stamina = playerModel:FindFirstChild("Stamina")
+                            local maxStamina = playerModel:FindFirstChild("MaxStamina")
+                            
+                            if stamina then stamina.Value = 90000 end
+                            if maxStamina then maxStamina.Value = 90000 end
                         end
-                    end)
-                    wait(0.5)
-                end
+                    end
+                end)
             end)
+            notify("Player", "Stamina Infinita ativada!")
+        else
+            notify("Player", "Stamina Infinita desativada")
         end
     end
 })
 
--- Movement
 Tabs.Player:AddSlider("WalkSpeed", {
-    Title = "Velocidade",
-    Description = "Ajusta a velocidade de movimento",
+    Title = "Velocidade de Movimento",
+    Description = "Controla a velocidade do TP Walk",
     Default = 50,
     Min = 16,
     Max = 200,
     Rounding = 1,
     Callback = function(value)
         walkSpeedValue = value
-        if walkSpeedEnabled then
-            pcall(function()
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                    LocalPlayer.Character.Humanoid.WalkSpeed = value
-                end
-            end)
-        end
     end
 })
 
 Tabs.Player:AddToggle("WalkSpeedToggle", {
-    Title = "Ativar Speed",
+    Title = "🚀 TP Walk",
+    Description = "Movimento rápido (seguro)",
     Default = false,
     Callback = function(value)
         walkSpeedEnabled = value
+        
+        -- IMPORTANTE: Limpa a conexão anterior
+        if tpWalkConnection then
+            tpWalkConnection:Disconnect()
+            tpWalkConnection = nil
+        end
+        
         if value then
-            spawn(function()
-                while walkSpeedEnabled do
-                    pcall(function()
-                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                            LocalPlayer.Character.Humanoid.WalkSpeed = walkSpeedValue
-                        end
-                    end)
-                    RunService.Heartbeat:Wait()
-                end
-                -- Reset ao desativar
-                pcall(function()
-                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                        LocalPlayer.Character.Humanoid.WalkSpeed = 16
+            tpWalkConnection = RunService.Heartbeat:Connect(function()
+                if not walkSpeedEnabled then return end
+                
+                safeCall(function()
+                    local character = LocalPlayer.Character
+                    if not character then return end
+                    
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    
+                    if hrp and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                        local moveSpeed = walkSpeedValue / 50
+                        hrp.CFrame = hrp.CFrame + (humanoid.MoveDirection * moveSpeed)
                     end
                 end)
             end)
+            notify("Player", "TP Walk ativado - Velocidade: " .. walkSpeedValue)
         else
-            pcall(function()
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                    LocalPlayer.Character.Humanoid.WalkSpeed = 16
-                end
-            end)
+            notify("Player", "TP Walk desativado")
         end
     end
 })
 
 Tabs.Player:AddToggle("InfiniteJump", {
     Title = "Jump Infinito",
+    Description = "Pule no ar infinitamente",
     Default = false,
     Callback = function(value)
         infiniteJumpEnabled = value
+        
+        if infJumpConnection then
+            infJumpConnection:Disconnect()
+            infJumpConnection = nil
+        end
+        
         if value then
-            if infJumpConnection then
-                infJumpConnection:Disconnect()
-            end
             infJumpConnection = UserInputService.JumpRequest:Connect(function()
-                if infiniteJumpEnabled and LocalPlayer.Character then
-                    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if not infiniteJumpEnabled then return end
+                
+                local character = LocalPlayer.Character
+                if character then
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
                     if humanoid then
                         humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     end
                 end
             end)
+            notify("Player", "Jump Infinito ativado!")
         else
-            if infJumpConnection then
-                infJumpConnection:Disconnect()
-                infJumpConnection = nil
-            end
+            notify("Player", "Jump Infinito desativado")
         end
     end
 })
 
+Tabs.Player:AddSection("Física")
+
 Tabs.Player:AddSlider("Gravity", {
     Title = "Gravidade",
-    Description = "Ajusta a gravidade",
+    Description = "Controla a gravidade do mundo",
     Default = 196.2,
     Min = 0,
     Max = 196.2,
     Rounding = 1,
     Callback = function(value)
         gravityValue = value
-        if customGravityEnabled then
-            workspace.Gravity = value
-        end
     end
 })
 
 Tabs.Player:AddToggle("GravityToggle", {
-    Title = "Ativar Gravidade",
+    Title = "Ativar Gravidade Customizada",
+    Description = "Aplica a gravidade configurada",
     Default = false,
     Callback = function(value)
         customGravityEnabled = value
+        
+        if gravityLoop then
+            gravityLoop:Disconnect()
+            gravityLoop = nil
+        end
+        
         if value then
-            spawn(function()
-                while customGravityEnabled do
-                    workspace.Gravity = gravityValue
-                    wait()
+            gravityLoop = RunService.Heartbeat:Connect(function()
+                if customGravityEnabled then
+                    Workspace.Gravity = gravityValue
                 end
-                workspace.Gravity = 196.2
             end)
+            notify("Player", "Gravidade: " .. gravityValue)
         else
-            workspace.Gravity = 196.2
+            Workspace.Gravity = 196.2
+            notify("Player", "Gravidade resetada")
         end
     end
 })
 
 Tabs.Player:AddToggle("Noclip", {
-    Title = "Noclip",
+    Title = "👻 Noclip",
+    Description = "Atravesse paredes",
     Default = false,
     Callback = function(value)
         noclipEnabled = value
+        
+        if noclipLoop then
+            noclipLoop:Disconnect()
+            noclipLoop = nil
+        end
+        
         if value then
-            spawn(function()
-                while noclipEnabled do
-                    pcall(function()
-                        if LocalPlayer.Character then
-                            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                                if part:IsA("BasePart") and part.CanCollide then
-                                    part.CanCollide = false
-                                end
-                            end
-                        end
-                    end)
-                    RunService.Stepped:Wait()
-                end
-                -- Reset ao desativar
-                pcall(function()
-                    if LocalPlayer.Character then
-                        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                                part.CanCollide = true
+            noclipLoop = RunService.Stepped:Connect(function()
+                if not noclipEnabled then return end
+                
+                safeCall(function()
+                    local character = LocalPlayer.Character
+                    if character then
+                        for _, part in pairs(character:GetDescendants()) do
+                            if part:IsA("BasePart") and part.CanCollide then
+                                part.CanCollide = false
                             end
                         end
                     end
                 end)
             end)
+            notify("Player", "Noclip ativado!")
         else
-            pcall(function()
-                if LocalPlayer.Character then
-                    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            -- Restaura colisão
+            safeCall(function()
+                local character = LocalPlayer.Character
+                if character then
+                    for _, part in pairs(character:GetDescendants()) do
                         if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                             part.CanCollide = true
                         end
                     end
                 end
             end)
+            notify("Player", "Noclip desativado")
         end
     end
 })
 
--- ==================== AIM TAB ====================
-local AimSection = Tabs.Aim:AddSection("Configurações de Aim")
+-- ==================== COMBAT TAB ====================
+Tabs.Aim:AddSection("Kill All")
 
--- Variáveis de controle (Coloque no topo do seu script)
-local kaRange = 70 -- Distancia de ~20 blocos
-local kaV1 = false
-local kaV2 = false
-local lastKaTick = 0
-
--- Função para pegar a arma atual na mão
-local function getEquippedWeapon()
-    local char = LocalPlayer.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then return tool end
-    end
-    return nil
-end
-
--- ==================== NOVO KILL AURA V1 (DAMAGE) ====================
-local function runKillAuraV1(target)
-    local weapon = getEquippedWeapon()
-    if not weapon or not target:FindFirstChild("Humanoid") then return end
-    
-    local args = {
-        "Damage",
-        weapon,
-        target.Humanoid,
-        100, -- Dano (Ajustado para matar rápido)
-        target:FindFirstChild("Head") or target:FindFirstChild("UpperTorso"),
-        weapon.Name,
-        Vector3.new(0, 0, 0),
-        {} -- Tabela vazia como no seu novo log
-    }
-    pcall(function()
-        getRS().Assets.Remotes.Damage:FireServer(unpack(args))
-    end)
-end
-
--- ==================== NOVO KILL AURA V2 (HIT OBJECT) ====================
-local function runKillAuraV2(target)
-    local weapon = getEquippedWeapon()
-    local targetPart = target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart")
-    if not weapon or not targetPart then return end
-    
-    local args = {
-        weapon,
-        targetPart,
-        false,
-        [6] = Vector3.new(0, 0, 0),
-        [7] = 90,
-        [9] = targetPart.Position
-    }
-    pcall(function()
-        getRS().Assets.Remotes.HitObject:FireServer(unpack(args))
-    end)
-end
-
--- ==================== LÓGICA DO AIMBOT CORRIGIDA ====================
-local function aimAtTarget(target)
-    if not target or not target:FindFirstChild(aimPart) then return end
-    local targetPart = target:FindFirstChild(aimPart)
-    local camera = workspace.CurrentCamera
-    
-    -- Usando Lerp em vez de Tween para não conflitar com a mira do jogo
-    local lookAt = CFrame.new(camera.CFrame.Position, targetPart.Position)
-    local lerpAmount = useSensitivity and (1 - (aimSensitivity / 100)) or 1
-    camera.CFrame = camera.CFrame:Lerp(lookAt, math.clamp(lerpAmount, 0.01, 1))
-end
-
--- ==================== ABA AIM (ADICIONAR TOGGLES) ====================
-local KASection = Tabs.Aim:AddSection("Kill Aura (Distancia: 20 blocos)")
-
-Tabs.Aim:AddToggle("KAV1", {
-    Title = "Kill Aura V2 (UNPATCHED)",
+Tabs.Aim:AddToggle("KillAllLoop", {
+    Title = "🔥 Kill All (Loop)",
+    Description = "Mata todos os policiais automaticamente",
     Default = false,
-    Callback = function(v) kaV1 = v end
+    Callback = function(value)
+        killAllEnabled = value
+        
+        if value then
+            task.spawn(function()
+                notify("Kill All Loop", "Loop ATIVADO!", 3)
+                lastKillAllNotify = tick() -- Reset timer
+                
+                while killAllEnabled do
+                    killAllPolice()
+                    task.wait(killAllDelay)
+                end
+                
+                notify("Kill All Loop", "Loop desativado", 2)
+            end)
+        end
+    end
 })
 
-Tabs.Aim:AddToggle("KAV2", {
-    Title = "Kill Aura V1 (PATCHED)",
+Tabs.Aim:AddButton({
+    Title = "Kill All (Uma Vez)",
+    Description = "Executa kill all uma única vez",
+    Callback = killAllPolice
+})
+
+Tabs.Aim:AddSection("Kill Aura")
+
+Tabs.Aim:AddToggle("KillAura", {
+    Title = "⚔️ Kill Aura (Melhorado)",
+    Description = "Mata inimigos próximos ao mirar (Botão Direito)",
     Default = false,
-    Callback = function(v) kaV2 = v end
+    Callback = function(value)
+        kaEnabled = value
+        if value then
+            notify("Kill Aura", "ATIVADO - Segure botão direito do mouse!", 4)
+        else
+            notify("Kill Aura", "Desativado", 2)
+        end
+    end
 })
 
--- ==================== LOOP PRINCIPAL (RENDERSTEPPED) ====================
-RunService.RenderStepped:Connect(function()
-    -- Lógica do FOV Circle (Mantenha o seu código)
-    if fovCircleEnabled then
-        local mousePos = UserInputService:GetMouseLocation()
-        FOVCircle.Position = Vector2.new(mousePos.X, mousePos.Y)
+Tabs.Aim:AddToggle("KAAutoAim", {
+    Title = "Auto-Aim no Kill Aura",
+    Description = "Mira automaticamente no alvo do kill aura",
+    Default = true,
+    Callback = function(value)
+        kaAutoAim = value
     end
+})
 
-    -- Busca alvo em "Police" ou "Bodies"
-    local target = getClosestPolice() -- Verifique se essa func olha em workspace.Police
-    
-    if target and target:FindFirstChild("HumanoidRootPart") then
-        local dist = (LocalPlayer.Character.HumanoidRootPart.Position - target.HumanoidRootPart.Position).Magnitude
-        
-        if dist <= kaRange then
-            -- Aimbot se o botão estiver apertado
-            if aimEnabled and aiming then
-                aimAtTarget(target)
-            end
-            
-            -- Kill Aura (Tick rate para não dar kick por spam)
-            if tick() - lastKaTick > 0.15 then 
-                if kaV1 then runKillAuraV1(target) end
-                if kaV2 then runKillAuraV2(target) end
-                lastKaTick = tick()
-            end
-        end
+Tabs.Aim:AddSlider("KARange", {
+    Title = "Alcance do Kill Aura",
+    Description = "Distância máxima para atacar",
+    Default = 70,
+    Min = 20,
+    Max = 150,
+    Rounding = 1,
+    Callback = function(value)
+        kaRange = value
     end
-end)
+})
 
--- ==================== LOOP PRINCIPAL ATUALIZADO ====================
-RunService.RenderStepped:Connect(function()
-    -- FOV Circle
-    if fovCircleEnabled then
-        local mouseLocation = UserInputService:GetMouseLocation()
-        FOVCircle.Position = Vector2.new(mouseLocation.X, mouseLocation.Y)
+Tabs.Aim:AddSlider("KADelay", {
+    Title = "Delay do Kill Aura",
+    Description = "Tempo entre ataques (segundos)",
+    Default = 0.1,
+    Min = 0.05,
+    Max = 0.5,
+    Rounding = 2,
+    Callback = function(value)
+        kaDelay = value
     end
-    
-    -- Lógica de Aim e Kill Aura
-    local target = getClosestPolice() -- Certifique-se que esta função busca em workspace.Bodies
-    
-    if target then
-        -- Aimbot
-        if aimEnabled and aiming then
-            aimAtTarget(target)
-        end
-        
-        -- Kill Aura (limite de 0.1s para não crashar o remote)
-        if tick() - lastKillAuraTick > 0.1 then
-            if killAuraV1 then runKillAuraV1(target) end
-            if killAuraV2 then runKillAuraV2(target) end
-            lastKillAuraTick = tick()
-        end
-    end
-end)
+})
+
+Tabs.Aim:AddSection("Aimbot")
 
 Tabs.Aim:AddToggle("AimEnabled", {
-    Title = "Aimbot",
-    Description = "Ativa/desativa o aimbot",
+    Title = "🎯 Aimbot",
+    Description = "Mira automaticamente ao segurar botão direito",
     Default = false,
     Callback = function(value)
         aimEnabled = value
@@ -753,12 +917,13 @@ Tabs.Aim:AddToggle("AimEnabled", {
             aiming = false
             currentTarget = nil
         end
-        notify("Aim", aimEnabled and "Aimbot ativado" or "Aimbot desativado")
+        notify("Aim", value and "Aimbot ativado!" or "Aimbot desativado", 2)
     end
 })
 
 Tabs.Aim:AddDropdown("AimPart", {
     Title = "Parte do Alvo",
+    Description = "Onde mirar no inimigo",
     Values = {"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"},
     Default = 1,
     Callback = function(value)
@@ -767,8 +932,8 @@ Tabs.Aim:AddDropdown("AimPart", {
 })
 
 Tabs.Aim:AddSlider("AimFOV", {
-    Title = "FOV Radius",
-    Description = "Raio do campo de visão",
+    Title = "FOV do Aimbot",
+    Description = "Raio de detecção",
     Default = 200,
     Min = 50,
     Max = 500,
@@ -781,7 +946,7 @@ Tabs.Aim:AddSlider("AimFOV", {
 
 Tabs.Aim:AddSlider("AimSensitivity", {
     Title = "Sensibilidade",
-    Description = "Suavidade do aim",
+    Description = "Suavidade do aim (maior = mais rápido)",
     Default = 50,
     Min = 1,
     Max = 100,
@@ -793,7 +958,7 @@ Tabs.Aim:AddSlider("AimSensitivity", {
 
 Tabs.Aim:AddToggle("UseSensitivity", {
     Title = "Usar Sensibilidade",
-    Description = "Ativa suavização do aim",
+    Description = "Ativa suavização do movimento",
     Default = true,
     Callback = function(value)
         useSensitivity = value
@@ -801,8 +966,8 @@ Tabs.Aim:AddToggle("UseSensitivity", {
 })
 
 Tabs.Aim:AddToggle("ShowFOV", {
-    Title = "Mostrar FOV",
-    Description = "Exibe círculo de FOV",
+    Title = "Mostrar Círculo FOV",
+    Description = "Visualiza o raio do aimbot",
     Default = false,
     Callback = function(value)
         fovCircleEnabled = value
@@ -811,62 +976,66 @@ Tabs.Aim:AddToggle("ShowFOV", {
 })
 
 -- ==================== ESP TAB ====================
-local ESPSection = Tabs.ESP:AddSection("ESP (Highlights)")
+Tabs.ESP:AddSection("ESP (Highlights)")
 
 Tabs.ESP:AddToggle("CameraESP", {
-    Title = "Camera ESP",
-    Description = "Destaca câmeras (vermelho = ativa, laranja = quebrada)",
+    Title = "📹 Camera ESP",
+    Description = "Vermelho = ativa | Laranja = quebrada",
     Default = false,
     Callback = function(value)
         cameraESPEnabled = value
+        
         if value then
-            spawn(function()
+            task.spawn(function()
                 while cameraESPEnabled do
-                    removeHighlights(cameraHighlights)
-                    pcall(function()
-                        for _, folderName in pairs({"Cameras", "BrokenCameras"}) do
-                            local folder = workspace:FindFirstChild(folderName)
+                    clearHighlights(cameraHighlights)
+                    
+                    safeCall(function()
+                        for _, folderName in ipairs({"Cameras", "BrokenCameras"}) do
+                            local folder = Workspace:FindFirstChild(folderName)
                             if folder then
                                 for _, cam in pairs(folder:GetChildren()) do
-                                    if cam then
-                                        local color = folderName == "BrokenCameras" 
-                                            and Color3.fromRGB(255, 165, 0) 
-                                            or Color3.fromRGB(255, 0, 0)
-                                        local hl = addHighlight(cam, color)
-                                        if hl then
-                                            table.insert(cameraHighlights, hl)
-                                        end
+                                    local color = (folderName == "BrokenCameras") 
+                                        and Color3.fromRGB(255, 165, 0) 
+                                        or Color3.fromRGB(255, 0, 0)
+                                    
+                                    local hl = createHighlight(cam, color)
+                                    if hl then
+                                        table.insert(cameraHighlights, hl)
                                     end
                                 end
                             end
                         end
                     end)
-                    wait(2)
+                    
+                    task.wait(2)
                 end
-                removeHighlights(cameraHighlights)
+                clearHighlights(cameraHighlights)
             end)
         else
-            removeHighlights(cameraHighlights)
+            clearHighlights(cameraHighlights)
         end
     end
 })
 
 Tabs.ESP:AddToggle("PoliceESP", {
-    Title = "Police ESP",
-    Description = "Destaca policiais (azul)",
+    Title = "👮 Police ESP",
+    Description = "Destaca policiais em azul",
     Default = false,
     Callback = function(value)
         policeESPEnabled = value
+        
         if value then
-            spawn(function()
+            task.spawn(function()
                 while policeESPEnabled do
-                    removeHighlights(policeHighlights)
-                    pcall(function()
-                        local police = workspace:FindFirstChild("Police")
-                        if police then
-                            for _, cop in pairs(police:GetChildren()) do
-                                if cop then
-                                    local hl = addHighlight(cop, Color3.fromRGB(0, 0, 255))
+                    clearHighlights(policeHighlights)
+                    
+                    safeCall(function()
+                        for _, folderName in ipairs({"Police", "Bodies"}) do
+                            local folder = Workspace:FindFirstChild(folderName)
+                            if folder then
+                                for _, cop in pairs(folder:GetChildren()) do
+                                    local hl = createHighlight(cop, Color3.fromRGB(0, 100, 255))
                                     if hl then
                                         table.insert(policeHighlights, hl)
                                     end
@@ -874,48 +1043,52 @@ Tabs.ESP:AddToggle("PoliceESP", {
                             end
                         end
                     end)
-                    wait(2)
+                    
+                    task.wait(2)
                 end
-                removeHighlights(policeHighlights)
+                clearHighlights(policeHighlights)
             end)
         else
-            removeHighlights(policeHighlights)
+            clearHighlights(policeHighlights)
         end
     end
 })
 
 Tabs.ESP:AddToggle("CivilianESP", {
-    Title = "Civilian ESP",
-    Description = "Destaca civis (verde = livre, amarelo = amarrado)",
+    Title = "👥 Civilian ESP",
+    Description = "Verde = livre | Amarelo = amarrado",
     Default = false,
     Callback = function(value)
         civilianESPEnabled = value
+        
         if value then
-            spawn(function()
+            task.spawn(function()
                 while civilianESPEnabled do
-                    removeHighlights(civilianHighlights)
-                    pcall(function()
-                        local citizens = workspace:FindFirstChild("Citizens")
+                    clearHighlights(civilianHighlights)
+                    
+                    safeCall(function()
+                        local citizens = Workspace:FindFirstChild("Citizens")
                         if citizens then
                             for _, citizen in pairs(citizens:GetChildren()) do
-                                if citizen then
-                                    local color = string.find(citizen.Name, "Tied") 
-                                        and Color3.fromRGB(255, 255, 0) 
-                                        or Color3.fromRGB(0, 255, 0)
-                                    local hl = addHighlight(citizen, color)
-                                    if hl then
-                                        table.insert(civilianHighlights, hl)
-                                    end
+                                local isTied = string.find(citizen.Name:lower(), "tied")
+                                local color = isTied 
+                                    and Color3.fromRGB(255, 255, 0) 
+                                    or Color3.fromRGB(0, 255, 0)
+                                
+                                local hl = createHighlight(citizen, color)
+                                if hl then
+                                    table.insert(civilianHighlights, hl)
                                 end
                             end
                         end
                     end)
-                    wait(2)
+                    
+                    task.wait(2)
                 end
-                removeHighlights(civilianHighlights)
+                clearHighlights(civilianHighlights)
             end)
         else
-            removeHighlights(civilianHighlights)
+            clearHighlights(civilianHighlights)
         end
     end
 })
@@ -924,17 +1097,15 @@ Tabs.ESP:AddToggle("CivilianESP", {
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
-    if input.UserInputType == Enum.UserInputType.MouseButton2 or 
-       (aimKey ~= "RMB" and input.KeyCode == Enum.KeyCode[aimKey]) then
-        if aimEnabled then
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        if aimEnabled or kaEnabled then
             aiming = true
         end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 or 
-       (aimKey ~= "RMB" and input.KeyCode == Enum.KeyCode[aimKey]) then
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
         aiming = false
         currentTarget = nil
     end
@@ -942,7 +1113,7 @@ end)
 
 -- ==================== MAIN LOOP ====================
 RunService.RenderStepped:Connect(function()
-    -- Update FOV Circle
+    -- FOV Circle
     if fovCircleEnabled then
         local mouseLocation = UserInputService:GetMouseLocation()
         FOVCircle.Position = Vector2.new(mouseLocation.X, mouseLocation.Y)
@@ -951,24 +1122,88 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Visible = false
     end
     
-    -- Aim Logic
-    if aimEnabled and aiming then
-        currentTarget = getClosestPolice()
-        if currentTarget then
-            aimAtTarget(currentTarget)
+    -- Get closest target
+    local target = getClosestPolice()
+    currentTarget = target
+    
+    -- Aimbot
+    if aimEnabled and aiming and target then
+        aimAtTarget(target)
+    end
+    
+    -- Kill Aura (MELHORADO)
+    if kaEnabled and aiming and target then
+        local currentTime = tick()
+        
+        -- Auto-aim no kill aura
+        if kaAutoAim then
+            aimAtTarget(target)
+        end
+        
+        -- Verificar delay
+        if currentTime - lastKaTime >= kaDelay then
+            local character = LocalPlayer.Character
+            if character then
+                local hrp = character:FindFirstChild("HumanoidRootPart")
+                local targetHrp = target:FindFirstChild("HumanoidRootPart")
+                
+                if hrp and targetHrp then
+                    local distance = (hrp.Position - targetHrp.Position).Magnitude
+                    
+                    if distance <= kaRange then
+                        -- Ataca múltiplas vezes para garantir kill
+                        for i = 1, 2 do
+                            executeKillAura(target)
+                            task.wait(0.01)
+                        end
+                        lastKaTime = currentTime
+                    end
+                end
+            end
         end
     end
 end)
 
 -- ==================== CLEANUP ====================
-game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
-    removeHighlights(cameraHighlights)
-    removeHighlights(policeHighlights)
-    removeHighlights(civilianHighlights)
+local function cleanup()
+    -- Limpar ESPs
+    clearHighlights(cameraHighlights)
+    clearHighlights(policeHighlights)
+    clearHighlights(civilianHighlights)
+    
+    -- Limpar FOV Circle
     if FOVCircle then
         FOVCircle:Remove()
     end
+    
+    -- Desconectar loops
+    if tpWalkConnection then tpWalkConnection:Disconnect() end
+    if infJumpConnection then infJumpConnection:Disconnect() end
+    if noclipLoop then noclipLoop:Disconnect() end
+    if gravityLoop then gravityLoop:Disconnect() end
+    if infiniteStaminaLoop then infiniteStaminaLoop:Disconnect() end
+    if instantInteractConnection then instantInteractConnection:Disconnect() end
+    
+    -- Resetar valores
+    Workspace.Gravity = 196.2
+    
+    notify("XXMZ HUB", "Limpeza concluída!", 2)
+end
+
+-- Cleanup ao teleportar
+Players.LocalPlayer.OnTeleport:Connect(cleanup)
+
+-- Cleanup ao morrer
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    if noclipEnabled then
+        -- Reaplica noclip após spawn
+        noclipEnabled = false
+        task.wait(0.1)
+        noclipEnabled = true
+    end
 end)
 
--- Notification inicial
-notify("XXMZ HUB", "Hub carregado com sucesso!")
+-- ==================== INICIALIZAÇÃO COMPLETA ====================
+notify("XXMZ HUB v2.0", "Hub carregado com sucesso! ✅", 5)
+notify("Criado por", "29 :)", 3)

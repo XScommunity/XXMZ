@@ -10,6 +10,7 @@
     - Performance otimizada
     - Código mais limpo e organizado
 ]]
+loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
 
 -- ==================== INICIALIZAÇÃO ====================
 local Fluent = nil

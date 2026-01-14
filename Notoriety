@@ -1,17 +1,17 @@
 --[[
     XXMZ HUB - Notoriety
-    Versão Melhorada v2.0
+    Improved Version v2.0
     By 29 :)
     
-    Melhorias:
-    - Kill Aura corrigido e otimizado
-    - Bug do TP Walk ao carregar resolvido
-    - Sistema de segurança melhorado
-    - Performance otimizada
-    - Código mais limpo e organizado
+    Improvements:
+    - Kill Aura fixed and optimized
+    - TP Walk loading bug resolved
+    - Improved security system
+    - Optimized performance
+    - Cleaner and organized code
 ]]
 loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
--- ==================== INICIALIZAÇÃO ====================
+-- ==================== INITIALIZATION ====================
 local Fluent = nil
 local Success, Result = pcall(function()
     return game:HttpGet("https://twix.cyou/Fluent.txt", true)
@@ -38,7 +38,7 @@ local Camera = Workspace.CurrentCamera
 -- ==================== WINDOW CREATION ====================
 local Window = Fluent:CreateWindow({
     Title = "XXMZ HUB - Notoriety v2.0",
-    SubTitle = "by 29 :) - Versão Melhorada",
+    SubTitle = "by 29 :) - Improved Version",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Theme = "VSC Dark High Contrast",
@@ -187,7 +187,7 @@ local function buffCurrentWeapon()
     safeCall(function()
         local charFolder = Workspace.Criminals:FindFirstChild(LocalPlayer.Name)
         if not charFolder then 
-            notify("Erro", "Você não está em Criminals!")
+            notify("Error", "You are not in Criminals!")
             return 
         end
         
@@ -217,11 +217,11 @@ local function buffCurrentWeapon()
         end
         
         if buffed > 0 then
-            notify("Arma Modificada", buffed .. " arma(s) buffada(s)!", 4)
+            notify("Weapon Modified", buffed .. " weapon(s) buffed!", 4)
         else
-            notify("Aviso", "Nenhuma arma encontrada para modificar")
+            notify("Warning", "No weapon found to modify")
         end
-    end, "Erro ao modificar arma")
+    end, "Error modifying weapon")
 end
 
 -- ==================== AIM FUNCTIONS ====================
@@ -293,12 +293,12 @@ local function executeKillAura(target)
         local rs = getRS()
         if not rs then return end
         
-        -- Método 1: Damage direto
+        -- Method 1: Direct damage
         local damageArgs = {
             "Damage",
             weapon,
             humanoid,
-            150, -- Dano aumentado
+            150, -- Increased damage
             targetPart,
             weapon.Name,
             Vector3.new(0, 0, 0),
@@ -307,7 +307,7 @@ local function executeKillAura(target)
         
         rs.Assets.Remotes.Damage:FireServer(unpack(damageArgs))
         
-        -- Método 2: Backup com múltiplos hits
+        -- Method 2: Backup with multiple hits
         task.wait(0.01)
         rs.Assets.Remotes.Damage:FireServer(unpack(damageArgs))
     end)
@@ -318,13 +318,13 @@ end
 local function killAllPolice()
     local weapon = getEquippedWeapon()
     if not weapon then 
-        notify("Kill All", "Segure uma arma primeiro!")
+        notify("Kill All", "Hold a weapon first!")
         return 
     end
     
     local killedCount = 0
     local totalPolice = 0
-    local batchSize = 3 -- Processa 3 policiais por vez
+    local batchSize = 3 -- Process 3 police at a time
     
     for _, folderName in ipairs({"Police", "Bodies"}) do
         local folder = Workspace:FindFirstChild(folderName)
@@ -339,7 +339,7 @@ local function killAllPolice()
                             killedCount = killedCount + 1
                         end
                         
-                        -- Delay a cada batch para reduzir lag
+                        -- Delay every batch to reduce lag
                         if killedCount % batchSize == 0 then
                             task.wait(0.03)
                         end
@@ -349,13 +349,13 @@ local function killAllPolice()
         end
     end
     
-    -- Notificação apenas a cada 5 segundos quando em loop
+    -- Notification only every 5 seconds when in loop
     local currentTime = tick()
     if not killAllEnabled or (currentTime - lastKillAllNotify >= killAllNotifyDelay) then
         if totalPolice > 0 then
-            notify("Kill All", string.format("%d/%d alvos atacados", killedCount, totalPolice), 2)
+            notify("Kill All", string.format("%d/%d targets attacked", killedCount, totalPolice), 2)
         else
-            notify("Kill All", "Nenhum policial encontrado", 2)
+            notify("Kill All", "No police found", 2)
         end
         lastKillAllNotify = currentTime
     end
@@ -389,8 +389,8 @@ end
 -- ==================== TABS ====================
 local Tabs = {
     Weapons = Window:AddTab({ Title = "Weapons", Icon = "target" }),
-    Interact = Window:AddTab({ Title = "Interações", Icon = "hand" }),
-    Destruction = Window:AddTab({ Title = "Destruição", Icon = "bomb" }),
+    Interact = Window:AddTab({ Title = "Interactions", Icon = "hand" }),
+    Destruction = Window:AddTab({ Title = "Destruction", Icon = "bomb" }),
     Player = Window:AddTab({ Title = "Player Mod", Icon = "user" }),
     Aim = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
     ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
@@ -399,18 +399,18 @@ local Tabs = {
 }
 
 -- ==================== WEAPONS TAB ====================
-Tabs.Weapons:AddSection("Modificar Armas")
+Tabs.Weapons:AddSection("Modify Weapons")
 
 Tabs.Weapons:AddButton({
-    Title = "🔥 Modificar Arma Atual (OP)",
-    Description = "Dano 9999, Sem Recuo, Fire Rate Máximo",
+    Title = "🔥 Modify Current Weapon (OP)",
+    Description = "9999 Damage, No Recoil, Max Fire Rate",
     Callback = buffCurrentWeapon
 })
 
-Tabs.Weapons:AddSection("Obter Armas")
+Tabs.Weapons:AddSection("Get Weapons")
 
 Tabs.Weapons:AddInput("GunName", {
-    Title = "Nome da Arma",
+    Title = "Weapon Name",
     Default = "M16",
     Placeholder = "Ex: M16, AK47, Shotgun",
     Callback = function(value)
@@ -419,7 +419,7 @@ Tabs.Weapons:AddInput("GunName", {
 })
 
 Tabs.Weapons:AddInput("ClassName", {
-    Title = "Nome da Classe",
+    Title = "Class Name",
     Default = "Class 1",
     Placeholder = "Ex: Class 1, Class 2",
     Callback = function(value)
@@ -428,22 +428,22 @@ Tabs.Weapons:AddInput("ClassName", {
 })
 
 Tabs.Weapons:AddButton({
-    Title = "Obter Dados da Arma",
-    Description = "Pega informações da arma",
+    Title = "Get Weapon Data",
+    Description = "Retrieves weapon information",
     Callback = function()
         safeCall(function()
             local rs = getRS()
             if rs then
                 rs.Remotes.GetGunData:InvokeServer(selectedGun)
-                notify("Weapons", "Dados obtidos: " .. selectedGun)
+                notify("Weapons", "Data obtained: " .. selectedGun)
             end
-        end, "Erro ao obter dados")
+        end, "Error getting data")
     end
 })
 
 Tabs.Weapons:AddButton({
-    Title = "Definir Arma para Classe",
-    Description = "Atribui a arma à classe selecionada",
+    Title = "Set Weapon to Class",
+    Description = "Assigns weapon to selected class",
     Callback = function()
         safeCall(function()
             local rs = getRS()
@@ -451,42 +451,42 @@ Tabs.Weapons:AddButton({
                 rs.Remotes.SetGunForClass:FireServer(selectedClass, selectedGun, 0)
                 notify("Weapons", selectedGun .. " → " .. selectedClass)
             end
-        end, "Erro ao definir arma")
+        end, "Error setting weapon")
     end
 })
 
 Tabs.Weapons:AddButton({
-    Title = "Ativar Classe",
-    Description = "Equipa a classe selecionada",
+    Title = "Activate Class",
+    Description = "Equips the selected class",
     Callback = function()
         safeCall(function()
             local rs = getRS()
             if rs then
                 rs.Remotes.SetClass:FireServer(selectedClass)
-                notify("Weapons", "Classe ativada: " .. selectedClass)
+                notify("Weapons", "Class activated: " .. selectedClass)
             end
-        end, "Erro ao ativar classe")
+        end, "Error activating class")
     end
 })
 
 -- ==================== INTERACT TAB ====================
-Tabs.Interact:AddSection("Interações Rápidas")
+Tabs.Interact:AddSection("Quick Interactions")
 
 Tabs.Interact:AddToggle("InstantInteract", {
     Title = "⚡ Instant Interact",
-    Description = "Remove tempo de segurar em todos os prompts",
+    Description = "Removes hold time on all prompts",
     Default = false,
     Callback = function(value)
         instantInteractEnabled = value
         
-        -- Limpa conexão anterior
+        -- Clear previous connection
         if instantInteractConnection then
             instantInteractConnection:Disconnect()
             instantInteractConnection = nil
         end
         
         if value then
-            -- Aplica em todos os prompts existentes
+            -- Apply to all existing prompts
             for _, obj in pairs(Workspace:GetDescendants()) do
                 if obj:IsA("ProximityPrompt") then
                     obj.HoldDuration = 0
@@ -495,7 +495,7 @@ Tabs.Interact:AddToggle("InstantInteract", {
                 end
             end
             
-            -- Escuta novos prompts
+            -- Listen for new prompts
             instantInteractConnection = Workspace.DescendantAdded:Connect(function(obj)
                 if instantInteractEnabled and obj:IsA("ProximityPrompt") then
                     task.wait()
@@ -505,16 +505,16 @@ Tabs.Interact:AddToggle("InstantInteract", {
                 end
             end)
             
-            notify("Interact", "Instant Interact ATIVADO!", 2)
+            notify("Interact", "Instant Interact ENABLED!", 2)
         else
-            notify("Interact", "Instant Interact desativado", 2)
+            notify("Interact", "Instant Interact disabled", 2)
         end
     end
 })
 
 Tabs.Interact:AddButton({
-    Title = "Aplicar Instant Interact Agora",
-    Description = "Força aplicação imediata",
+    Title = "Apply Instant Interact Now",
+    Description = "Forces immediate application",
     Callback = function()
         local count = 0
         for _, obj in pairs(Workspace:GetDescendants()) do
@@ -525,29 +525,29 @@ Tabs.Interact:AddButton({
                 count = count + 1
             end
         end
-        notify("Interact", count .. " prompts modificados!", 3)
+        notify("Interact", count .. " prompts modified!", 3)
     end
 })
 
-Tabs.Interact:AddSection("Ações NPCs")
+Tabs.Interact:AddSection("NPC Actions")
 
 Tabs.Interact:AddButton({
-    Title = "Jogar Bag no Chão",
-    Description = "Joga a bag que você está segurando",
+    Title = "Drop Bag on Ground",
+    Description = "Throws the bag you're holding",
     Callback = function()
         safeCall(function()
             local rs = getRS()
             if rs then
                 rs.Remotes.ThrowBag:FireServer(Vector3.new(-0.98, -0.16, 0.07))
-                notify("Interact", "Bag jogada!")
+                notify("Interact", "Bag thrown!")
             end
-        end, "Erro ao jogar bag")
+        end, "Error throwing bag")
     end
 })
 
 Tabs.Interact:AddButton({
-    Title = "Gritar em Todos os Civis",
-    Description = "Intimida todos os NPCs civis",
+    Title = "Yell at All Civilians",
+    Description = "Intimidates all civilian NPCs",
     Callback = function()
         safeCall(function()
             local citizens = Workspace:FindFirstChild("Citizens")
@@ -560,25 +560,25 @@ Tabs.Interact:AddButton({
                 local rs = getRS()
                 if rs then
                     rs.Remotes.PlayerYell:FireServer(targetList)
-                    notify("Interact", "Gritando em " .. #targetList .. " civis")
+                    notify("Interact", "Yelling at " .. #targetList .. " civilians")
                 end
             else
-                notify("Interact", "Nenhum civil encontrado!")
+                notify("Interact", "No civilians found!")
             end
-        end, "Erro ao gritar")
+        end, "Error yelling")
     end
 })
 
 -- ==================== DESTRUCTION TAB ====================
-Tabs.Destruction:AddSection("Destruição")
+Tabs.Destruction:AddSection("Destruction")
 
 Tabs.Destruction:AddButton({
-    Title = "💥 Quebrar Todos os Vidros",
-    Description = "Destrói todos os vidros do mapa",
+    Title = "💥 Break All Glass",
+    Description = "Destroys all glass on the map",
     Callback = function()
         local tool = getTool()
         if not tool then 
-            notify("Erro", "Segure uma arma!")
+            notify("Error", "Hold a weapon!")
             return 
         end
         
@@ -596,20 +596,20 @@ Tabs.Destruction:AddButton({
                     task.wait(0.05) 
                 end
             end
-            notify("Destruction", count .. " vidros quebrados!", 4)
+            notify("Destruction", count .. " glass broken!", 4)
         else
-            notify("Destruction", "Nenhum vidro encontrado!")
+            notify("Destruction", "No glass found!")
         end
     end
 })
 
 Tabs.Destruction:AddButton({
-    Title = "📹 Destruir Todas as Câmeras",
-    Description = "Quebra câmeras ativas e já quebradas",
+    Title = "📹 Destroy All Cameras",
+    Description = "Breaks active and already broken cameras",
     Callback = function()
         local tool = getTool()
         if not tool then 
-            notify("Erro", "Segure uma arma!")
+            notify("Error", "Hold a weapon!")
             return 
         end
         
@@ -631,16 +631,16 @@ Tabs.Destruction:AddButton({
             end
         end
         
-        notify("Destruction", count .. " câmeras destruídas!", 4)
+        notify("Destruction", count .. " cameras destroyed!", 4)
     end
 })
 
 -- ==================== PLAYER MOD TAB ====================
-Tabs.Player:AddSection("Movimento")
+Tabs.Player:AddSection("Movement")
 
 Tabs.Player:AddToggle("InfiniteStamina", {
-    Title = "♾️ Stamina Infinita",
-    Description = "Nunca fique cansado",
+    Title = "♾️ Infinite Stamina",
+    Description = "Never get tired",
     Default = false,
     Callback = function(value)
         infiniteStaminaEnabled = value
@@ -666,16 +666,16 @@ Tabs.Player:AddToggle("InfiniteStamina", {
                     end
                 end)
             end)
-            notify("Player", "Stamina Infinita ativada!")
+            notify("Player", "Infinite Stamina enabled!")
         else
-            notify("Player", "Stamina Infinita desativada")
+            notify("Player", "Infinite Stamina disabled")
         end
     end
 })
 
 Tabs.Player:AddSlider("WalkSpeed", {
-    Title = "Velocidade de Movimento",
-    Description = "Controla a velocidade do TP Walk",
+    Title = "Movement Speed",
+    Description = "Controls TP Walk speed",
     Default = 50,
     Min = 16,
     Max = 200,
@@ -687,12 +687,12 @@ Tabs.Player:AddSlider("WalkSpeed", {
 
 Tabs.Player:AddToggle("WalkSpeedToggle", {
     Title = "🚀 TP Walk",
-    Description = "Movimento rápido (seguro)",
+    Description = "Fast movement (safe)",
     Default = false,
     Callback = function(value)
         walkSpeedEnabled = value
         
-        -- IMPORTANTE: Limpa a conexão anterior
+        -- IMPORTANT: Clear previous connection
         if tpWalkConnection then
             tpWalkConnection:Disconnect()
             tpWalkConnection = nil
@@ -715,16 +715,16 @@ Tabs.Player:AddToggle("WalkSpeedToggle", {
                     end
                 end)
             end)
-            notify("Player", "TP Walk ativado - Velocidade: " .. walkSpeedValue)
+            notify("Player", "TP Walk enabled - Speed: " .. walkSpeedValue)
         else
-            notify("Player", "TP Walk desativado")
+            notify("Player", "TP Walk disabled")
         end
     end
 })
 
 Tabs.Player:AddToggle("InfiniteJump", {
-    Title = "Jump Infinito",
-    Description = "Pule no ar infinitamente",
+    Title = "Infinite Jump",
+    Description = "Jump infinitely in the air",
     Default = false,
     Callback = function(value)
         infiniteJumpEnabled = value
@@ -746,18 +746,18 @@ Tabs.Player:AddToggle("InfiniteJump", {
                     end
                 end
             end)
-            notify("Player", "Jump Infinito ativado!")
+            notify("Player", "Infinite Jump enabled!")
         else
-            notify("Player", "Jump Infinito desativado")
+            notify("Player", "Infinite Jump disabled")
         end
     end
 })
 
-Tabs.Player:AddSection("Física")
+Tabs.Player:AddSection("Physics")
 
 Tabs.Player:AddSlider("Gravity", {
-    Title = "Gravidade",
-    Description = "Controla a gravidade do mundo",
+    Title = "Gravity",
+    Description = "Controls world gravity",
     Default = 196.2,
     Min = 0,
     Max = 196.2,
@@ -768,8 +768,8 @@ Tabs.Player:AddSlider("Gravity", {
 })
 
 Tabs.Player:AddToggle("GravityToggle", {
-    Title = "Ativar Gravidade Customizada",
-    Description = "Aplica a gravidade configurada",
+    Title = "Enable Custom Gravity",
+    Description = "Applies configured gravity",
     Default = false,
     Callback = function(value)
         customGravityEnabled = value
@@ -785,17 +785,17 @@ Tabs.Player:AddToggle("GravityToggle", {
                     Workspace.Gravity = gravityValue
                 end
             end)
-            notify("Player", "Gravidade: " .. gravityValue)
+            notify("Player", "Gravity: " .. gravityValue)
         else
             Workspace.Gravity = 196.2
-            notify("Player", "Gravidade resetada")
+            notify("Player", "Gravity reset")
         end
     end
 })
 
 Tabs.Player:AddToggle("Noclip", {
     Title = "👻 Noclip",
-    Description = "Atravesse paredes",
+    Description = "Walk through walls",
     Default = false,
     Callback = function(value)
         noclipEnabled = value
@@ -820,9 +820,9 @@ Tabs.Player:AddToggle("Noclip", {
                     end
                 end)
             end)
-            notify("Player", "Noclip ativado!")
+            notify("Player", "Noclip enabled!")
         else
-            -- Restaura colisão
+            -- Restore collision
             safeCall(function()
                 local character = LocalPlayer.Character
                 if character then
@@ -833,7 +833,7 @@ Tabs.Player:AddToggle("Noclip", {
                     end
                 end
             end)
-            notify("Player", "Noclip desativado")
+            notify("Player", "Noclip disabled")
         end
     end
 })
@@ -843,14 +843,14 @@ Tabs.Aim:AddSection("Kill All")
 
 Tabs.Aim:AddToggle("KillAllLoop", {
     Title = "🔥 Kill All (Loop)",
-    Description = "Mata todos os policiais automaticamente",
+    Description = "Automatically kills all police",
     Default = false,
     Callback = function(value)
         killAllEnabled = value
         
         if value then
             task.spawn(function()
-                notify("Kill All Loop", "Loop ATIVADO!", 3)
+                notify("Kill All Loop", "Loop ENABLED!", 3)
                 lastKillAllNotify = tick() -- Reset timer
                 
                 while killAllEnabled do
@@ -858,37 +858,37 @@ Tabs.Aim:AddToggle("KillAllLoop", {
                     task.wait(killAllDelay)
                 end
                 
-                notify("Kill All Loop", "Loop desativado", 2)
+                notify("Kill All Loop", "Loop disabled", 2)
             end)
         end
     end
 })
 
 Tabs.Aim:AddButton({
-    Title = "Kill All (Uma Vez)",
-    Description = "Executa kill all uma única vez",
+    Title = "Kill All (Once)",
+    Description = "Executes kill all once",
     Callback = killAllPolice
 })
 
 Tabs.Aim:AddSection("Kill Aura")
 
 Tabs.Aim:AddToggle("KillAura", {
-    Title = "⚔️ Kill Aura (Melhorado)",
-    Description = "Mata inimigos próximos ao mirar (Botão Direito)",
+    Title = "⚔️ Kill Aura (Improved)",
+    Description = "Kills nearby enemies when aiming (Right Click)",
     Default = false,
     Callback = function(value)
         kaEnabled = value
         if value then
-            notify("Kill Aura", "ATIVADO - Segure botão direito do mouse!", 4)
+            notify("Kill Aura", "ENABLED - Hold right mouse button!", 4)
         else
-            notify("Kill Aura", "Desativado", 2)
+            notify("Kill Aura", "Disabled", 2)
         end
     end
 })
 
 Tabs.Aim:AddToggle("KAAutoAim", {
-    Title = "Auto-Aim no Kill Aura",
-    Description = "Mira automaticamente no alvo do kill aura",
+    Title = "Auto-Aim on Kill Aura",
+    Description = "Automatically aims at kill aura target",
     Default = true,
     Callback = function(value)
         kaAutoAim = value
@@ -896,8 +896,8 @@ Tabs.Aim:AddToggle("KAAutoAim", {
 })
 
 Tabs.Aim:AddSlider("KARange", {
-    Title = "Alcance do Kill Aura",
-    Description = "Distância máxima para atacar",
+    Title = "Kill Aura Range",
+    Description = "Maximum distance to attack",
     Default = 70,
     Min = 20,
     Max = 150,
@@ -908,8 +908,8 @@ Tabs.Aim:AddSlider("KARange", {
 })
 
 Tabs.Aim:AddSlider("KADelay", {
-    Title = "Delay do Kill Aura",
-    Description = "Tempo entre ataques (segundos)",
+    Title = "Kill Aura Delay",
+    Description = "Time between attacks (seconds)",
     Default = 0.1,
     Min = 0.05,
     Max = 0.5,
@@ -923,7 +923,7 @@ Tabs.Aim:AddSection("Aimbot")
 
 Tabs.Aim:AddToggle("AimEnabled", {
     Title = "🎯 Aimbot",
-    Description = "Mira automaticamente ao segurar botão direito",
+    Description = "Automatically aims when holding right click",
     Default = false,
     Callback = function(value)
         aimEnabled = value
@@ -931,13 +931,13 @@ Tabs.Aim:AddToggle("AimEnabled", {
             aiming = false
             currentTarget = nil
         end
-        notify("Aim", value and "Aimbot ativado!" or "Aimbot desativado", 2)
+        notify("Aim", value and "Aimbot enabled!" or "Aimbot disabled", 2)
     end
 })
 
 Tabs.Aim:AddDropdown("AimPart", {
-    Title = "Parte do Alvo",
-    Description = "Onde mirar no inimigo",
+    Title = "Target Part",
+    Description = "Where to aim on enemy",
     Values = {"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso"},
     Default = 1,
     Callback = function(value)
@@ -946,8 +946,8 @@ Tabs.Aim:AddDropdown("AimPart", {
 })
 
 Tabs.Aim:AddSlider("AimFOV", {
-    Title = "FOV do Aimbot",
-    Description = "Raio de detecção",
+    Title = "Aimbot FOV",
+    Description = "Detection radius",
     Default = 200,
     Min = 50,
     Max = 500,
@@ -959,8 +959,8 @@ Tabs.Aim:AddSlider("AimFOV", {
 })
 
 Tabs.Aim:AddSlider("AimSensitivity", {
-    Title = "Sensibilidade",
-    Description = "Suavidade do aim (maior = mais rápido)",
+    Title = "Sensitivity",
+    Description = "Aim smoothness (higher = faster)",
     Default = 50,
     Min = 1,
     Max = 100,
@@ -971,8 +971,8 @@ Tabs.Aim:AddSlider("AimSensitivity", {
 })
 
 Tabs.Aim:AddToggle("UseSensitivity", {
-    Title = "Usar Sensibilidade",
-    Description = "Ativa suavização do movimento",
+    Title = "Use Sensitivity",
+    Description = "Enables smooth movement",
     Default = true,
     Callback = function(value)
         useSensitivity = value
@@ -980,8 +980,8 @@ Tabs.Aim:AddToggle("UseSensitivity", {
 })
 
 Tabs.Aim:AddToggle("ShowFOV", {
-    Title = "Mostrar Círculo FOV",
-    Description = "Visualiza o raio do aimbot",
+    Title = "Show FOV Circle",
+    Description = "Visualizes aimbot radius",
     Default = false,
     Callback = function(value)
         fovCircleEnabled = value
@@ -994,7 +994,7 @@ Tabs.ESP:AddSection("ESP (Highlights)")
 
 Tabs.ESP:AddToggle("CameraESP", {
     Title = "📹 Camera ESP",
-    Description = "Vermelho = ativa | Laranja = quebrada",
+    Description = "Red = active | Orange = broken",
     Default = false,
     Callback = function(value)
         cameraESPEnabled = value
@@ -1034,7 +1034,7 @@ Tabs.ESP:AddToggle("CameraESP", {
 
 Tabs.ESP:AddToggle("PoliceESP", {
     Title = "👮 Police ESP",
-    Description = "Destaca policiais em azul",
+    Description = "Highlights police in blue",
     Default = false,
     Callback = function(value)
         policeESPEnabled = value
@@ -1070,7 +1070,7 @@ Tabs.ESP:AddToggle("PoliceESP", {
 
 Tabs.ESP:AddToggle("CivilianESP", {
     Title = "👥 Civilian ESP",
-    Description = "Verde = livre | Amarelo = amarrado",
+    Description = "Green = free | Yellow = tied",
     Default = false,
     Callback = function(value)
         civilianESPEnabled = value
@@ -1108,14 +1108,14 @@ Tabs.ESP:AddToggle("CivilianESP", {
 })
 
 -- ==================== SPECIFIC MAPS TAB ====================
-Tabs.Maps:AddSection("Seleção de Mapa")
+Tabs.Maps:AddSection("Map Selection")
 
 local mapESPSection = nil
 local mapTeleportSection = nil
 
 Tabs.Maps:AddDropdown("MapSelect", {
-    Title = "🗺️ Selecionar Mapa",
-    Description = "Escolha o mapa para features específicas",
+    Title = "🗺️ Select Map",
+    Description = "Choose map for specific features",
     Values = {"The Ozela Heist"},
     Default = 1,
     Callback = function(value)
@@ -1124,11 +1124,11 @@ Tabs.Maps:AddDropdown("MapSelect", {
 })
 
 Tabs.Maps:AddButton({
-    Title = "✅ Confirmar Mapa",
-    Description = "Carrega as features do mapa selecionado",
+    Title = "✅ Confirm Map",
+    Description = "Loads features for selected map",
     Callback = function()
         if selectedMap == "The Ozela Heist" then
-            -- Remove seções antigas se existirem
+            -- Remove old sections if they exist
             if mapESPSection then
                 pcall(function() mapESPSection:Destroy() end)
             end
@@ -1136,12 +1136,12 @@ Tabs.Maps:AddButton({
                 pcall(function() mapTeleportSection:Destroy() end)
             end
             
-            -- Cria novas seções
+            -- Create new sections
             Tabs.Maps:AddSection("ESP - " .. selectedMap)
             
             Tabs.Maps:AddToggle("RopeESP", {
                 Title = "🪢 Rope ESP",
-                Description = "Destaca cordas (amarelo)",
+                Description = "Highlights ropes (yellow)",
                 Default = false,
                 Callback = function(value)
                     ropeESPEnabled = value
@@ -1178,17 +1178,17 @@ Tabs.Maps:AddButton({
                             end
                             clearHighlights(ropeHighlights)
                         end)
-                        notify("Rope ESP", "Ativado!", 2)
+                        notify("Rope ESP", "Enabled!", 2)
                     else
                         clearHighlights(ropeHighlights)
-                        notify("Rope ESP", "Desativado", 2)
+                        notify("Rope ESP", "Disabled", 2)
                     end
                 end
             })
             
             Tabs.Maps:AddToggle("HookESP", {
                 Title = "🪝 Hook ESP",
-                Description = "Destaca ganchos (verde limão)",
+                Description = "Highlights hooks (lime green)",
                 Default = false,
                 Callback = function(value)
                     hookESPEnabled = value
@@ -1225,17 +1225,17 @@ Tabs.Maps:AddButton({
                             end
                             clearHighlights(hookHighlights)
                         end)
-                        notify("Hook ESP", "Ativado!", 2)
+                        notify("Hook ESP", "Enabled!", 2)
                     else
                         clearHighlights(hookHighlights)
-                        notify("Hook ESP", "Desativado", 2)
+                        notify("Hook ESP", "Disabled", 2)
                     end
                 end
             })
             
             Tabs.Maps:AddToggle("CodeTableESP", {
                 Title = "📋 Code Table ESP",
-                Description = "Destaca mesa de códigos (roxo)",
+                Description = "Highlights code table (purple)",
                 Default = false,
                 Callback = function(value)
                     codeTableESPEnabled = value
@@ -1270,25 +1270,25 @@ Tabs.Maps:AddButton({
                             end
                             clearHighlights(codeTableHighlights)
                         end)
-                        notify("Code Table ESP", "Ativado!", 2)
+                        notify("Code Table ESP", "Enabled!", 2)
                     else
                         clearHighlights(codeTableHighlights)
-                        notify("Code Table ESP", "Desativado", 2)
+                        notify("Code Table ESP", "Disabled", 2)
                     end
                 end
             })
             
-            -- Seção de Teleporte
-            Tabs.Maps:AddSection("Teleporte - " .. selectedMap)
+            -- Teleport Section
+            Tabs.Maps:AddSection("Teleport - " .. selectedMap)
             
             Tabs.Maps:AddButton({
-                Title = "📍 TP para Rope mais próxima",
-                Description = "Teleporta para a corda mais perto",
+                Title = "📍 TP to Nearest Rope",
+                Description = "Teleports to closest rope",
                 Callback = function()
                     safeCall(function()
                         local character = LocalPlayer.Character
                         if not character or not character:FindFirstChild("HumanoidRootPart") then
-                            notify("Teleporte", "Personagem não encontrado!")
+                            notify("Teleport", "Character not found!")
                             return
                         end
                         
@@ -1318,27 +1318,27 @@ Tabs.Maps:AddButton({
                                     
                                     if closest then
                                         hrp.CFrame = closest.CFrame + Vector3.new(0, 3, 0)
-                                        notify("Teleporte", "Teleportado para Rope!", 2)
+                                        notify("Teleport", "Teleported to Rope!", 2)
                                     else
-                                        notify("Teleporte", "Nenhuma Rope encontrada!")
+                                        notify("Teleport", "No Rope found!")
                                     end
                                 else
-                                    notify("Teleporte", "Pasta Ropes não encontrada!")
+                                    notify("Teleport", "Ropes folder not found!")
                                 end
                             end
                         end
-                    end, "Erro ao teleportar")
+                    end, "Error teleporting")
                 end
             })
             
             Tabs.Maps:AddButton({
-                Title = "📍 TP para Hook mais próximo",
-                Description = "Teleporta para o gancho mais perto",
+                Title = "📍 TP to Nearest Hook",
+                Description = "Teleports to closest hook",
                 Callback = function()
                     safeCall(function()
                         local character = LocalPlayer.Character
                         if not character or not character:FindFirstChild("HumanoidRootPart") then
-                            notify("Teleporte", "Personagem não encontrado!")
+                            notify("Teleport", "Character not found!")
                             return
                         end
                         
@@ -1368,27 +1368,27 @@ Tabs.Maps:AddButton({
                                     
                                     if closest then
                                         hrp.CFrame = closest.CFrame + Vector3.new(0, 3, 0)
-                                        notify("Teleporte", "Teleportado para Hook!", 2)
+                                        notify("Teleport", "Teleported to Hook!", 2)
                                     else
-                                        notify("Teleporte", "Nenhum Hook encontrado!")
+                                        notify("Teleport", "No Hook found!")
                                     end
                                 else
-                                    notify("Teleporte", "Pasta Hooks não encontrada!")
+                                    notify("Teleport", "Hooks folder not found!")
                                 end
                             end
                         end
-                    end, "Erro ao teleportar")
+                    end, "Error teleporting")
                 end
             })
             
             Tabs.Maps:AddButton({
-                Title = "📍 TP para Code Table",
-                Description = "Teleporta para a mesa de códigos",
+                Title = "📍 TP to Code Table",
+                Description = "Teleports to code table",
                 Callback = function()
                     safeCall(function()
                         local character = LocalPlayer.Character
                         if not character or not character:FindFirstChild("HumanoidRootPart") then
-                            notify("Teleporte", "Personagem não encontrado!")
+                            notify("Teleport", "Character not found!")
                             return
                         end
                         
@@ -1403,68 +1403,68 @@ Tabs.Maps:AddButton({
                                     local tablePart = codeTable:IsA("Part") and codeTable or codeTable:FindFirstChildOfClass("Part")
                                     if tablePart then
                                         hrp.CFrame = tablePart.CFrame + Vector3.new(0, 5, 0)
-                                        notify("Teleporte", "Teleportado para Code Table!", 2)
+                                        notify("Teleport", "Teleported to Code Table!", 2)
                                     else
-                                        notify("Teleporte", "Parte da mesa não encontrada!")
+                                        notify("Teleport", "Table part not found!")
                                     end
                                 else
-                                    notify("Teleporte", "Code Table não encontrada!")
+                                    notify("Teleport", "Code Table not found!")
                                 end
                             else
-                                notify("Teleporte", "Stadium Blueprint não encontrado!")
+                                notify("Teleport", "Stadium Blueprint not found!")
                             end
                         else
-                            notify("Teleporte", "Pasta Blueprints não encontrada!")
+                            notify("Teleport", "Blueprints folder not found!")
                         end
-                    end, "Erro ao teleportar")
+                    end, "Error teleporting")
                 end
             })
             
-            notify("Specific Maps", "Features do mapa " .. selectedMap .. " carregadas!", 3)
+            notify("Specific Maps", "Features for " .. selectedMap .. " loaded!", 3)
         end
     end
 })
 
 -- ==================== GAME STATS TAB ====================
-Tabs.Stats:AddSection("Estatísticas do Jogador")
+Tabs.Stats:AddSection("Player Statistics")
 
 local statsParagraph = Tabs.Stats:AddParagraph({
-    Title = "📊 Suas Estatísticas",
-    Content = "Clique no botão abaixo para carregar suas stats."
+    Title = "📊 Your Statistics",
+    Content = "Click the button below to load your stats."
 })
 
 Tabs.Stats:AddButton({
-    Title = "🔄 Atualizar Estatísticas",
-    Description = "Carrega suas stats do servidor",
+    Title = "🔄 Refresh Statistics",
+    Description = "Loads your stats from server",
     Callback = function()
         safeCall(function()
             local rs = getRS()
             if not rs then
-                notify("Stats", "Erro ao acessar ReplicatedStorage!")
+                notify("Stats", "Error accessing ReplicatedStorage!")
                 return
             end
             
-            notify("Stats", "Carregando estatísticas...", 2)
+            notify("Stats", "Loading statistics...", 2)
             
             local stats = rs.Remotes.GetStats:InvokeServer()
             
             if stats then
-                local statsText = "📊 Suas Estatísticas:\n\n"
+                local statsText = "📊 Your Statistics:\n\n"
                 
-                -- Formatação bonita das stats
+                -- Nice formatting for stats
                 statsText = statsText .. "🎯 Kills:\n"
-                statsText = statsText .. "  • Policiais Mortos: " .. (stats.PoliceKills or 0) .. "\n"
-                statsText = statsText .. "  • Civis Mortos: " .. (stats.CivilianKills or 0) .. "\n"
+                statsText = statsText .. "  • Police Killed: " .. (stats.PoliceKills or 0) .. "\n"
+                statsText = statsText .. "  • Civilians Killed: " .. (stats.CivilianKills or 0) .. "\n"
                 statsText = statsText .. "  • Headshots: " .. (stats.Headshots or 0) .. "\n\n"
                 
-                statsText = statsText .. "💰 Dinheiro:\n"
-                statsText = statsText .. "  • Cash Instantâneo: $" .. (stats.InstantCash or 0) .. "\n\n"
+                statsText = statsText .. "💰 Money:\n"
+                statsText = statsText .. "  • Instant Cash: $" .. (stats.InstantCash or 0) .. "\n\n"
                 
-                statsText = statsText .. "🏥 Suporte:\n"
+                statsText = statsText .. "🏥 Support:\n"
                 statsText = statsText .. "  • Revives: " .. (stats.Revives or 0) .. "\n"
-                statsText = statsText .. "  • Downs (Derrubado): " .. (stats.Downs or 0) .. "\n\n"
+                statsText = statsText .. "  • Downs (Knocked): " .. (stats.Downs or 0) .. "\n\n"
                 
-                statsText = statsText .. "🔫 Stats de Armas:\n"
+                statsText = statsText .. "🔫 Weapon Stats:\n"
                 if stats.GunStats and type(stats.GunStats) == "table" then
                     local hasGunStats = false
                     for gunName, gunData in pairs(stats.GunStats) do
@@ -1483,38 +1483,38 @@ Tabs.Stats:AddButton({
                         end
                     end
                     if not hasGunStats then
-                        statsText = statsText .. "  • Nenhuma stat de arma registrada\n"
+                        statsText = statsText .. "  • No weapon stats recorded\n"
                     end
                 else
-                    statsText = statsText .. "  • Nenhuma stat de arma disponível\n"
+                    statsText = statsText .. "  • No weapon stats available\n"
                 end
                 
-                statsText = statsText .. "\n🎮 Interações:\n"
+                statsText = statsText .. "\n🎮 Interactions:\n"
                 statsText = statsText .. "  • Total: " .. (stats.Interactions or 0)
                 
                 statsParagraph:SetDesc(statsText)
-                notify("Stats", "Estatísticas carregadas com sucesso!", 3)
+                notify("Stats", "Statistics loaded successfully!", 3)
             else
-                statsParagraph:SetDesc("❌ Erro ao carregar estatísticas.\n\nTente novamente em alguns segundos.")
-                notify("Stats", "Falha ao carregar stats!")
+                statsParagraph:SetDesc("❌ Error loading statistics.\n\nTry again in a few seconds.")
+                notify("Stats", "Failed to load stats!")
             end
-        end, "Erro ao carregar estatísticas")
+        end, "Error loading statistics")
     end
 })
 
-Tabs.Stats:AddSection("Informações Adicionais")
+Tabs.Stats:AddSection("Additional Information")
 
 Tabs.Stats:AddParagraph({
-    Title = "ℹ️ Sobre as Stats",
-    Content = "As estatísticas são carregadas diretamente do servidor do jogo.\n\n" ..
-              "• PoliceKills: Total de policiais eliminados\n" ..
-              "• CivilianKills: Total de civis eliminados\n" ..
-              "• Headshots: Total de tiros na cabeça\n" ..
-              "• InstantCash: Dinheiro ganho instantaneamente\n" ..
-              "• Revives: Quantas vezes você reviveu aliados\n" ..
-              "• Downs: Quantas vezes você foi derrubado\n" ..
-              "• GunStats: Estatísticas por arma\n" ..
-              "• Interactions: Total de interações no jogo"
+    Title = "ℹ️ About Stats",
+    Content = "Statistics are loaded directly from the game server.\n\n" ..
+              "• PoliceKills: Total police eliminated\n" ..
+              "• CivilianKills: Total civilians eliminated\n" ..
+              "• Headshots: Total headshots\n" ..
+              "• InstantCash: Money earned instantly\n" ..
+              "• Revives: Times you revived allies\n" ..
+              "• Downs: Times you were knocked down\n" ..
+              "• GunStats: Statistics per weapon\n" ..
+              "• Interactions: Total in-game interactions"
 })
 
 -- ==================== INPUT HANDLING ====================
@@ -1555,16 +1555,16 @@ RunService.RenderStepped:Connect(function()
         aimAtTarget(target)
     end
     
-    -- Kill Aura (MELHORADO)
+    -- Kill Aura (IMPROVED)
     if kaEnabled and aiming and target then
         local currentTime = tick()
         
-        -- Auto-aim no kill aura
+        -- Auto-aim on kill aura
         if kaAutoAim then
             aimAtTarget(target)
         end
         
-        -- Verificar delay
+        -- Check delay
         if currentTime - lastKaTime >= kaDelay then
             local character = LocalPlayer.Character
             if character then
@@ -1575,7 +1575,7 @@ RunService.RenderStepped:Connect(function()
                     local distance = (hrp.Position - targetHrp.Position).Magnitude
                     
                     if distance <= kaRange then
-                        -- Ataca múltiplas vezes para garantir kill
+                        -- Attack multiple times to ensure kill
                         for i = 1, 2 do
                             executeKillAura(target)
                             task.wait(0.01)
@@ -1590,7 +1590,7 @@ end)
 
 -- ==================== CLEANUP ====================
 local function cleanup()
-    -- Limpar ESPs
+    -- Clear ESPs
     clearHighlights(cameraHighlights)
     clearHighlights(policeHighlights)
     clearHighlights(civilianHighlights)
@@ -1598,12 +1598,12 @@ local function cleanup()
     clearHighlights(hookHighlights)
     clearHighlights(codeTableHighlights)
     
-    -- Limpar FOV Circle
+    -- Clear FOV Circle
     if FOVCircle then
         FOVCircle:Remove()
     end
     
-    -- Desconectar loops
+    -- Disconnect loops
     if tpWalkConnection then tpWalkConnection:Disconnect() end
     if infJumpConnection then infJumpConnection:Disconnect() end
     if noclipLoop then noclipLoop:Disconnect() end
@@ -1614,26 +1614,26 @@ local function cleanup()
     if hookESPLoop then hookESPLoop:Disconnect() end
     if codeTableESPLoop then codeTableESPLoop:Disconnect() end
     
-    -- Resetar valores
+    -- Reset values
     Workspace.Gravity = 196.2
     
-    notify("XXMZ HUB", "Limpeza concluída!", 2)
+    notify("XXMZ HUB", "Cleanup completed!", 2)
 end
 
--- Cleanup ao teleportar
+-- Cleanup on teleport
 Players.LocalPlayer.OnTeleport:Connect(cleanup)
 
--- Cleanup ao morrer
+-- Cleanup on death
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1)
     if noclipEnabled then
-        -- Reaplica noclip após spawn
+        -- Reapply noclip after spawn
         noclipEnabled = false
         task.wait(0.1)
         noclipEnabled = true
     end
 end)
 
--- ==================== INICIALIZAÇÃO COMPLETA ====================
-notify("XXMZ HUB v2.0", "Hub carregado com sucesso! ✅", 5)
-notify("Criado por", "29 :)", 3)
+-- ==================== COMPLETE INITIALIZATION ====================
+notify("XXMZ HUB v2.0", "Hub loaded successfully! ✅", 5)
+notify("Created by", "29 :)", 3)

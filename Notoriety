@@ -1,14 +1,16 @@
 --[[
     XXMZ HUB - Notoriety
-    Improved Version v2.0
+    Improved Version v2.1
     By 29 :)
     
-    Improvements:
-    - Kill Aura fixed and optimized
-    - TP Walk loading bug resolved
-    - Improved security system
-    - Optimized performance
-    - Cleaner and organized code
+    Changelog v2.1:
+    - Added KeyCard ESP and Teleport
+    - Added Ozela Heist code identification system
+    - Added Color Box auto-detection and teleport
+    - Added USB Computer status monitor
+    - Removed patched features (Kill Aura, Kill All)
+    - Added Changelogs tab
+    - Improved Ozela Heist features
 ]]
 loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
 -- ==================== INITIALIZATION ====================
@@ -37,8 +39,8 @@ local Camera = Workspace.CurrentCamera
 
 -- ==================== WINDOW CREATION ====================
 local Window = Fluent:CreateWindow({
-    Title = "XXMZ HUB - Notoriety v2.0",
-    SubTitle = "by 29 :) - Improved Version",
+    Title = "XXMZ HUB - Notoriety v2.1",
+    SubTitle = "by 29 :) - Enhanced Ozela Heist Features",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Theme = "VSC Dark High Contrast",
@@ -77,9 +79,11 @@ local gravityLoop = nil
 local cameraESPEnabled = false
 local policeESPEnabled = false
 local civilianESPEnabled = false
+local keyCardESPEnabled = false
 local cameraHighlights = {}
 local policeHighlights = {}
 local civilianHighlights = {}
+local keyCardHighlights = {}
 local espLoops = {}
 
 -- Map-Specific ESP
@@ -94,6 +98,13 @@ local ropeESPLoop = nil
 local hookESPLoop = nil
 local codeTableESPLoop = nil
 
+-- Ozela Heist Code System
+local codeStatusParagraph = nil
+local usbStatusParagraph = nil
+local detectedCodes = {}
+local correctCode = ""
+local correctColorBox = ""
+
 -- Aim
 local aimEnabled = false
 local aimPart = "Head"
@@ -103,19 +114,6 @@ local useSensitivity = true
 local fovCircleEnabled = false
 local currentTarget = nil
 local aiming = false
-
--- Kill Aura
-local kaEnabled = false
-local kaRange = 70
-local kaDelay = 0.1
-local lastKaTime = 0
-local kaAutoAim = true
-
--- Kill All
-local killAllEnabled = false
-local killAllDelay = 0.5
-local killAllNotifyDelay = 5
-local lastKillAllNotify = 0
 
 -- ==================== UTILITY FUNCTIONS ====================
 local function getRS()
@@ -276,91 +274,6 @@ local function aimAtTarget(target)
     end
 end
 
--- ==================== KILL AURA FUNCTIONS ====================
-local function executeKillAura(target)
-    if not target then return false end
-    
-    local humanoid = target:FindFirstChild("Humanoid")
-    if not humanoid or humanoid.Health <= 0 then return false end
-    
-    local weapon = getEquippedWeapon()
-    if not weapon then return false end
-    
-    local targetPart = target:FindFirstChild("Head") or target:FindFirstChild("UpperTorso") or target:FindFirstChild("Torso")
-    if not targetPart then return false end
-    
-    local success = safeCall(function()
-        local rs = getRS()
-        if not rs then return end
-        
-        -- Method 1: Direct damage
-        local damageArgs = {
-            "Damage",
-            weapon,
-            humanoid,
-            150, -- Increased damage
-            targetPart,
-            weapon.Name,
-            Vector3.new(0, 0, 0),
-            {}
-        }
-        
-        rs.Assets.Remotes.Damage:FireServer(unpack(damageArgs))
-        
-        -- Method 2: Backup with multiple hits
-        task.wait(0.01)
-        rs.Assets.Remotes.Damage:FireServer(unpack(damageArgs))
-    end)
-    
-    return success
-end
-
-local function killAllPolice()
-    local weapon = getEquippedWeapon()
-    if not weapon then 
-        notify("Kill All", "Hold a weapon first!")
-        return 
-    end
-    
-    local killedCount = 0
-    local totalPolice = 0
-    local batchSize = 3 -- Process 3 police at a time
-    
-    for _, folderName in ipairs({"Police", "Bodies"}) do
-        local folder = Workspace:FindFirstChild(folderName)
-        if folder then
-            for _, npc in pairs(folder:GetChildren()) do
-                if npc and npc:FindFirstChildOfClass("Humanoid") then
-                    local humanoid = npc:FindFirstChildOfClass("Humanoid")
-                    if humanoid.Health > 0 then
-                        totalPolice = totalPolice + 1
-                        
-                        if executeKillAura(npc) then
-                            killedCount = killedCount + 1
-                        end
-                        
-                        -- Delay every batch to reduce lag
-                        if killedCount % batchSize == 0 then
-                            task.wait(0.03)
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    -- Notification only every 5 seconds when in loop
-    local currentTime = tick()
-    if not killAllEnabled or (currentTime - lastKillAllNotify >= killAllNotifyDelay) then
-        if totalPolice > 0 then
-            notify("Kill All", string.format("%d/%d targets attacked", killedCount, totalPolice), 2)
-        else
-            notify("Kill All", "No police found", 2)
-        end
-        lastKillAllNotify = currentTime
-    end
-end
-
 -- ==================== DESTRUCTION FUNCTIONS ====================
 local function getTool()
     return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
@@ -386,17 +299,238 @@ local function fireHit(tool, hitPart)
     end)
 end
 
+-- ==================== OZELA HEIST CODE DETECTION ====================
+local function detectColorBoxCode()
+    local result = {
+        codes = {},
+        correctCode = "",
+        correctTitle = "",
+        colorSequence = "",
+        colorBoxName = ""
+    }
+    
+    safeCall(function()
+        -- Detect correct code from card reader
+        -- Path: workspace.prop_stadium_cardReader.main.serial.SurfaceGui.TextLabel
+        local cardReader = Workspace:FindFirstChild("prop_stadium_cardReader")
+        if cardReader then
+            local main = cardReader:FindFirstChild("main")
+            if main then
+                local serial = main:FindFirstChild("serial")
+                if serial then
+                    local surfaceGui = serial:FindFirstChild("SurfaceGui")
+                    if surfaceGui then
+                        local textLabel = surfaceGui:FindFirstChild("TextLabel")
+                        if textLabel and textLabel.Text ~= "" then
+                            result.correctCode = textLabel.Text
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Detect codes from blueprints
+        -- Path: workspace.Blueprints.prop_stadium_blueprintTableRNG.prop_stadium_blueprint["1-3"].serial.SurfaceGui.TextLabel
+        local blueprints = Workspace:FindFirstChild("Blueprints")
+        if blueprints then
+            local stadiumBlueprint = blueprints:FindFirstChild("prop_stadium_blueprintTableRNG")
+            if stadiumBlueprint then
+                local blueprint = stadiumBlueprint:FindFirstChild("prop_stadium_blueprint")
+                if blueprint then
+                    for i = 1, 3 do
+                        local numbered = blueprint:FindFirstChild(tostring(i))
+                        if numbered then
+                            local serial = numbered:FindFirstChild("serial")
+                            if serial then
+                                local surfaceGui = serial:FindFirstChild("SurfaceGui")
+                                if surfaceGui then
+                                    local textLabel = surfaceGui:FindFirstChild("TextLabel")
+                                    if textLabel and textLabel.Text ~= "" then
+                                        local codeTitle = textLabel.Text
+                                        
+                                        -- Check if this is the correct code
+                                        if codeTitle == result.correctCode and result.correctCode ~= "" then
+                                            result.correctTitle = codeTitle
+                                            
+                                            -- Get color sequence
+                                            -- Path: workspace.Blueprints.prop_stadium_blueprintTableRNG.prop_stadium_blueprint["1"].colors["1-4"].SurfaceGui.TextLabel
+                                            local colors = numbered:FindFirstChild("colors")
+                                            if colors then
+                                                local colorParts = {}
+                                                for j = 1, 4 do
+                                                    local colorPart = colors:FindFirstChild(tostring(j))
+                                                    if colorPart then
+                                                        local colorSurface = colorPart:FindFirstChild("SurfaceGui")
+                                                        if colorSurface then
+                                                            local colorLabel = colorSurface:FindFirstChild("TextLabel")
+                                                            if colorLabel and colorLabel.Text ~= "" then
+                                                                table.insert(colorParts, colorLabel.Text)
+                                                            end
+                                                        end
+                                                    end
+                                                end
+                                                result.colorSequence = table.concat(colorParts, " ")
+                                            end
+                                        end
+                                        
+                                        table.insert(result.codes, {
+                                            number = i,
+                                            title = codeTitle,
+                                            isCorrect = (codeTitle == result.correctCode and result.correctCode ~= "")
+                                        })
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Detect correct color box
+        -- Path: workspace.colorBoxRNG.*.serial.SurfaceGui.TextLabel
+        local colorBoxRNG = Workspace:FindFirstChild("colorBoxRNG")
+        if colorBoxRNG and result.correctTitle ~= "" then
+            for _, colorBox in pairs(colorBoxRNG:GetChildren()) do
+                if colorBox:IsA("Model") or colorBox:IsA("BasePart") then
+                    local serial = colorBox:FindFirstChild("serial")
+                    if serial then
+                        local surfaceGui = serial:FindFirstChild("SurfaceGui")
+                        if surfaceGui then
+                            local textLabel = surfaceGui:FindFirstChild("TextLabel")
+                            if textLabel and textLabel.Text == result.correctTitle then
+                                result.colorBoxName = colorBox.Name
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end, "Error detecting color box code")
+    
+    return result
+end
+
+local function getUSBComputerStatus()
+    local status = "Not found"
+    
+    safeCall(function()
+        -- Path: workspace.UsedUSBComputer.Screen.SurfaceGui.TextLabel
+        local usbComputer = Workspace:FindFirstChild("UsedUSBComputer")
+        if usbComputer then
+            local screen = usbComputer:FindFirstChild("Screen")
+            if screen then
+                local surfaceGui = screen:FindFirstChild("SurfaceGui")
+                if surfaceGui then
+                    local textLabel = surfaceGui:FindFirstChild("TextLabel")
+                    if textLabel and textLabel.Text ~= "" then
+                        status = textLabel.Text
+                    end
+                end
+            end
+        end
+    end, "Error getting USB status")
+    
+    return status
+end
+
+local function updateColorBoxStatus()
+    if not codeStatusParagraph then return end
+    
+    local info = detectColorBoxCode()
+    
+    -- Update code status
+    local codeText = "🔐 Color Box Code Detection:\n\n"
+    
+    if #info.codes > 0 then
+        codeText = codeText .. "📋 Available Codes:\n"
+        for _, code in ipairs(info.codes) do
+            local marker = code.isCorrect and "✅" or "❌"
+            codeText = codeText .. string.format("  %s Code #%d: %s\n", marker, code.number, code.title)
+        end
+        codeText = codeText .. "\n"
+    else
+        codeText = codeText .. "❌ No codes detected\n\n"
+    end
+    
+    if info.correctCode ~= "" then
+        codeText = codeText .. "✅ Correct Code: " .. info.correctCode .. "\n"
+    else
+        codeText = codeText .. "❌ Correct code not found\n"
+    end
+    
+    if info.colorSequence ~= "" then
+        codeText = codeText .. "🎨 Color Sequence: " .. info.colorSequence .. "\n"
+    end
+    
+    if info.colorBoxName ~= "" then
+        codeText = codeText .. "📦 Color Box: " .. info.colorBoxName
+    end
+    
+    codeStatusParagraph:SetDesc(codeText)
+    
+    return info
+end
+
+local function updateUSBStatus()
+    if not usbStatusParagraph then return end
+    
+    local status = getUSBComputerStatus()
+    local usbText = "💻 USB Computer Code:\n\n" .. status
+    usbStatusParagraph:SetDesc(usbText)
+end
+
 -- ==================== TABS ====================
 local Tabs = {
     Weapons = Window:AddTab({ Title = "Weapons", Icon = "target" }),
     Interact = Window:AddTab({ Title = "Interactions", Icon = "hand" }),
+    Teleports = Window:AddTab({ Title = "Teleports", Icon = "navigation" }),
     Destruction = Window:AddTab({ Title = "Destruction", Icon = "bomb" }),
     Player = Window:AddTab({ Title = "Player Mod", Icon = "user" }),
     Aim = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
     ESP = Window:AddTab({ Title = "ESP", Icon = "eye" }),
     Maps = Window:AddTab({ Title = "Specific Maps", Icon = "map" }),
-    Stats = Window:AddTab({ Title = "Game Stats", Icon = "bar-chart" })
+    Stats = Window:AddTab({ Title = "Game Stats", Icon = "bar-chart" }),
+    Changelog = Window:AddTab({ Title = "Changelogs", Icon = "file-text" })
 }
+
+-- ==================== CHANGELOGS TAB ====================
+Tabs.Changelog:AddSection("📋 Version History")
+
+Tabs.Changelog:AddParagraph({
+    Title = "🆕 Version 2.1 - Current",
+    Content = "• Added KeyCard ESP and Teleport\n" ..
+              "• Added Ozela Heist code identification system\n" ..
+              "• Added Color Box auto-detection and teleport\n" ..
+              "• Added USB Computer status monitor\n" ..
+              "• Improved Ozela Heist automation features\n" ..
+              "• Added Helper Position teleport for Ozela\n" ..
+              "• Added Changelogs tab\n\n" ..
+              "⚠️ REMOVED (Patched by game):\n" ..
+              "• Kill Aura - No longer functional\n" ..
+              "• Kill All - No longer functional\n" ..
+              "• All kill-based features have been patched"
+})
+
+Tabs.Changelog:AddParagraph({
+    Title = "📦 Version 2.0",
+    Content = "• Kill Aura fixed and optimized\n" ..
+              "• TP Walk loading bug resolved\n" ..
+              "• Improved security system\n" ..
+              "• Optimized performance\n" ..
+              "• Cleaner and organized code"
+})
+
+Tabs.Changelog:AddSection("ℹ️ Information")
+
+Tabs.Changelog:AddParagraph({
+    Title = "About XXMZ HUB",
+    Content = "Created by: 29 :)\n\n" ..
+              "This hub provides various quality-of-life features for Notoriety.\n\n" ..
+              "Features are continuously updated to maintain functionality.\n\n" ..
+              "If you encounter any bugs, please report them to the developer."
+})
 
 -- ==================== WEAPONS TAB ====================
 Tabs.Weapons:AddSection("Modify Weapons")
@@ -566,6 +700,54 @@ Tabs.Interact:AddButton({
                 notify("Interact", "No civilians found!")
             end
         end, "Error yelling")
+    end
+})
+
+-- ==================== TELEPORTS TAB ====================
+Tabs.Teleports:AddSection("General Teleports")
+
+Tabs.Teleports:AddButton({
+    Title = "🔑 Teleport to KeyCard",
+    Description = "Teleports to keycard location (works on all maps)",
+    Callback = function()
+        safeCall(function()
+            local character = LocalPlayer.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then
+                notify("Teleport", "❌ Character not found!")
+                return
+            end
+            
+            local hrp = character.HumanoidRootPart
+            
+            -- Path: workspace.Map.KeyCard.KeyCard
+            local map = Workspace:FindFirstChild("Map")
+            if not map then
+                notify("Teleport", "❌ Map not found!")
+                return
+            end
+            
+            local keyCardFolder = map:FindFirstChild("KeyCard")
+            if not keyCardFolder then
+                notify("Teleport", "❌ KeyCard folder not found!")
+                return
+            end
+            
+            local keyCard = keyCardFolder:FindFirstChild("KeyCard")
+            if not keyCard then
+                notify("Teleport", "❌ KeyCard not found!")
+                return
+            end
+            
+            -- Get position from the keycard
+            local targetPart = keyCard.PrimaryPart or keyCard:FindFirstChildWhichIsA("BasePart", true)
+            if not targetPart then
+                notify("Teleport", "❌ KeyCard has no parts!")
+                return
+            end
+            
+            hrp.CFrame = targetPart.CFrame + Vector3.new(0, 5, 0)
+            notify("Teleport", "✅ Teleported to KeyCard!", 2)
+        end, "Error teleporting to KeyCard")
     end
 })
 
@@ -839,84 +1021,11 @@ Tabs.Player:AddToggle("Noclip", {
 })
 
 -- ==================== COMBAT TAB ====================
-Tabs.Aim:AddSection("Kill All")
+Tabs.Aim:AddSection("⚠️ Notice")
 
-Tabs.Aim:AddToggle("KillAllLoop", {
-    Title = "🔥 Kill All (Loop)",
-    Description = "Automatically kills all police",
-    Default = false,
-    Callback = function(value)
-        killAllEnabled = value
-        
-        if value then
-            task.spawn(function()
-                notify("Kill All Loop", "Loop ENABLED!", 3)
-                lastKillAllNotify = tick() -- Reset timer
-                
-                while killAllEnabled do
-                    killAllPolice()
-                    task.wait(killAllDelay)
-                end
-                
-                notify("Kill All Loop", "Loop disabled", 2)
-            end)
-        end
-    end
-})
-
-Tabs.Aim:AddButton({
-    Title = "Kill All (Once)",
-    Description = "Executes kill all once",
-    Callback = killAllPolice
-})
-
-Tabs.Aim:AddSection("Kill Aura")
-
-Tabs.Aim:AddToggle("KillAura", {
-    Title = "⚔️ Kill Aura (Improved)",
-    Description = "Kills nearby enemies when aiming (Right Click)",
-    Default = false,
-    Callback = function(value)
-        kaEnabled = value
-        if value then
-            notify("Kill Aura", "ENABLED - Hold right mouse button!", 4)
-        else
-            notify("Kill Aura", "Disabled", 2)
-        end
-    end
-})
-
-Tabs.Aim:AddToggle("KAAutoAim", {
-    Title = "Auto-Aim on Kill Aura",
-    Description = "Automatically aims at kill aura target",
-    Default = true,
-    Callback = function(value)
-        kaAutoAim = value
-    end
-})
-
-Tabs.Aim:AddSlider("KARange", {
-    Title = "Kill Aura Range",
-    Description = "Maximum distance to attack",
-    Default = 70,
-    Min = 20,
-    Max = 150,
-    Rounding = 1,
-    Callback = function(value)
-        kaRange = value
-    end
-})
-
-Tabs.Aim:AddSlider("KADelay", {
-    Title = "Kill Aura Delay",
-    Description = "Time between attacks (seconds)",
-    Default = 0.1,
-    Min = 0.05,
-    Max = 0.5,
-    Rounding = 2,
-    Callback = function(value)
-        kaDelay = value
-    end
+Tabs.Aim:AddParagraph({
+    Title = "Kill Features Patched",
+    Content = "Kill Aura and Kill All features have been patched by the game developers and removed from this version.\n\nAimbot features below still work normally."
 })
 
 Tabs.Aim:AddSection("Aimbot")
@@ -1107,6 +1216,44 @@ Tabs.ESP:AddToggle("CivilianESP", {
     end
 })
 
+Tabs.ESP:AddToggle("KeyCardESP", {
+    Title = "🔑 KeyCard ESP",
+    Description = "Highlights keycards in gold",
+    Default = false,
+    Callback = function(value)
+        keyCardESPEnabled = value
+        
+        if value then
+            task.spawn(function()
+                while keyCardESPEnabled do
+                    clearHighlights(keyCardHighlights)
+                    
+                    safeCall(function()
+                        local map = Workspace:FindFirstChild("Map")
+                        if map then
+                            local keyCardFolder = map:FindFirstChild("KeyCard")
+                            if keyCardFolder then
+                                local keyCard = keyCardFolder:FindFirstChild("KeyCard")
+                                if keyCard then
+                                    local hl = createHighlight(keyCard, Color3.fromRGB(255, 215, 0))
+                                    if hl then
+                                        table.insert(keyCardHighlights, hl)
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    
+                    task.wait(2)
+                end
+                clearHighlights(keyCardHighlights)
+            end)
+        else
+            clearHighlights(keyCardHighlights)
+        end
+    end
+})
+
 -- ==================== SPECIFIC MAPS TAB ====================
 Tabs.Maps:AddSection("Map Selection")
 
@@ -1278,6 +1425,65 @@ Tabs.Maps:AddButton({
                 end
             })
             
+            -- Code Detection Section
+            Tabs.Maps:AddSection("Code Detection - " .. selectedMap)
+            
+            codeStatusParagraph = Tabs.Maps:AddParagraph({
+                Title = "🔐 Color Box Code",
+                Content = "Click 'Detect Color Box Code' to scan"
+            })
+            
+            usbStatusParagraph = Tabs.Maps:AddParagraph({
+                Title = "💻 USB Computer Code",
+                Content = "Click 'Check USB Code' to view"
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "🔍 Detect Color Box Code",
+                Description = "Scans and identifies correct color box code",
+                Callback = function()
+                    local info = updateColorBoxStatus()
+                    if info.correctCode ~= "" then
+                        notify("Color Box", "Correct code: " .. info.correctCode, 4)
+                    else
+                        notify("Color Box", "No codes detected yet", 3)
+                    end
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "💻 Check USB Computer Code",
+                Description = "Displays current USB computer code",
+                Callback = function()
+                    updateUSBStatus()
+                    local status = getUSBComputerStatus()
+                    if status ~= "Not found" then
+                        notify("USB Computer", "Code: " .. status, 4)
+                    else
+                        notify("USB Computer", "Computer not found or no code", 3)
+                    end
+                end
+            })
+            
+            Tabs.Maps:AddToggle("AutoRefreshUSB", {
+                Title = "🔄 Auto-Refresh USB Code",
+                Description = "Automatically updates USB code every 2 seconds",
+                Default = false,
+                Callback = function(value)
+                    if value then
+                        task.spawn(function()
+                            while value do
+                                updateUSBStatus()
+                                task.wait(2)
+                            end
+                        end)
+                        notify("USB Auto-Refresh", "Enabled!", 2)
+                    else
+                        notify("USB Auto-Refresh", "Disabled", 2)
+                    end
+                end
+            })
+            
             -- Teleport Section
             Tabs.Maps:AddSection("Teleport - " .. selectedMap)
             
@@ -1400,23 +1606,196 @@ Tabs.Maps:AddButton({
                             if stadiumBlueprint then
                                 local codeTable = stadiumBlueprint:FindFirstChild("prop_office_TablePlastic")
                                 if codeTable then
-                                    local tablePart = codeTable:IsA("Part") and codeTable or codeTable:FindFirstChildOfClass("Part")
+                                    -- Code table is a model, get PrimaryPart or any BasePart
+                                    local tablePart = codeTable.PrimaryPart or codeTable:FindFirstChildWhichIsA("BasePart")
                                     if tablePart then
                                         hrp.CFrame = tablePart.CFrame + Vector3.new(0, 5, 0)
-                                        notify("Teleport", "Teleported to Code Table!", 2)
+                                        notify("Teleport", "✅ Teleported to Code Table!", 2)
                                     else
-                                        notify("Teleport", "Table part not found!")
+                                        notify("Teleport", "❌ Table has no parts!")
                                     end
                                 else
-                                    notify("Teleport", "Code Table not found!")
+                                    notify("Teleport", "❌ Code Table not found!")
                                 end
                             else
-                                notify("Teleport", "Stadium Blueprint not found!")
+                                notify("Teleport", "❌ Stadium Blueprint not found!")
                             end
                         else
-                            notify("Teleport", "Blueprints folder not found!")
+                            notify("Teleport", "❌ Blueprints folder not found!")
                         end
-                    end, "Error teleporting")
+                    end, "Error teleporting to Code Table")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "📍 TP to Correct Color Box",
+                Description = "Teleports to the correct color box",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleport", "Character not found!")
+                            return
+                        end
+                        
+                        local info = detectColorBoxCode()
+                        
+                        if info.colorBoxName == "" then
+                            notify("Teleport", "❌ Detect Color Box code first!", 3)
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        local colorBoxRNG = Workspace:FindFirstChild("colorBoxRNG")
+                        
+                        if colorBoxRNG then
+                            local colorBox = colorBoxRNG:FindFirstChild(info.colorBoxName)
+                            if colorBox then
+                                local boxPart = colorBox.PrimaryPart or colorBox:FindFirstChildWhichIsA("BasePart")
+                                if boxPart then
+                                    hrp.CFrame = boxPart.CFrame + Vector3.new(0, 5, 0)
+                                    notify("Teleport", "✅ Teleported to: " .. info.colorBoxName, 3)
+                                else
+                                    notify("Teleport", "❌ Color box has no parts!")
+                                end
+                            else
+                                notify("Teleport", "❌ Color box not found!")
+                            end
+                        else
+                            notify("Teleport", "❌ colorBoxRNG not found!")
+                        end
+                    end, "Error teleporting to Color Box")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "📍 TP to Admin Room",
+                Description = "Teleports to Admin Room (156, 42, -165)",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleport", "Character not found!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        hrp.CFrame = CFrame.new(156, 42, -165)
+                        notify("Teleport", "✅ Teleported to Admin Room!", 2)
+                    end, "Error teleporting to Admin Room")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "🔑 TP to KeyCard",
+                Description = "Teleports to keycard location",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleport", "❌ Character not found!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        
+                        -- Path: workspace.Map.KeyCard.KeyCard
+                        local map = Workspace:FindFirstChild("Map")
+                        if not map then
+                            notify("Teleport", "❌ Map not found!")
+                            return
+                        end
+                        
+                        local keyCardFolder = map:FindFirstChild("KeyCard")
+                        if not keyCardFolder then
+                            notify("Teleport", "❌ KeyCard folder not found!")
+                            return
+                        end
+                        
+                        local keyCard = keyCardFolder:FindFirstChild("KeyCard")
+                        if not keyCard then
+                            notify("Teleport", "❌ KeyCard not found!")
+                            return
+                        end
+                        
+                        -- Get position from the keycard
+                        local targetPart = keyCard.PrimaryPart or keyCard:FindFirstChildWhichIsA("BasePart", true)
+                        if not targetPart then
+                            notify("Teleport", "❌ KeyCard has no parts!")
+                            return
+                        end
+                        
+                        hrp.CFrame = targetPart.CFrame + Vector3.new(0, 5, 0)
+                        notify("Teleport", "✅ Teleported to KeyCard!", 2)
+                    end, "Error teleporting to KeyCard")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "🏦 TP to Vault",
+                Description = "Teleports to vault (487, 39, -222)",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleport", "❌ Character not found!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        hrp.CFrame = CFrame.new(487, 39, -222)
+                        notify("Teleport", "✅ Teleported to Vault!", 2)
+                    end, "Error teleporting to Vault")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "🚪 TP to Locker Room",
+                Description = "Teleports to locker room (83, 39, -201)",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleport", "❌ Character not found!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        hrp.CFrame = CFrame.new(83, 39, -201)
+                        notify("Teleport", "✅ Teleported to Locker Room!", 2)
+                    end, "Error teleporting to Locker Room")
+                end
+            })
+            
+            Tabs.Maps:AddButton({
+                Title = "🚁 TP to Exit/Escape",
+                Description = "Teleports to bag secured area",
+                Callback = function()
+                    safeCall(function()
+                        local character = LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            notify("Teleport", "❌ Character not found!")
+                            return
+                        end
+                        
+                        local hrp = character.HumanoidRootPart
+                        
+                        -- Path: workspace.BagSecuredArea.FloorPart
+                        local bagSecuredArea = Workspace:FindFirstChild("BagSecuredArea")
+                        if not bagSecuredArea then
+                            notify("Teleport", "❌ BagSecuredArea not found!")
+                            return
+                        end
+                        
+                        local floorPart = bagSecuredArea:FindFirstChild("FloorPart")
+                        if not floorPart then
+                            notify("Teleport", "❌ FloorPart not found!")
+                            return
+                        end
+                        
+                        hrp.CFrame = floorPart.CFrame + Vector3.new(0, 5, 0)
+                        notify("Teleport", "✅ Teleported to Exit!", 2)
+                    end, "Error teleporting to Exit")
                 end
             })
             
@@ -1522,7 +1901,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        if aimEnabled or kaEnabled then
+        if aimEnabled then
             aiming = true
         end
     end
@@ -1554,38 +1933,6 @@ RunService.RenderStepped:Connect(function()
     if aimEnabled and aiming and target then
         aimAtTarget(target)
     end
-    
-    -- Kill Aura (IMPROVED)
-    if kaEnabled and aiming and target then
-        local currentTime = tick()
-        
-        -- Auto-aim on kill aura
-        if kaAutoAim then
-            aimAtTarget(target)
-        end
-        
-        -- Check delay
-        if currentTime - lastKaTime >= kaDelay then
-            local character = LocalPlayer.Character
-            if character then
-                local hrp = character:FindFirstChild("HumanoidRootPart")
-                local targetHrp = target:FindFirstChild("HumanoidRootPart")
-                
-                if hrp and targetHrp then
-                    local distance = (hrp.Position - targetHrp.Position).Magnitude
-                    
-                    if distance <= kaRange then
-                        -- Attack multiple times to ensure kill
-                        for i = 1, 2 do
-                            executeKillAura(target)
-                            task.wait(0.01)
-                        end
-                        lastKaTime = currentTime
-                    end
-                end
-            end
-        end
-    end
 end)
 
 -- ==================== CLEANUP ====================
@@ -1594,6 +1941,7 @@ local function cleanup()
     clearHighlights(cameraHighlights)
     clearHighlights(policeHighlights)
     clearHighlights(civilianHighlights)
+    clearHighlights(keyCardHighlights)
     clearHighlights(ropeHighlights)
     clearHighlights(hookHighlights)
     clearHighlights(codeTableHighlights)
@@ -1635,5 +1983,5 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ==================== COMPLETE INITIALIZATION ====================
-notify("XXMZ HUB v2.0", "Hub loaded successfully! ✅", 5)
-notify("Created by", "29 :)", 3)
+notify("XXMZ HUB v2.1", "Hub loaded successfully! ✅", 5)
+notify("Enhanced Features", "Ozela Heist code detection added!", 3)

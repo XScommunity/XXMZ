@@ -646,25 +646,23 @@ Tab5:Button({
     end
 })
 
+-- CORREÇÃO: Anti IceClimb usando Delete FE
 Tab5:Button({
     Title = "Anti IceClimb for everyone",
-    Desc = "Deleta o evento IceSlip",
+    Desc = "Deleta o evento IceSlip (FE)",
     Locked = false,
     Callback = function()
-        pcall(function()
-            game:GetService("ReplicatedStorage").Events.IceSlip:Destroy()
-        end)
+        Delete(game:GetService("ReplicatedStorage").Events.IceSlip)
     end
 })
 
+-- CORREÇÃO: Semi Godmode usando Delete FE
 Tab5:Button({
     Title = "Semi Godmode for everyone",
-    Desc = "Deleta o evento Energy",
+    Desc = "Deleta o evento Energy (FE)",
     Locked = false,
     Callback = function()
-        pcall(function()
-            game:GetService("ReplicatedStorage").Events.Energy:Destroy()
-        end)
+        Delete(game:GetService("ReplicatedStorage").Events.Energy)
     end
 })
 

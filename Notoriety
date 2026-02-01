@@ -543,7 +543,7 @@ Tabs.Changelog:AddSection("📋 Version History")
 
 Tabs.Changelog:AddParagraph({
     Title = "🆕 Version 2.2 - Current",
-    Content = "• Kill All v2 fixed.
+    Content = "• Kill All v2 fixed."
 })
 
 Tabs.Changelog:AddParagraph({

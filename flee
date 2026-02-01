@@ -1,0 +1,994 @@
+--[[
+    XXMZ HUB | Flee The Facility
+    By 29
+]]
+
+-- Load WindUI Library
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- Load ESP Library
+local ESPLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/XScommunity/c00llib/refs/heads/main/esp'))()
+
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Variables
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Global State
+local State = {
+    AutoSolveMinigame = false,
+    AntiBeastEnabled = false,
+    Speed = 16,
+    JumpPower = 50,
+    SpeedEnabled = false,
+    JumpPowerEnabled = false,
+    BeastLockOn = nil,
+    SelectedPlayerForChance = nil,
+    LockOnFOV = 200,
+    NoFog = false,
+    Noclip = false,
+    
+    -- ESP Settings
+    ESPEnabled = false,
+    ESPComputers = false,
+    ESPBeast = false,
+    ESPInnocent = false,
+    ESPFreezePods = false,
+    ESPExit = false,
+    ESPColor = Color3.fromRGB(255, 255, 255),
+    ESPDistance = 5000,
+}
+
+-- Tracking
+local MinigameConnection = nil
+local TeleportConnection = nil
+local AntiBeastConnection = nil
+local LockOnConnection = nil
+local NoclipConnection = nil
+
+-- Helper Functions
+local function getCharacter()
+    return LocalPlayer.Character
+end
+
+local function getHumanoid()
+    local char = getCharacter()
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+local function getRootPart()
+    local char = getCharacter()
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function isBeast(player)
+    if not player.Character then return false end
+    return player.Character:FindFirstChild("Hammer") ~= nil
+end
+
+local function getBeastPlayer()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if isBeast(player) then
+            return player
+        end
+    end
+    return nil
+end
+
+local function getInnocentPlayers()
+    local innocents = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character and not isBeast(player) and player ~= LocalPlayer then
+            table.insert(innocents, player)
+        end
+    end
+    return innocents
+end
+
+local function findAllOfClass(className)
+    local objects = {}
+    for _, descendant in ipairs(workspace:GetDescendants()) do
+        if descendant:IsA("Model") and descendant.Name == className then
+            table.insert(objects, descendant)
+        end
+    end
+    return objects
+end
+
+local function getRandomWalkablePosition(origin, range)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {getCharacter()}
+    
+    for i = 1, 20 do
+        local randomOffset = Vector3.new(
+            math.random(-range, range),
+            50,
+            math.random(-range, range)
+        )
+        local checkPos = origin + randomOffset
+        
+        local ray = workspace:Raycast(checkPos, Vector3.new(0, -100, 0), params)
+        if ray and ray.Instance.CanCollide then
+            return ray.Position + Vector3.new(0, 3, 0)
+        end
+    end
+    
+    return origin + Vector3.new(0, 50, 0)
+end
+
+-- ESP System using new library
+local function updateESP()
+    -- Clear all ESPs first
+    ESPLib:Clear()
+    
+    if not State.ESPEnabled then return end
+    
+    -- Configure ESP settings
+    local espSettings = {
+        Enabled = true,
+        ShowArrows = true,
+        ShowTracers = false, -- Disabled as requested
+        ShowHighlight = true,
+        ShowDistance = true,
+        ShowHealth = true,
+        MaxDistance = State.ESPDistance,
+        FillColor = State.ESPColor,
+        OutlineColor = State.ESPColor,
+        TextColor = State.ESPColor,
+        ArrowColor = State.ESPColor,
+    }
+    
+    -- ESP for Players
+    if State.ESPBeast or State.ESPInnocent then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local shouldAdd = false
+                local customSettings = table.clone(espSettings)
+                
+                if isBeast(player) and State.ESPBeast then
+                    shouldAdd = true
+                    customSettings.FillColor = Color3.fromRGB(255, 0, 0)
+                    customSettings.OutlineColor = Color3.fromRGB(255, 0, 0)
+                    customSettings.TextColor = Color3.fromRGB(255, 0, 0)
+                    customSettings.ArrowColor = Color3.fromRGB(255, 0, 0)
+                elseif not isBeast(player) and State.ESPInnocent then
+                    shouldAdd = true
+                    customSettings.FillColor = Color3.fromRGB(0, 255, 0)
+                    customSettings.OutlineColor = Color3.fromRGB(0, 255, 0)
+                    customSettings.TextColor = Color3.fromRGB(0, 255, 0)
+                    customSettings.ArrowColor = Color3.fromRGB(0, 255, 0)
+                end
+                
+                if shouldAdd then
+                    ESPLib:AddPlayer(player, customSettings)
+                end
+            end
+        end
+    end
+    
+    -- ESP for Objects
+    local objectTypes = {
+        {enabled = State.ESPComputers, class = "ComputerTable", name = "Computer", color = Color3.fromRGB(0, 150, 255)},
+        {enabled = State.ESPFreezePods, class = "FreezePod", name = "Freeze Pod", color = Color3.fromRGB(0, 255, 255)},
+        {enabled = State.ESPExit, class = "ExitDoor", name = "Exit", color = Color3.fromRGB(255, 255, 0)},
+    }
+    
+    for _, objType in ipairs(objectTypes) do
+        if objType.enabled then
+            local objects = findAllOfClass(objType.class)
+            for _, obj in ipairs(objects) do
+                local customSettings = table.clone(espSettings)
+                customSettings.FillColor = objType.color
+                customSettings.OutlineColor = objType.color
+                customSettings.TextColor = objType.color
+                customSettings.ArrowColor = objType.color
+                customSettings.ShowHealth = false
+                customSettings.CustomName = objType.name
+                
+                ESPLib:AddObject(obj, customSettings)
+            end
+        end
+    end
+end
+
+-- Auto Solve Computer
+local function startAutoSolveMinigame()
+    if MinigameConnection then return end
+    
+    MinigameConnection = RunService.Heartbeat:Connect(function()
+        if not State.AutoSolveMinigame then return end
+        
+        local args = {"SetPlayerMinigameResult", true}
+        ReplicatedStorage:WaitForChild("RemoteEvent"):FireServer(unpack(args))
+        
+        task.wait(0.05)
+    end)
+end
+
+local function stopAutoSolveMinigame()
+    if MinigameConnection then
+        MinigameConnection:Disconnect()
+        MinigameConnection = nil
+    end
+end
+
+-- Anti Beast
+local function startAntiBeast()
+    if AntiBeastConnection then return end
+    
+    AntiBeastConnection = RunService.Heartbeat:Connect(function()
+        if not State.AntiBeastEnabled then return end
+        
+        local rootPart = getRootPart()
+        if not rootPart then return end
+        
+        local beast = getBeastPlayer()
+        if not beast or not beast.Character then return end
+        
+        local beastRoot = beast.Character:FindFirstChild("HumanoidRootPart")
+        if not beastRoot then return end
+        
+        local distance = (rootPart.Position - beastRoot.Position).Magnitude
+        
+        if distance < 30 then
+            local newPos = getRandomWalkablePosition(rootPart.Position, 100)
+            rootPart.CFrame = CFrame.new(newPos)
+        end
+    end)
+end
+
+local function stopAntiBeast()
+    if AntiBeastConnection then
+        AntiBeastConnection:Disconnect()
+        AntiBeastConnection = nil
+    end
+end
+
+-- TP Walk
+local function startTPWalk()
+    if TeleportConnection then return end
+    
+    TeleportConnection = RunService.Heartbeat:Connect(function()
+        if not State.SpeedEnabled then return end
+        
+        local humanoid = getHumanoid()
+        local rootPart = getRootPart()
+        
+        if not humanoid or not rootPart then return end
+        
+        if humanoid.MoveDirection.Magnitude > 0 then
+            local moveDirection = humanoid.MoveDirection
+            local speed = State.Speed / 16
+            rootPart.CFrame = rootPart.CFrame + (moveDirection * speed * 0.5)
+        end
+    end)
+end
+
+local function stopTPWalk()
+    if TeleportConnection then
+        TeleportConnection:Disconnect()
+        TeleportConnection = nil
+    end
+end
+
+-- JumpPower
+local function updateJumpPower()
+    local humanoid = getHumanoid()
+    if humanoid then
+        if State.JumpPowerEnabled then
+            humanoid.JumpPower = State.JumpPower
+        else
+            humanoid.JumpPower = 50
+        end
+    end
+end
+
+-- Noclip
+local function startNoclip()
+    if NoclipConnection then return end
+    
+    NoclipConnection = RunService.Stepped:Connect(function()
+        if not State.Noclip then return end
+        
+        local char = getCharacter()
+        if not char then return end
+        
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end)
+end
+
+local function stopNoclip()
+    if NoclipConnection then
+        NoclipConnection:Disconnect()
+        NoclipConnection = nil
+    end
+    
+    local char = getCharacter()
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+-- Beast Lock On
+local FOVCircle = nil
+local FOVCircleGui = nil
+
+local function createFOVCircle()
+    if FOVCircleGui then
+        FOVCircleGui:Destroy()
+        FOVCircleGui = nil
+    end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "FOVCircle"
+    screenGui.IgnoreGuiInset = true
+    screenGui.ResetOnSpawn = false
+    
+    if gethui then
+        screenGui.Parent = gethui()
+    elseif syn and syn.protect_gui then
+        syn.protect_gui(screenGui)
+        screenGui.Parent = game:GetService("CoreGui")
+    else
+        screenGui.Parent = game:GetService("CoreGui")
+    end
+    
+    FOVCircleGui = screenGui
+    
+    local circle = Instance.new("ImageLabel")
+    circle.Name = "Circle"
+    circle.AnchorPoint = Vector2.new(0.5, 0.5)
+    circle.BackgroundTransparency = 1
+    circle.Size = UDim2.new(0, State.LockOnFOV * 2, 0, State.LockOnFOV * 2)
+    circle.Position = UDim2.new(0.5, 0, 0.5, 0)
+    circle.Image = "rbxassetid://3926305904"
+    circle.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    circle.ImageTransparency = 0.7
+    circle.Parent = screenGui
+    
+    FOVCircle = circle
+end
+
+local function updateFOVCircle()
+    if FOVCircle and State.BeastLockOn then
+        FOVCircle.Size = UDim2.new(0, State.LockOnFOV * 2, 0, State.LockOnFOV * 2)
+        FOVCircle.Visible = true
+    elseif FOVCircle then
+        FOVCircle.Visible = false
+    end
+end
+
+local function getClosestInnocent()
+    if not isBeast(LocalPlayer) then return nil end
+    
+    local rootPart = getRootPart()
+    if not rootPart then return nil end
+    
+    local innocents = getInnocentPlayers()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    
+    local viewportSize = Camera.ViewportSize
+    local centerScreen = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    
+    for _, player in ipairs(innocents) do
+        if player.Character then
+            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local targetHead = player.Character:FindFirstChild("Head")
+            
+            if targetRoot and targetHead then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(targetHead.Position)
+                
+                if onScreen then
+                    local screenPoint = Vector2.new(screenPos.X, screenPos.Y)
+                    local distanceFromCenter = (screenPoint - centerScreen).Magnitude
+                    
+                    if distanceFromCenter < State.LockOnFOV and distanceFromCenter < shortestDistance then
+                        closestPlayer = player
+                        shortestDistance = distanceFromCenter
+                    end
+                end
+            end
+        end
+    end
+    
+    return closestPlayer
+end
+
+local function startBeastLockOn()
+    if LockOnConnection then return end
+    
+    createFOVCircle()
+    
+    LockOnConnection = RunService.RenderStepped:Connect(function()
+        if not State.BeastLockOn then 
+            if FOVCircle then
+                FOVCircle.Visible = false
+            end
+            return 
+        end
+        
+        if not isBeast(LocalPlayer) then 
+            if FOVCircle then
+                FOVCircle.Visible = false
+            end
+            stopBeastLockOn()
+            return 
+        end
+        
+        local closestInnocent = getClosestInnocent()
+        if closestInnocent then
+            State.BeastLockOn = closestInnocent
+        end
+        
+        updateFOVCircle()
+        
+        if State.BeastLockOn and State.BeastLockOn.Character then
+            local targetHead = State.BeastLockOn.Character:FindFirstChild("Head")
+            
+            if targetHead then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetHead.Position)
+            end
+        end
+    end)
+end
+
+local function stopBeastLockOn()
+    if LockOnConnection then
+        LockOnConnection:Disconnect()
+        LockOnConnection = nil
+    end
+    
+    if FOVCircleGui then
+        FOVCircleGui:Destroy()
+        FOVCircleGui = nil
+    end
+    
+    FOVCircle = nil
+    State.BeastLockOn = nil
+end
+
+-- Get Player Names
+local function getPlayerNames()
+    local names = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        table.insert(names, player.Name)
+    end
+    return names
+end
+
+-- Create UI
+local Window = WindUI:CreateWindow({
+    Title = "XXMZ HUB",
+    Icon = "skull",
+    Author = "Flee The Facility - by 29",
+    Folder = "XXMZ_FleeTheFacility",
+    Size = UDim2.fromOffset(580, 460),
+    Transparent = true,
+    Theme = "Dark",
+})
+
+-- Tabs
+local MainTab = Window:Tab({
+    Title = "Main",
+    Icon = "home",
+})
+
+local PlayerTab = Window:Tab({
+    Title = "Player",
+    Icon = "user",
+})
+
+local ESPTab = Window:Tab({
+    Title = "ESP",
+    Icon = "eye",
+})
+
+local TeleportTab = Window:Tab({
+    Title = "Teleport",
+    Icon = "map-pin",
+})
+
+local BeastTab = Window:Tab({
+    Title = "Beast Helper",
+    Icon = "skull",
+})
+
+-- Main Tab
+MainTab:Toggle({
+    Title = "Auto Solve Computer",
+    Desc = "Resolve computadores automaticamente",
+    Icon = "cpu",
+    Value = false,
+    Callback = function(state)
+        State.AutoSolveMinigame = state
+        if state then
+            startAutoSolveMinigame()
+        else
+            stopAutoSolveMinigame()
+        end
+    end
+})
+
+local BeastCheckerParagraph = MainTab:Paragraph({
+    Title = "Beast Chance Checker",
+    Desc = "Veja a chance de cada jogador ser a besta",
+    Color = "Green",
+    Locked = false
+})
+
+local BeastChanceDropdown = MainTab:Dropdown({
+    Title = "Selecione um Jogador",
+    Values = {
+        {
+            Title = "Carregando...",
+            Desc = "Aguarde os jogadores carregarem",
+            Icon = "user",
+            Callback = function() 
+                State.SelectedPlayerForChance = "Carregando..."
+            end
+        }
+    }
+})
+
+local BeastChanceLabel = MainTab:Paragraph({
+    Title = "Chance de Beast",
+    Desc = "Selecione um jogador acima",
+    Color = "Green",
+    Locked = false
+})
+
+-- Update chance label and dropdown
+task.spawn(function()
+    while task.wait(1) do
+        if State.SelectedPlayerForChance and State.SelectedPlayerForChance ~= "Carregando..." then
+            local player = Players:FindFirstChild(State.SelectedPlayerForChance)
+            if player and player:FindFirstChild("SavedPlayerStatsModule") then
+                local beastChance = player.SavedPlayerStatsModule:FindFirstChild("BeastChance")
+                if beastChance then
+                    BeastChanceLabel:SetDesc(State.SelectedPlayerForChance .. ": " .. tostring(beastChance.Value) .. "%")
+                else
+                    BeastChanceLabel:SetDesc("Não encontrado")
+                end
+            else
+                BeastChanceLabel:SetDesc("Jogador não encontrado")
+            end
+        end
+        
+        -- Update player dropdown
+        local playerNames = getPlayerNames()
+        local dropdownValues = {}
+        for _, name in ipairs(playerNames) do
+            table.insert(dropdownValues, {
+                Title = name,
+                Desc = "Jogador",
+                Icon = "user",
+                Callback = function() 
+                    State.SelectedPlayerForChance = name
+                end
+            })
+        end
+        BeastChanceDropdown:Refresh(dropdownValues)
+    end
+end)
+
+-- Player Tab
+PlayerTab:Toggle({
+    Title = "Anti Beast",
+    Desc = "Teleporta para longe quando a besta se aproxima",
+    Icon = "shield",
+    Value = false,
+    Callback = function(state)
+        State.AntiBeastEnabled = state
+        if state then
+            startAntiBeast()
+        else
+            stopAntiBeast()
+        end
+    end
+})
+
+PlayerTab:Slider({
+    Title = "Velocidade",
+    Desc = "Ajusta a velocidade do TP Walk",
+    Step = 1,
+    Value = {
+        Min = 16,
+        Max = 200,
+        Default = 16,
+    },
+    Callback = function(value)
+        State.Speed = value
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Ativar Velocidade",
+    Desc = "Ativa o TP Walk",
+    Icon = "zap",
+    Value = false,
+    Callback = function(state)
+        State.SpeedEnabled = state
+        if state then
+            startTPWalk()
+        else
+            stopTPWalk()
+        end
+    end
+})
+
+PlayerTab:Slider({
+    Title = "Jump Power",
+    Desc = "Ajusta a força do pulo",
+    Step = 1,
+    Value = {
+        Min = 50,
+        Max = 200,
+        Default = 50,
+    },
+    Callback = function(value)
+        State.JumpPower = value
+        updateJumpPower()
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Ativar Jump Power",
+    Desc = "Ativa o Jump Power customizado",
+    Icon = "arrow-up",
+    Value = false,
+    Callback = function(state)
+        State.JumpPowerEnabled = state
+        updateJumpPower()
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Remover Fog",
+    Desc = "Remove a névoa do jogo",
+    Icon = "cloud-off",
+    Value = false,
+    Callback = function(state)
+        State.NoFog = state
+        local Lighting = game:GetService("Lighting")
+        
+        if state then
+            Lighting.FogEnd = 100000
+            Lighting.FogStart = 0
+        else
+            Lighting.FogEnd = 1000
+            Lighting.FogStart = 0
+        end
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Noclip",
+    Desc = "Atravessa paredes",
+    Icon = "ghost",
+    Value = false,
+    Callback = function(state)
+        State.Noclip = state
+        if state then
+            startNoclip()
+        else
+            stopNoclip()
+        end
+    end
+})
+
+-- ESP Tab
+ESPTab:Toggle({
+    Title = "Ativar ESP",
+    Desc = "Liga/desliga o sistema ESP",
+    Icon = "eye",
+    Value = false,
+    Callback = function(state)
+        State.ESPEnabled = state
+        updateESP()
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Computadores",
+    Desc = "Mostra todos os computadores",
+    Icon = "monitor",
+    Value = false,
+    Callback = function(state)
+        State.ESPComputers = state
+        updateESP()
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Beast",
+    Desc = "Mostra a besta",
+    Icon = "skull",
+    Value = false,
+    Callback = function(state)
+        State.ESPBeast = state
+        updateESP()
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Inocentes",
+    Desc = "Mostra todos os inocentes",
+    Icon = "users",
+    Value = false,
+    Callback = function(state)
+        State.ESPInnocent = state
+        updateESP()
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Freeze Pods",
+    Desc = "Mostra todos os Freeze Pods",
+    Icon = "snowflake",
+    Value = false,
+    Callback = function(state)
+        State.ESPFreezePods = state
+        updateESP()
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Saídas",
+    Desc = "Mostra todas as saídas",
+    Icon = "door-open",
+    Value = false,
+    Callback = function(state)
+        State.ESPExit = state
+        updateESP()
+    end
+})
+
+ESPTab:Colorpicker({
+    Title = "Cor do ESP",
+    Desc = "Escolha a cor principal do ESP",
+    Default = Color3.fromRGB(255, 255, 255),
+    Callback = function(color)
+        State.ESPColor = color
+        updateESP()
+    end
+})
+
+ESPTab:Slider({
+    Title = "Distância do ESP",
+    Desc = "Distância máxima para mostrar ESP",
+    Step = 100,
+    Value = {
+        Min = 100,
+        Max = 10000,
+        Default = 5000,
+    },
+    Callback = function(value)
+        State.ESPDistance = value
+        updateESP()
+    end
+})
+
+-- Update ESP periodically
+task.spawn(function()
+    while task.wait(2) do
+        if State.ESPEnabled then
+            updateESP()
+        end
+    end
+end)
+
+-- Teleport Tab
+local SelectedComputerIndex = 1
+local CachedComputers = {}
+
+local ComputerDropdown = TeleportTab:Dropdown({
+    Title = "Teleportar para Computador",
+    Values = {
+        {
+            Title = "Carregando...",
+            Desc = "Aguarde os computadores carregarem",
+            Icon = "monitor",
+            Callback = function() 
+                print("Carregando computadores...")
+            end
+        }
+    }
+})
+
+TeleportTab:Button({
+    Title = "TP para Computador",
+    Desc = "Teleporta para o computador selecionado",
+    Callback = function()
+        if CachedComputers[SelectedComputerIndex] then
+            local computer = CachedComputers[SelectedComputerIndex]
+            local rootPart = getRootPart()
+            local computerPart = computer:FindFirstChildWhichIsA("BasePart", true)
+            if rootPart and computerPart then
+                local centerPos = computerPart.Position
+                local sizeY = computerPart.Size.Y
+                rootPart.CFrame = CFrame.new(centerPos.X, centerPos.Y + (sizeY / 2) + 3, centerPos.Z)
+            end
+        end
+    end
+})
+
+-- Update computer list
+task.spawn(function()
+    while task.wait(3) do
+        local computers = findAllOfClass("ComputerTable")
+        CachedComputers = computers
+        local dropdownValues = {}
+        for i, comp in ipairs(computers) do
+            table.insert(dropdownValues, {
+                Title = "Computador #" .. i,
+                Desc = "Teleportar para este computador",
+                Icon = "monitor",
+                Callback = function() 
+                    SelectedComputerIndex = i
+                end
+            })
+        end
+        if #dropdownValues > 0 then
+            ComputerDropdown:Refresh(dropdownValues)
+        end
+    end
+end)
+
+TeleportTab:Button({
+    Title = "TP para Saída",
+    Desc = "Teleporta para a saída mais próxima",
+    Callback = function()
+        local exits = findAllOfClass("ExitDoor")
+        if #exits > 0 then
+            local rootPart = getRootPart()
+            if rootPart then
+                local closestExit = nil
+                local closestDistance = math.huge
+                
+                for _, exit in ipairs(exits) do
+                    local exitPart = exit:FindFirstChildWhichIsA("BasePart", true)
+                    if exitPart then
+                        local distance = (rootPart.Position - exitPart.Position).Magnitude
+                        if distance < closestDistance then
+                            closestDistance = distance
+                            closestExit = exitPart
+                        end
+                    end
+                end
+                
+                if closestExit then
+                    rootPart.CFrame = CFrame.new(closestExit.Position + Vector3.new(0, 5, 0))
+                end
+            end
+        end
+    end
+})
+
+TeleportTab:Button({
+    Title = "TP para Beast",
+    Desc = "Teleporta para a besta",
+    Callback = function()
+        local beast = getBeastPlayer()
+        if beast and beast.Character then
+            local rootPart = getRootPart()
+            local beastRoot = beast.Character:FindFirstChild("HumanoidRootPart")
+            if rootPart and beastRoot then
+                rootPart.CFrame = beastRoot.CFrame * CFrame.new(0, 0, 5)
+            end
+        end
+    end
+})
+
+TeleportTab:Button({
+    Title = "TP para Inocente Aleatório",
+    Desc = "Teleporta para um inocente aleatório",
+    Callback = function()
+        local innocents = getInnocentPlayers()
+        if #innocents > 0 then
+            local randomInnocent = innocents[math.random(1, #innocents)]
+            if randomInnocent.Character then
+                local rootPart = getRootPart()
+                local innocentRoot = randomInnocent.Character:FindFirstChild("HumanoidRootPart")
+                if rootPart and innocentRoot then
+                    rootPart.CFrame = innocentRoot.CFrame * CFrame.new(0, 0, 5)
+                end
+            end
+        end
+    end
+})
+
+TeleportTab:Button({
+    Title = "TP para Lobby",
+    Desc = "Teleporta para o lobby",
+    Callback = function()
+        local rootPart = getRootPart()
+        if rootPart then
+            rootPart.CFrame = CFrame.new(126, 4, -373)
+        end
+    end
+})
+
+TeleportTab:Button({
+    Title = "TP para Spawn da Beast",
+    Desc = "Teleporta para o spawn da besta",
+    Callback = function()
+        local rootPart = getRootPart()
+        if rootPart then
+            rootPart.CFrame = CFrame.new(-215, 4, -224)
+        end
+    end
+})
+
+-- Beast Helper Tab
+local LockOnParagraph = BeastTab:Paragraph({
+    Title = "Lock On Inocente",
+    Desc = "Trava automaticamente no inocente mais próximo dentro do FOV (somente para Beast)",
+    Color = "Green",
+    Locked = false
+})
+
+BeastTab:Slider({
+    Title = "FOV do Lock On",
+    Desc = "Ajusta o tamanho do círculo FOV",
+    Step = 10,
+    Value = {
+        Min = 50,
+        Max = 500,
+        Default = 200,
+    },
+    Callback = function(value)
+        State.LockOnFOV = value
+    end
+})
+
+BeastTab:Toggle({
+    Title = "Ativar Lock On",
+    Desc = "Trava automaticamente no inocente mais próximo",
+    Icon = "crosshair",
+    Value = false,
+    Callback = function(state)
+        if state then
+            State.BeastLockOn = true
+            startBeastLockOn()
+        else
+            stopBeastLockOn()
+        end
+    end
+})
+
+local HowToUseParagraph = BeastTab:Paragraph({
+    Title = "Como usar",
+    Desc = "O Lock On vai travar automaticamente no inocente mais próximo do centro da tela dentro do círculo FOV. O círculo branco mostra a área de detecção.",
+    Color = "Green",
+    Locked = false
+})
+
+-- Cleanup on exit
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        stopAutoSolveMinigame()
+        stopAntiBeast()
+        stopTPWalk()
+        stopBeastLockOn()
+        stopNoclip()
+        ESPLib:Clear()
+    end
+end)
+
+print("XXMZ HUB | Flee The Facility loaded successfully!")

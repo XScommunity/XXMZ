@@ -543,13 +543,7 @@ Tabs.Changelog:AddSection("📋 Version History")
 
 Tabs.Changelog:AddParagraph({
     Title = "🆕 Version 2.2 - Current",
-    Content = "• Kill All v2 improved - NPCs now stack in same spot\n" ..
-              "• Removed Bullet Kill All (not working)\n" ..
-              "• Fixed Anti-Suspicion auto-teleport (now triggers at 60+)\n" ..
-              "• Added Fling BETA (WalkFling + Float)\n" ..
-              "• Added Undetected BETA (Mask + Inventory)\n" ..
-              "• Changed Kill All v2 to toggle instead of button\n" ..
-              "• Improved suspicion detection system"
+    Content = "• Kill All v2 fixed.
 })
 
 Tabs.Changelog:AddParagraph({

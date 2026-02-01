@@ -1,16 +1,10 @@
 --[[
     XXMZ HUB - Notoriety
-    Improved Version v2.1
+    Improved Version v2.2
     By 29 :)
     
-    Changelog v2.1:
-    - Added KeyCard ESP and Teleport
-    - Added Ozela Heist code identification system
-    - Added Color Box auto-detection and teleport
-    - Added USB Computer status monitor
-    - Removed patched features (Kill Aura, Kill All)
-    - Added Changelogs tab
-    - Improved Ozela Heist features
+    Changelog v2.2:
+    - Kill all v2 fixed.
 ]]
 loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
 -- ==================== INITIALIZATION ====================
@@ -39,8 +33,8 @@ local Camera = Workspace.CurrentCamera
 
 -- ==================== WINDOW CREATION ====================
 local Window = Fluent:CreateWindow({
-    Title = "XXMZ HUB - Notoriety v2.1",
-    SubTitle = "by 29 :) - Enhanced Ozela Heist Features",
+    Title = "XXMZ HUB - Notoriety v2.2",
+    SubTitle = "by 29 :) - Versão ADMIN",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Theme = "VSC Dark High Contrast",
@@ -114,6 +108,9 @@ local useSensitivity = true
 local fovCircleEnabled = false
 local currentTarget = nil
 local aiming = false
+
+-- Combat Features
+local visualKillAllActive = false
 
 -- ==================== UTILITY FUNCTIONS ====================
 local function getRS()
@@ -296,6 +293,52 @@ local function fireHit(tool, hitPart)
         }
         
         rs.Assets.Remotes.HitObject:FireServer(unpack(args, 1, 9))
+    end)
+end
+
+-- ==================== COMBAT FUNCTIONS ====================
+local function visualKillAll()
+    task.spawn(function()
+        while visualKillAllActive do
+            local character = LocalPlayer.Character
+            if not character then
+                task.wait(0.5)
+                continue
+            end
+            
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                task.wait(0.5)
+                continue
+            end
+            
+            -- Position all NPCs in the SAME spot (stacked)
+            local targetPos = hrp.CFrame * CFrame.new(0, 0, -10)
+            
+            for _, folderName in ipairs({"Police", "Bodies"}) do
+                local folder = Workspace:FindFirstChild(folderName)
+                if folder then
+                    for _, npc in pairs(folder:GetChildren()) do
+                        if not visualKillAllActive then break end
+                        
+                        local npcHrp = npc:FindFirstChild("HumanoidRootPart")
+                        local humanoid = npc:FindFirstChildOfClass("Humanoid")
+                        
+                        if npcHrp and humanoid and humanoid.Health > 0 then
+                            -- Position NPC in the SAME spot (everyone stacked together)
+                            npcHrp.CFrame = targetPos
+                            npcHrp.Anchored = true
+                            
+                            -- Make NPC face player
+                            local lookAt = CFrame.new(npcHrp.Position, hrp.Position)
+                            npcHrp.CFrame = lookAt
+                        end
+                    end
+                end
+            end
+            
+            task.wait(0.1) -- Keep updating positions every 0.1 seconds
+        end
     end)
 end
 
@@ -499,18 +542,25 @@ local Tabs = {
 Tabs.Changelog:AddSection("📋 Version History")
 
 Tabs.Changelog:AddParagraph({
-    Title = "🆕 Version 2.1 - Current",
+    Title = "🆕 Version 2.2 - Current",
+    Content = "• Kill All v2 improved - NPCs now stack in same spot\n" ..
+              "• Removed Bullet Kill All (not working)\n" ..
+              "• Fixed Anti-Suspicion auto-teleport (now triggers at 60+)\n" ..
+              "• Added Fling BETA (WalkFling + Float)\n" ..
+              "• Added Undetected BETA (Mask + Inventory)\n" ..
+              "• Changed Kill All v2 to toggle instead of button\n" ..
+              "• Improved suspicion detection system"
+})
+
+Tabs.Changelog:AddParagraph({
+    Title = "📦 Version 2.1",
     Content = "• Added KeyCard ESP and Teleport\n" ..
               "• Added Ozela Heist code identification system\n" ..
               "• Added Color Box auto-detection and teleport\n" ..
               "• Added USB Computer status monitor\n" ..
-              "• Improved Ozela Heist automation features\n" ..
-              "• Added Helper Position teleport for Ozela\n" ..
-              "• Added Changelogs tab\n\n" ..
-              "⚠️ REMOVED (Patched by game):\n" ..
-              "• Kill Aura - No longer functional\n" ..
-              "• Kill All - No longer functional\n" ..
-              "• All kill-based features have been patched"
+              "• Removed patched features (Kill Aura, Kill All)\n" ..
+              "• Added Changelogs tab\n" ..
+              "• Improved Ozela Heist features"
 })
 
 Tabs.Changelog:AddParagraph({
@@ -1025,7 +1075,38 @@ Tabs.Aim:AddSection("⚠️ Notice")
 
 Tabs.Aim:AddParagraph({
     Title = "Kill Features Patched",
-    Content = "Kill Aura and Kill All features have been patched by the game developers and removed from this version.\n\nAimbot features below still work normally."
+    Content = "Kill Aura and original Kill All features have been patched by the game developers.\n\nThe feature below is an alternative method that still works."
+})
+
+Tabs.Aim:AddSection("Alternative Kill Method")
+
+Tabs.Aim:AddToggle("BringGuards", {
+    Title = "👥 Bring Guards - Kill All Replacement",
+    Description = "Positions all police in one spot in front of you for easy shooting",
+    Default = false,
+    Callback = function(value)
+        visualKillAllActive = value
+        
+        if value then
+            notify("Bring Guards", "👁️ Bringing all guards to you! Keep it on to auto-update.", 3)
+            visualKillAll()
+        else
+            -- Unanchor all NPCs
+            for _, folderName in ipairs({"Police", "Bodies"}) do
+                local folder = Workspace:FindFirstChild(folderName)
+                if folder then
+                    for _, npc in pairs(folder:GetChildren()) do
+                        local npcHrp = npc:FindFirstChild("HumanoidRootPart")
+                        if npcHrp then
+                            npcHrp.Anchored = false
+                        end
+                    end
+                end
+            end
+            
+            notify("Bring Guards", "✅ Stopped and released all guards", 3)
+        end
+    end
 })
 
 Tabs.Aim:AddSection("Aimbot")
@@ -1962,6 +2043,8 @@ local function cleanup()
     if hookESPLoop then hookESPLoop:Disconnect() end
     if codeTableESPLoop then codeTableESPLoop:Disconnect() end
     
+    visualKillAllActive = false
+    
     -- Reset values
     Workspace.Gravity = 196.2
     
@@ -1983,5 +2066,5 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ==================== COMPLETE INITIALIZATION ====================
-notify("XXMZ HUB v2.1", "Hub loaded successfully! ✅", 5)
-notify("Enhanced Features", "Ozela Heist code detection added!", 3)
+notify("XXMZ HUB v2.2", "Hub loaded successfully! ✅", 5)
+notify("Enhanced Features", "All features ready to use!", 3)

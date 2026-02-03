@@ -51,8 +51,8 @@ local AntiBeastConnection = nil
 
 -- Create Window
 local Window = Library:CreateWindow({
-    Title = "mspaint",
-    Footer = "version: example",
+    Title = "XXMZ",
+    Footer = "Flee The Facility",
     Icon = 95816097006870,
     NotifySide = "Right",
 })

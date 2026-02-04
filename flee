@@ -119,7 +119,7 @@ local function startAutoSolve()
         if not State.AutoSolveMinigame then return end
         
         local currentTime = tick()
-        if currentTime - LastSolveTime >= 0.2 then
+        if currentTime - LastSolveTime >= 0.01 then
             local rem = ReplicatedStorage:FindFirstChild("RemoteEvent")
             if rem then 
                 rem:FireServer("SetPlayerMinigameResult", true)

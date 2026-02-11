@@ -1014,6 +1014,7 @@ HubListGroup:AddLabel("• Possessor", true)
 HubListGroup:AddLabel("• Road-Side Shawarma", true)
 HubListGroup:AddLabel("• Forsaken", true)
 HubListGroup:AddLabel("• EB | Apex Hard", true)
+HubListGroup:AddLabel("• Flee The Facility", true)
 HubListGroup:AddLabel("<font color=\"rgb(0, 150, 255)\">• Escape Tsunami For Brainrots</font>", true)
 
 HubListGroup:AddDivider()

@@ -1,0 +1,459 @@
+-- XXMZ | RGT Script
+-- Roblox Got Talent Auto Tagger
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+Library.ShowCustomCursor = true
+
+local Window = Library:CreateWindow({
+	Title = "XXMZ | RGT",
+	Footer = "version: fuck roblox got talent.",
+	Icon = 95816097006870,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
+})
+
+local Tabs = {
+	Main = Window:AddTab("Main", "user"),
+	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+-- Main Tab
+local MainGroupBox = Tabs.Main:AddLeftGroupbox("Tagger", "tag")
+
+-- Function to get player list with display names
+local function GetPlayerList()
+	local playerList = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		local displayName = player.DisplayName
+		local username = player.Name
+		local formattedName = displayName .. " (@" .. username .. ")"
+		playerList[formattedName] = username -- Map display to actual username
+	end
+	return playerList
+end
+
+-- Function to get formatted player names for dropdown
+local function GetFormattedPlayerNames()
+	local names = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		local displayName = player.DisplayName
+		local username = player.Name
+		table.insert(names, displayName .. " (@" .. username .. ")")
+	end
+	return names
+end
+
+-- Player Dropdown with Search
+local playerMapping = GetPlayerList()
+MainGroupBox:AddDropdown("PlayerDropdown", {
+	Values = GetFormattedPlayerNames(),
+	Default = 1,
+	Multi = false,
+	Searchable = true,
+	
+	Text = "Select Player",
+	Tooltip = "Search and select a player to tag",
+	
+	Callback = function(Value)
+		print("Selected player:", Value)
+	end,
+})
+
+-- Update dropdown when players join/leave
+Players.PlayerAdded:Connect(function()
+	task.wait(0.5)
+	playerMapping = GetPlayerList()
+	Options.PlayerDropdown:SetValues(GetFormattedPlayerNames())
+end)
+
+Players.PlayerRemoving:Connect(function()
+	task.wait(0.5)
+	playerMapping = GetPlayerList()
+	Options.PlayerDropdown:SetValues(GetFormattedPlayerNames())
+end)
+
+MainGroupBox:AddDivider()
+
+-- Tag Player Button
+MainGroupBox:AddButton({
+	Text = "Tag Player",
+	Func = function()
+		local selectedFormatted = Options.PlayerDropdown.Value
+		
+		if selectedFormatted and selectedFormatted ~= "" then
+			-- Extract actual username from formatted name
+			local actualUsername = playerMapping[selectedFormatted]
+			
+			if actualUsername then
+				local targetPlayer = Players:FindFirstChild(actualUsername)
+				
+				if targetPlayer then
+					local args = {
+						"Solo",
+						{
+							targetPlayer
+						}
+					}
+					
+					local success, err = pcall(function()
+						ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestTag"):InvokeServer(unpack(args))
+					end)
+					
+					if success then
+						Library:Notify({
+							Title = "Tag Sent",
+							Description = "Tagged: " .. selectedFormatted,
+							Time = 3,
+						})
+					else
+						Library:Notify({
+							Title = "Error",
+							Description = "Failed to tag player: " .. tostring(err),
+							Time = 3,
+						})
+					end
+				else
+					Library:Notify({
+						Title = "Error",
+						Description = "Player not found in game",
+						Time = 3,
+					})
+				end
+			else
+				Library:Notify({
+					Title = "Error",
+					Description = "Invalid player selection",
+					Time = 3,
+				})
+			end
+		else
+			Library:Notify({
+				Title = "Error",
+				Description = "Please select a player from dropdown",
+				Time = 3,
+			})
+		end
+	end,
+	
+	Tooltip = "Tag the selected player",
+	Risky = false,
+})
+
+-- Tag All Players Button
+MainGroupBox:AddButton({
+	Text = "Tag All Players",
+	Func = function()
+		local allPlayers = Players:GetPlayers()
+		local taggedCount = 0
+		local failedCount = 0
+		
+		if #allPlayers > 0 then
+			Library:Notify({
+				Title = "Tagging All Players",
+				Description = "Starting to tag " .. #allPlayers .. " players...",
+				Time = 2,
+			})
+			
+			-- Tag cada jogador individualmente
+			for _, player in ipairs(allPlayers) do
+				local args = {
+					"Solo",
+					{
+						player
+					}
+				}
+				
+				local success, err = pcall(function()
+					ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestTag"):InvokeServer(unpack(args))
+				end)
+				
+				if success then
+					taggedCount = taggedCount + 1
+					print("Tagged:", player.DisplayName .. " (@" .. player.Name .. ")")
+				else
+					failedCount = failedCount + 1
+					warn("Failed to tag:", player.DisplayName, err)
+				end
+				
+				task.wait(0.1) -- Pequeno delay entre cada tag para evitar rate limit
+			end
+			
+			Library:Notify({
+				Title = "Tag All Complete",
+				Description = "Tagged: " .. taggedCount .. " | Failed: " .. failedCount,
+				Time = 4,
+			})
+		else
+			Library:Notify({
+				Title = "Error",
+				Description = "No players found in the game",
+				Time = 3,
+			})
+		end
+	end,
+	
+	Tooltip = "Tag all players in the server (one by one)",
+	Risky = true,
+})
+
+MainGroupBox:AddDivider()
+
+-- Spectate Tag Toggle
+MainGroupBox:AddToggle("SpectateTag", {
+	Text = "Spectate Tag",
+	Tooltip = "Toggle spectating tagged players",
+	Default = false,
+	
+	Callback = function(Value)
+		if Value then
+			-- Enable spectating
+			local args = {
+				"CurrentlySpectating"
+			}
+			
+			local success, err = pcall(function()
+				ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SpectateEvent"):FireServer(unpack(args))
+			end)
+			
+			if success then
+				Library:Notify({
+					Title = "Spectate Enabled",
+					Description = "Now spectating tagged players",
+					Time = 2,
+				})
+			else
+				Library:Notify({
+					Title = "Error",
+					Description = "Failed to enable spectate: " .. tostring(err),
+					Time = 3,
+				})
+			end
+		else
+			-- Disable spectating
+			local args = {
+				"NotSpectating"
+			}
+			
+			local success, err = pcall(function()
+				ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SpectateEvent"):FireServer(unpack(args))
+			end)
+			
+			if success then
+				Library:Notify({
+					Title = "Spectate Disabled",
+					Description = "Stopped spectating",
+					Time = 2,
+				})
+			else
+				Library:Notify({
+					Title = "Error",
+					Description = "Failed to disable spectate: " .. tostring(err),
+					Time = 3,
+				})
+			end
+		end
+	end,
+})
+
+-- AUTO HOST SECTION
+local HostGroupBox = Tabs.Main:AddRightGroupbox("Auto Host", "crown")
+
+-- Function to check if a player is host by DisplayName color
+local function IsPlayerHost(player)
+	local character = player.Character
+	if not character then return false end
+	
+	local head = character:FindFirstChild("Head")
+	if not head then return false end
+	
+	local overhead = head:FindFirstChild("OverHead")
+	if not overhead then return false end
+	
+	local container = overhead:FindFirstChild("Container")
+	if not container then return false end
+	
+	local displayName = container:FindFirstChild("DisplayName")
+	if not displayName then return false end
+	
+	-- Check if it's a TextLabel or TextButton
+	if displayName:IsA("TextLabel") or displayName:IsA("TextButton") then
+		local color = displayName.TextColor3
+		local hostColor = Color3.fromRGB(245, 255, 232)
+		
+		-- Compare colors with small tolerance
+		local tolerance = 0.01
+		if math.abs(color.R - hostColor.R) < tolerance and 
+		   math.abs(color.G - hostColor.G) < tolerance and 
+		   math.abs(color.B - hostColor.B) < tolerance then
+			return true
+		end
+	end
+	
+	return false
+end
+
+-- Function to check if there's any host in the server
+local function IsThereAHost()
+	for _, player in ipairs(Players:GetPlayers()) do
+		if IsPlayerHost(player) then
+			return true, player
+		end
+	end
+	return false, nil
+end
+
+-- Function to request host
+local function RequestHost()
+	local args = {
+		"Host"
+	}
+	
+	local success, err = pcall(function()
+		ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChangeTeam"):FireServer(unpack(args))
+	end)
+	
+	return success, err
+end
+
+-- Auto Host Toggle
+local autoHostRunning = false
+local autoHostConnection = nil
+
+HostGroupBox:AddToggle("AutoHost", {
+	Text = "Auto Host",
+	Tooltip = "Automatically become host when there's no host",
+	Default = false,
+	Risky = true,
+	
+	Callback = function(Value)
+		autoHostRunning = Value
+		
+		if Value then
+			Library:Notify({
+				Title = "Auto Host Enabled",
+				Description = "Monitoring for host availability...",
+				Time = 3,
+			})
+			
+			-- Start monitoring
+			autoHostConnection = task.spawn(function()
+				while autoHostRunning do
+					local hasHost, hostPlayer = IsThereAHost()
+					
+					if not hasHost then
+						-- No host found, spam request
+						local success, err = RequestHost()
+						
+						if success then
+							print("[Auto Host] Sent host request (no host detected)")
+						else
+							warn("[Auto Host] Failed to send host request:", err)
+						end
+						
+						task.wait(0.5) -- Spam every 0.5 seconds when no host
+					else
+						-- Host exists, check less frequently
+						print("[Auto Host] Host detected:", hostPlayer.DisplayName .. " (@" .. hostPlayer.Name .. ")")
+						task.wait(2) -- Check every 2 seconds when host exists
+					end
+					
+					if Library.Unloaded then
+						break
+					end
+				end
+			end)
+		else
+			Library:Notify({
+				Title = "Auto Host Disabled",
+				Description = "Stopped monitoring for host",
+				Time = 2,
+			})
+		end
+	end,
+})
+
+-- Add label to show current host status
+HostGroupBox:AddLabel("CurrentHostLabel", {
+	Text = "Checking for host...",
+	DoesWrap = true,
+})
+
+-- Update host status label
+task.spawn(function()
+	while task.wait(1) do
+		if Library.Unloaded then break end
+		
+		local hasHost, hostPlayer = IsThereAHost()
+		
+		if hasHost and hostPlayer then
+			Options.CurrentHostLabel:SetText("Current Host: " .. hostPlayer.DisplayName .. " (@" .. hostPlayer.Name .. ")")
+		else
+			Options.CurrentHostLabel:SetText("No host detected")
+		end
+	end
+end)
+
+-- UI Settings
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
+
+MenuGroup:AddToggle("ShowCustomCursor", {
+	Text = "Custom Cursor",
+	Default = true,
+	Callback = function(Value)
+		Library.ShowCustomCursor = Value
+	end,
+})
+
+MenuGroup:AddDropdown("NotificationSide", {
+	Values = { "Left", "Right" },
+	Default = "Right",
+	Text = "Notification Side",
+	Callback = function(Value)
+		Library:SetNotifySide(Value)
+	end,
+})
+
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { 
+	Default = "RightControl",
+	NoUI = true, 
+	Text = "Menu keybind" 
+})
+
+MenuGroup:AddButton("Unload", function()
+	autoHostRunning = false -- Stop auto host when unloading
+	Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+-- Managers
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+
+ThemeManager:SetFolder("XXMZ")
+SaveManager:SetFolder("XXMZ/RGT")
+
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+
+SaveManager:LoadAutoloadConfig()
+
+Library:Notify({
+	Title = "XXMZ | RGT",
+	Description = "Script loaded successfully!",
+	Time = 4,
+})

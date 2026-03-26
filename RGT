@@ -16,10 +16,10 @@ Library.ShowCustomCursor = true
 
 local Window = Library:CreateWindow({
 	Title = "XXMZ | RGT",
-	Footer = "version: fuck roblox got talent.",
-	Icon = 95816097006870,
+	Footer = "fuck roblox got talent.",
+	Icon = ,
 	NotifySide = "Right",
-	ShowCustomCursor = true,
+	ShowCustomCursor = false,
 })
 
 local Tabs = {

@@ -21,8 +21,8 @@ local Toggles = Library.Toggles
 -- Window
 local Window = Library:CreateWindow({
     Title = "XXMZ",
-    Footer = "BITE BY NIGHT",
-    Icon = 95816097006870,
+    Footer = "BITE BY NIGHT | 1.1",
+    Icon = 1,
     NotifySide = "Right",
     ShowCustomCursor = true,
 })
@@ -72,11 +72,29 @@ local SurvivorESP = {
     HighlightFillTrans = 0.15,
     HighlightOutlineTrans = 0,
 }
+local BatteryESP = {
+    Enabled = false,
+    LabelFont = Drawing.Fonts.Monospace,
+    HighlightColor = Color3.fromRGB(255, 255, 0),
+    HighlightOutline = Color3.fromRGB(255, 200, 0),
+    HighlightFillTrans = 0.35,
+    HighlightOutlineTrans = 0,
+}
+local FuseBoxESP = {
+    Enabled = false,
+    LabelFont = Drawing.Fonts.Monospace,
+    HighlightColor = Color3.fromRGB(0, 150, 255),
+    HighlightOutline = Color3.fromRGB(100, 200, 255),
+    HighlightFillTrans = 0.35,
+    HighlightOutlineTrans = 0,
+}
 
 local TrackedTraps = {}
 local TrackedGenerators = {}
 local TrackedKillers = {}
 local TrackedSurvivors = {}
+local TrackedBatteries = {}
+local TrackedFuseBoxes = {}
 local RenderConnection = nil
 local Unloaded = false
 
@@ -101,11 +119,6 @@ local LockOn = {
     FocusedPlayer = nil,
     FocusLabel = nil
 }
-
-local TrackedTraps = {}
-local TrackedGenerators = {}
-local TrackedKillers = {}
-local TrackedSurvivors = {}
 
 -- Helper Functions
 local function W2S(pos)
@@ -436,6 +449,36 @@ local function UntrackSurvivor(model)
     TrackedSurvivors[model] = nil
 end
 
+local function TrackBattery(obj)
+    if TrackedBatteries[obj] or not FindBasePart(obj) then return end
+    local h = MakeHighlight(obj, BatteryESP.HighlightColor, BatteryESP.HighlightOutline, BatteryESP.HighlightFillTrans, BatteryESP.HighlightOutlineTrans)
+    if not h then return end
+    TrackedBatteries[obj] = {
+        label = MakeLabel("Battery", Color3.fromRGB(255, 255, 0), 14, BatteryESP.LabelFont),
+        highlight = h,
+    }
+end
+
+local function UntrackBattery(obj)
+    DestroyEntry(TrackedBatteries[obj])
+    TrackedBatteries[obj] = nil
+end
+
+local function TrackFuseBox(obj)
+    if TrackedFuseBoxes[obj] or not FindBasePart(obj) then return end
+    local h = MakeHighlight(obj, FuseBoxESP.HighlightColor, FuseBoxESP.HighlightOutline, FuseBoxESP.HighlightFillTrans, FuseBoxESP.HighlightOutlineTrans)
+    if not h then return end
+    TrackedFuseBoxes[obj] = {
+        label = MakeLabel("Fuse Box", Color3.fromRGB(0, 150, 255), 14, FuseBoxESP.LabelFont),
+        highlight = h,
+    }
+end
+
+local function UntrackFuseBox(obj)
+    DestroyEntry(TrackedFuseBoxes[obj])
+    TrackedFuseBoxes[obj] = nil
+end
+
 local function WireGenSignals(c)
     c:GetAttributeChangedSignal("Progress"):Connect(function()
         if IsGeneratorDone(c) then UntrackGenerator(c) end
@@ -450,6 +493,8 @@ local function FullRescan()
     for o in pairs(TrackedGenerators) do UntrackGenerator(o) end
     for m in pairs(TrackedKillers) do UntrackKiller(m) end
     for m in pairs(TrackedSurvivors) do UntrackSurvivor(m) end
+    for o in pairs(TrackedBatteries) do UntrackBattery(o) end
+    for o in pairs(TrackedFuseBoxes) do UntrackFuseBox(o) end
 
     local ignore = workspace:FindFirstChild("IGNORE")
     if ignore then
@@ -465,6 +510,20 @@ local function FullRescan()
         for _, c in ipairs(gf:GetChildren()) do
             TrackGenerator(c)
             WireGenSignals(c)
+        end
+    end
+    
+    local bf = gm and gm:FindFirstChild("Batteries")
+    if bf then
+        for _, c in ipairs(bf:GetChildren()) do
+            TrackBattery(c)
+        end
+    end
+    
+    local ff = gm and gm:FindFirstChild("FuseBoxes")
+    if ff then
+        for _, c in ipairs(ff:GetChildren()) do
+            TrackFuseBox(c)
         end
     end
 
@@ -515,13 +574,41 @@ local function SetupWatchers()
             end)
             gf.ChildRemoved:Connect(function(c) UntrackGenerator(c) end)
         end
+        local function setupBatteries(gm)
+            local bf = gm:FindFirstChild("Batteries") or gm:WaitForChild("Batteries", 30)
+            if not bf then return end
+            for _, c in ipairs(bf:GetChildren()) do
+                TrackBattery(c)
+            end
+            bf.ChildAdded:Connect(function(c)
+                TrackBattery(c)
+            end)
+            bf.ChildRemoved:Connect(function(c) UntrackBattery(c) end)
+        end
+        local function setupFuseBoxes(gm)
+            local ff = gm:FindFirstChild("FuseBoxes") or gm:WaitForChild("FuseBoxes", 30)
+            if not ff then return end
+            for _, c in ipairs(ff:GetChildren()) do
+                TrackFuseBox(c)
+            end
+            ff.ChildAdded:Connect(function(c)
+                TrackFuseBox(c)
+            end)
+            ff.ChildRemoved:Connect(function(c) UntrackFuseBox(c) end)
+        end
         local gm = maps:FindFirstChild("GAME MAP") or maps:WaitForChild("GAME MAP", 60)
-        if gm then setupGenerators(gm) end
+        if gm then 
+            setupGenerators(gm)
+            setupBatteries(gm)
+            setupFuseBoxes(gm)
+        end
         maps.ChildAdded:Connect(function(c)
             if c.Name == "GAME MAP" then
                 task.wait(1)
                 FullRescan()
                 setupGenerators(c)
+                setupBatteries(c)
+                setupFuseBoxes(c)
             end
         end)
     end)
@@ -610,10 +697,14 @@ local function StartRender()
         local gd = RenderESP(TrackedGenerators, GeneratorESP.Enabled, GetCenter, GeneratorESP, true)
         local kd = RenderESP(TrackedKillers, KillerESP.Enabled, GetCenter, KillerESP, false)
         local sd = RenderESP(TrackedSurvivors, SurvivorESP.Enabled, GetCenter, SurvivorESP, false)
+        local bd = RenderESP(TrackedBatteries, BatteryESP.Enabled, GetCenter, BatteryESP, false)
+        local fd = RenderESP(TrackedFuseBoxes, FuseBoxESP.Enabled, GetCenter, FuseBoxESP, false)
         for _, m in ipairs(td) do UntrackTrap(m) end
         for _, o in ipairs(gd) do UntrackGenerator(o) end
         for _, m in ipairs(kd) do UntrackKiller(m) end
         for _, m in ipairs(sd) do UntrackSurvivor(m) end
+        for _, o in ipairs(bd) do UntrackBattery(o) end
+        for _, o in ipairs(fd) do UntrackFuseBox(o) end
     end)
 end
 
@@ -652,15 +743,17 @@ end
 local function SetupTPWalk(enabled)
     if TPWalk.Conn then TPWalk.Conn:Disconnect(); TPWalk.Conn = nil end
     if not enabled then return end
-    TPWalk.Conn = RunService.RenderStepped:Connect(function()
+    TPWalk.Conn = RunService.Heartbeat:Connect(function(delta)
         local char = LocalPlayer.Character
         local hum = GetHumanoid()
-        local hrp = GetCharRoot()
-        if not char or not hum or not hrp then return end
+        if not char or not hum or not hum.Parent then 
+            TPWalk.Conn:Disconnect()
+            TPWalk.Conn = nil
+            return 
+        end
         
-        if hum.MoveVector.Magnitude > 0 then
-            local moveDirection = hum.MoveVector
-            hrp.CFrame = hrp.CFrame + (moveDirection * TPWalk.Speed)
+        if hum.MoveDirection.Magnitude > 0 then
+            char:TranslateBy(hum.MoveDirection * TPWalk.Speed * delta * 10)
         end
     end)
 end
@@ -799,41 +892,12 @@ local function Unload()
     for o in pairs(TrackedGenerators) do UntrackGenerator(o) end
     for m in pairs(TrackedKillers) do UntrackKiller(m) end
     for m in pairs(TrackedSurvivors) do UntrackSurvivor(m) end
+    for o in pairs(TrackedBatteries) do UntrackBattery(o) end
+    for o in pairs(TrackedFuseBoxes) do UntrackFuseBox(o) end
     Library:Unload()
 end
 
 -- ========== MAIN TAB ==========
-local MainLeft = Tabs.Main:AddLeftGroupbox("Automation", "zap")
-
-MainLeft:AddToggle("AutoGen", {
-    Text = "Instant Generator Skibidi",
-    Default = false,
-    Callback = function(Value)
-        AutoGen.Enabled = Value
-        SetupAutoGen(Value)
-    end,
-})
-
-local MainRight = Tabs.Main:AddRightGroupbox("Visuals", "eye")
-
-MainRight:AddToggle("FullBright", {
-    Text = "Loop FullBright",
-    Default = false,
-    Callback = function(Value)
-        FullBright.Enabled = Value
-        SetupFullBright(Value)
-    end,
-})
-
-MainRight:AddToggle("NoFog", {
-    Text = "No Fog",
-    Default = false,
-    Callback = function(Value)
-        NoFog.Enabled = Value
-        SetupNoFog(Value)
-    end,
-})
-
 local MainESP = Tabs.Main:AddLeftGroupbox("ESP", "scan-eye")
 
 MainESP:AddToggle("TrapESP", {
@@ -872,6 +936,24 @@ MainESP:AddToggle("SurvivorESP", {
     end,
 })
 
+MainESP:AddToggle("BatteryESP", {
+    Text = "Battery ESP",
+    Default = false,
+    Callback = function(Value)
+        BatteryESP.Enabled = Value
+        if not Value then ShowTable(TrackedBatteries, false) end
+    end,
+})
+
+MainESP:AddToggle("FuseBoxESP", {
+    Text = "Fuse Box ESP",
+    Default = false,
+    Callback = function(Value)
+        FuseBoxESP.Enabled = Value
+        if not Value then ShowTable(TrackedFuseBoxes, false) end
+    end,
+})
+
 MainESP:AddSlider("TrapLabelSize", {
     Text = "Trap Label Size",
     Default = TrapESP.LabelSize,
@@ -895,8 +977,39 @@ MainESP:AddButton({
     Func = FullRescan,
 })
 
+local MainRight = Tabs.Main:AddRightGroupbox("Visuals", "eye")
+
+MainRight:AddToggle("FullBright", {
+    Text = "Loop FullBright",
+    Default = false,
+    Callback = function(Value)
+        FullBright.Enabled = Value
+        SetupFullBright(Value)
+    end,
+})
+
+MainRight:AddToggle("NoFog", {
+    Text = "No Fog",
+    Default = false,
+    Callback = function(Value)
+        NoFog.Enabled = Value
+        SetupNoFog(Value)
+    end,
+})
+
 -- ========== EXPLOITS TAB ==========
-local ExploitsLeft = Tabs.Exploits:AddLeftGroupbox("Emotes", "smile")
+local ExploitsLeft = Tabs.Exploits:AddLeftGroupbox("Automation", "zap")
+
+ExploitsLeft:AddToggle("AutoGen", {
+    Text = "Instant Generator Skibidi",
+    Default = false,
+    Callback = function(Value)
+        AutoGen.Enabled = Value
+        SetupAutoGen(Value)
+    end,
+})
+
+local ExploitsEmote = Tabs.Exploits:AddRightGroupbox("Emotes", "smile")
 
 local emoteList = {
     "Yoink Sploinky", "Smile", "RAAHH", "Prince of Egypt", "Panic", "PBJ",
@@ -904,7 +1017,7 @@ local emoteList = {
     "Hardstyle", "Friendly Stance", "Down", "Clown", "Boat Dance", "A Dare"
 }
 
-ExploitsLeft:AddToggle("EmoteEnabled", {
+ExploitsEmote:AddToggle("EmoteEnabled", {
     Text = "EMOTE ON/OFF",
     Default = false,
     Callback = function(Value)
@@ -915,7 +1028,7 @@ ExploitsLeft:AddToggle("EmoteEnabled", {
     end,
 })
 
-ExploitsLeft:AddDropdown("EmoteDropdown", {
+ExploitsEmote:AddDropdown("EmoteDropdown", {
     Values = emoteList,
     Default = 1,
     Multi = false,

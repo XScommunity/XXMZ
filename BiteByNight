@@ -1,0 +1,1133 @@
+if getgenv then getgenv().ConfirmLuna = true end
+if not identifyexecutor then identifyexecutor = function() return "Unknown" end end
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Camera = workspace.CurrentCamera
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+
+-- Obsidian Library
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+-- Window
+local Window = Library:CreateWindow({
+    Title = "XXMZ",
+    Footer = "BITE BY NIGHT",
+    Icon = 95816097006870,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+})
+
+-- Tabs
+local Tabs = {
+    Main = Window:AddTab("Main", "home"),
+    Exploits = Window:AddTab("Exploits", "bug"),
+    Player = Window:AddTab("Player", "user"),
+    Scripts = Window:AddTab("Scripts", "file-code"),
+    Settings = Window:AddTab("Settings", "settings"),
+}
+
+-- ESP Configs
+local TrapESP = {
+    Enabled = false,
+    LabelColor = Color3.fromRGB(255, 70, 70),
+    LabelSize = 14,
+    LabelFont = Drawing.Fonts.Monospace,
+    HighlightColor = Color3.fromRGB(255, 60, 60),
+    HighlightOutline = Color3.fromRGB(255, 210, 0),
+    HighlightFillTrans = 0.55,
+    HighlightOutlineTrans = 0,
+}
+local GeneratorESP = {
+    Enabled = false,
+    ProximityRange = 20,
+    LabelFont = Drawing.Fonts.Monospace,
+    HighlightColor = Color3.fromRGB(0, 210, 255),
+    HighlightOutline = Color3.fromRGB(255, 255, 255),
+    HighlightFillTrans = 0.35,
+    HighlightOutlineTrans = 0,
+}
+local KillerESP = {
+    Enabled = false,
+    LabelFont = Drawing.Fonts.Monospace,
+    HighlightColor = Color3.fromRGB(220, 30, 30),
+    HighlightOutline = Color3.fromRGB(255, 100, 0),
+    HighlightFillTrans = 0.15,
+    HighlightOutlineTrans = 0,
+}
+local SurvivorESP = {
+    Enabled = false,
+    LabelFont = Drawing.Fonts.Monospace,
+    HighlightColor = Color3.fromRGB(30, 220, 30),
+    HighlightOutline = Color3.fromRGB(100, 255, 0),
+    HighlightFillTrans = 0.15,
+    HighlightOutlineTrans = 0,
+}
+
+local TrackedTraps = {}
+local TrackedGenerators = {}
+local TrackedKillers = {}
+local TrackedSurvivors = {}
+local RenderConnection = nil
+local Unloaded = false
+
+local InfiniteStamina = { Enabled = false, Conn = nil }
+local AutoGen = { Enabled = false, Conn = nil, Done = false }
+local Noclip = { Enabled = false, Conn = nil }
+local InfiniteJump = { Enabled = false, Conn = nil }
+local AllowJumping = { Enabled = false, Conn = nil }
+local AntiStun = { Enabled = false, Conn = nil }
+local FullBright = { Enabled = false, Conn = nil }
+local NoFog = { Enabled = false, Conn = nil, OriginalFogEnd = nil, ChildConn = nil }
+local TPWalk = { Enabled = false, Speed = 1, Conn = nil }
+local EmoteToggle = { Enabled = false }
+
+-- Lock On System
+local LockOn = {
+    Enabled = false,
+    Target = nil,
+    Connection = nil,
+    Distance = 20,
+    FocusMode = false,
+    FocusedPlayer = nil,
+    FocusLabel = nil
+}
+
+local TrackedTraps = {}
+local TrackedGenerators = {}
+local TrackedKillers = {}
+local TrackedSurvivors = {}
+
+-- Helper Functions
+local function W2S(pos)
+    local v, onScreen = Camera:WorldToViewportPoint(pos)
+    return Vector2.new(v.X, v.Y), v.Z, onScreen
+end
+
+local function GetCharRoot()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function GetHumanoid()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChildWhichIsA("Humanoid")
+end
+
+local function FindBasePart(obj)
+    if obj:IsA("BasePart") then return obj end
+    if obj:IsA("Model") then
+        if obj.PrimaryPart then return obj.PrimaryPart end
+        for _, d in ipairs(obj:GetDescendants()) do
+            if d:IsA("BasePart") then return d end
+        end
+    end
+    return nil
+end
+
+local function GetCenter(obj)
+    if obj:IsA("Model") then
+        local ok, cf = pcall(function() return obj:GetBoundingBox() end)
+        if ok and cf then return cf.Position end
+        local p = FindBasePart(obj)
+        return p and p.Position
+    elseif obj:IsA("BasePart") then
+        return obj.Position
+    end
+    return nil
+end
+
+local function MakeHighlight(obj, fill, outline, fillTrans, outlineTrans)
+    local part = FindBasePart(obj)
+    if not part then return nil end
+    local h = Instance.new("Highlight")
+    h.FillColor = fill
+    h.OutlineColor = outline
+    h.FillTransparency = fillTrans
+    h.OutlineTransparency = outlineTrans
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Adornee = obj:IsA("Model") and obj or part
+    h.Parent = part
+    return h
+end
+
+local function MakeLabel(text, color, size, font)
+    local t = Drawing.new("Text")
+    t.Text = text
+    t.Size = size or 13
+    t.Color = color
+    t.Outline = true
+    t.Center = true
+    t.Visible = false
+    t.Font = font or Drawing.Fonts.Monospace
+    return t
+end
+
+local function DestroyEntry(e)
+    if not e then return end
+    pcall(function() e.label:Remove() end)
+    if e.highlight then pcall(function() e.highlight:Destroy() end) end
+end
+
+local function ShowTable(t, show)
+    for _, e in pairs(t) do
+        if e.label then e.label.Visible = show end
+        if e.highlight then e.highlight.Enabled = show end
+    end
+end
+
+local function IsGeneratorDone(obj)
+    local p = obj:GetAttribute("Progress") or obj:GetAttribute("progress")
+    return p == 100
+end
+
+local function IsTrap(obj)
+    return obj:IsA("Model") and obj.Name == "Trap"
+end
+
+local function GetTrapPos(model)
+    local inner = model:FindFirstChild("Trap")
+    if inner and inner:IsA("BasePart") then return inner.Position end
+    local p = FindBasePart(model)
+    return p and p.Position
+end
+
+local function GetPlayerTeam()
+    local playersFolder = workspace:FindFirstChild("PLAYERS")
+    if not playersFolder then return "LOBBY" end
+    
+    local survivors = playersFolder:FindFirstChild("ALIVE")
+    local killers = playersFolder:FindFirstChild("KILLER")
+    
+    if survivors then
+        for _, player in ipairs(survivors:GetChildren()) do
+            if player.Name == LocalPlayer.Name then
+                return "ALIVE"
+            end
+        end
+    end
+    
+    if killers then
+        for _, player in ipairs(killers:GetChildren()) do
+            if player.Name == LocalPlayer.Name then
+                return "KILLER"
+            end
+        end
+    end
+    
+    return "LOBBY"
+end
+
+local function GetNearestTarget(targetType)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    
+    local hrp = character.HumanoidRootPart
+    local playersFolder = workspace:FindFirstChild("PLAYERS")
+    if not playersFolder then return nil end
+    
+    local targetFolder = targetType == "ALIVE" and playersFolder:FindFirstChild("ALIVE") or playersFolder:FindFirstChild("KILLER")
+    if not targetFolder then return nil end
+    
+    local nearestTarget = nil
+    local nearestDistance = math.huge
+    
+    for _, target in pairs(targetFolder:GetChildren()) do
+        if target and target:FindFirstChild("HumanoidRootPart") and target.Name ~= LocalPlayer.Name then
+            local distance = (target.HumanoidRootPart.Position - hrp.Position).Magnitude
+            if distance < nearestDistance and distance <= LockOn.Distance then
+                nearestDistance = distance
+                nearestTarget = target
+            end
+        end
+    end
+    
+    return nearestTarget
+end
+
+local function GetTargetInView()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    
+    local hrp = character.HumanoidRootPart
+    local playersFolder = workspace:FindFirstChild("PLAYERS")
+    if not playersFolder then return nil end
+    
+    local mousePos = UserInputService:GetMouseLocation()
+    local closestTarget = nil
+    local closestDistance = math.huge
+    
+    local playerTeam = GetPlayerTeam()
+    local targetFolder = playerTeam == "ALIVE" and playersFolder:FindFirstChild("KILLER") or playersFolder:FindFirstChild("ALIVE")
+    if not targetFolder then return nil end
+    
+    for _, target in pairs(targetFolder:GetChildren()) do
+        if target and target:FindFirstChild("HumanoidRootPart") then
+            local targetPos = target.HumanoidRootPart.Position
+            local screenPos, depth, onScreen = W2S(targetPos)
+            
+            if onScreen and depth > 0 then
+                local distance = (Vector2.new(mousePos.X, mousePos.Y) - screenPos).Magnitude
+                if distance < closestDistance and distance < 200 then
+                    closestDistance = distance
+                    closestTarget = target
+                end
+            end
+        end
+    end
+    
+    return closestTarget
+end
+
+local function StartLockOn()
+    if LockOn.Connection then return end
+    
+    LockOn.Connection = RunService.RenderStepped:Connect(function()
+        if not LockOn.Enabled then return end
+        
+        local character = LocalPlayer.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        
+        local playerTeam = GetPlayerTeam()
+        if playerTeam == "LOBBY" then return end
+        
+        local targetType = playerTeam == "ALIVE" and "KILLER" or "ALIVE"
+        
+        local target = nil
+        if LockOn.FocusMode and LockOn.FocusedPlayer and LockOn.FocusedPlayer.Parent then
+            target = LockOn.FocusedPlayer
+        else
+            target = GetNearestTarget(targetType)
+        end
+        
+        if target and target:FindFirstChild("HumanoidRootPart") then
+            local hrp = character.HumanoidRootPart
+            local targetHRP = target.HumanoidRootPart
+            
+            local lookVector = (targetHRP.Position - hrp.Position).Unit
+            hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(lookVector.X, 0, lookVector.Z))
+            
+            if LockOn.FocusMode and LockOn.FocusLabel then
+                local screenPos, depth, onScreen = W2S(targetHRP.Position)
+                if onScreen and depth > 0 then
+                    LockOn.FocusLabel.Position = Vector2.new(screenPos.X, screenPos.Y - 50)
+                    LockOn.FocusLabel.Visible = true
+                else
+                    LockOn.FocusLabel.Visible = false
+                end
+            end
+        elseif LockOn.FocusLabel then
+            LockOn.FocusLabel.Visible = false
+        end
+    end)
+end
+
+local function StopLockOn()
+    if LockOn.Connection then
+        LockOn.Connection:Disconnect()
+        LockOn.Connection = nil
+    end
+    if LockOn.FocusLabel then
+        LockOn.FocusLabel.Visible = false
+    end
+end
+
+local function ToggleFocusPlayer()
+    if not LockOn.FocusMode then
+        local target = GetTargetInView()
+        if target then
+            LockOn.FocusMode = true
+            LockOn.FocusedPlayer = target
+            
+            if not LockOn.FocusLabel then
+                LockOn.FocusLabel = Drawing.new("Text")
+                LockOn.FocusLabel.Text = "FOCUSED [Press Y to unlock]"
+                LockOn.FocusLabel.Size = 16
+                LockOn.FocusLabel.Color = Color3.fromRGB(255, 255, 0)
+                LockOn.FocusLabel.Outline = true
+                LockOn.FocusLabel.Center = true
+                LockOn.FocusLabel.Font = Drawing.Fonts.Monospace
+            end
+            
+            Library:Notify({
+                Title = "Focus Player",
+                Description = "Locked onto " .. target.Name,
+                Time = 3,
+            })
+        end
+    else
+        LockOn.FocusMode = false
+        LockOn.FocusedPlayer = nil
+        if LockOn.FocusLabel then
+            LockOn.FocusLabel.Visible = false
+        end
+        
+        Library:Notify({
+            Title = "Focus Player",
+            Description = "Unlocked",
+            Time = 3,
+        })
+    end
+end
+
+local function TrackTrap(model)
+    if TrackedTraps[model] or not IsTrap(model) then return end
+    local h = MakeHighlight(model, TrapESP.HighlightColor, TrapESP.HighlightOutline, TrapESP.HighlightFillTrans, TrapESP.HighlightOutlineTrans)
+    TrackedTraps[model] = {
+        label = MakeLabel("Bear Trap", TrapESP.LabelColor, TrapESP.LabelSize, TrapESP.LabelFont),
+        highlight = h,
+    }
+end
+
+local function UntrackTrap(model)
+    DestroyEntry(TrackedTraps[model])
+    TrackedTraps[model] = nil
+end
+
+local function TrackGenerator(obj)
+    if TrackedGenerators[obj] or IsGeneratorDone(obj) or not FindBasePart(obj) then return end
+    local h = MakeHighlight(obj, GeneratorESP.HighlightColor, GeneratorESP.HighlightOutline, GeneratorESP.HighlightFillTrans, GeneratorESP.HighlightOutlineTrans)
+    if not h then return end
+    TrackedGenerators[obj] = {
+        label = MakeLabel("Generator", Color3.fromRGB(0, 210, 255), 14, GeneratorESP.LabelFont),
+        highlight = h,
+    }
+end
+
+local function UntrackGenerator(obj)
+    DestroyEntry(TrackedGenerators[obj])
+    TrackedGenerators[obj] = nil
+end
+
+local function TrackKiller(model)
+    if TrackedKillers[model] or not model:IsA("Model") then return end
+    local h = MakeHighlight(model, KillerESP.HighlightColor, KillerESP.HighlightOutline, KillerESP.HighlightFillTrans, KillerESP.HighlightOutlineTrans)
+    TrackedKillers[model] = {
+        label = MakeLabel("KILLER", Color3.fromRGB(220, 30, 30), 16, KillerESP.LabelFont),
+        highlight = h,
+    }
+end
+
+local function UntrackKiller(model)
+    DestroyEntry(TrackedKillers[model])
+    TrackedKillers[model] = nil
+end
+
+local function TrackSurvivor(model)
+    if TrackedSurvivors[model] or not model:IsA("Model") then return end
+    local h = MakeHighlight(model, SurvivorESP.HighlightColor, SurvivorESP.HighlightOutline, SurvivorESP.HighlightFillTrans, SurvivorESP.HighlightOutlineTrans)
+    TrackedSurvivors[model] = {
+        label = MakeLabel("SURVIVOR", Color3.fromRGB(30, 220, 30), 16, SurvivorESP.LabelFont),
+        highlight = h,
+    }
+end
+
+local function UntrackSurvivor(model)
+    DestroyEntry(TrackedSurvivors[model])
+    TrackedSurvivors[model] = nil
+end
+
+local function WireGenSignals(c)
+    c:GetAttributeChangedSignal("Progress"):Connect(function()
+        if IsGeneratorDone(c) then UntrackGenerator(c) end
+    end)
+    c:GetAttributeChangedSignal("progress"):Connect(function()
+        if IsGeneratorDone(c) then UntrackGenerator(c) end
+    end)
+end
+
+local function FullRescan()
+    for m in pairs(TrackedTraps) do UntrackTrap(m) end
+    for o in pairs(TrackedGenerators) do UntrackGenerator(o) end
+    for m in pairs(TrackedKillers) do UntrackKiller(m) end
+    for m in pairs(TrackedSurvivors) do UntrackSurvivor(m) end
+
+    local ignore = workspace:FindFirstChild("IGNORE")
+    if ignore then
+        for _, c in ipairs(ignore:GetChildren()) do
+            if IsTrap(c) then TrackTrap(c) end
+        end
+    end
+
+    local maps = workspace:FindFirstChild("MAPS")
+    local gm = maps and maps:FindFirstChild("GAME MAP")
+    local gf = gm and gm:FindFirstChild("Generators")
+    if gf then
+        for _, c in ipairs(gf:GetChildren()) do
+            TrackGenerator(c)
+            WireGenSignals(c)
+        end
+    end
+
+    local pf = workspace:FindFirstChild("PLAYERS")
+    local kf = pf and pf:FindFirstChild("KILLER")
+    if kf then
+        for _, c in ipairs(kf:GetChildren()) do
+            if c:IsA("Model") then TrackKiller(c) end
+        end
+    end
+    
+    local sf = pf and pf:FindFirstChild("ALIVE")
+    if sf then
+        for _, c in ipairs(sf:GetChildren()) do
+            if c:IsA("Model") and c.Name ~= LocalPlayer.Name then
+                TrackSurvivor(c)
+            end
+        end
+    end
+end
+
+local function SetupWatchers()
+    task.spawn(function()
+        local ignore = workspace:FindFirstChild("IGNORE") or workspace:WaitForChild("IGNORE", 30)
+        if not ignore then return end
+        ignore.ChildAdded:Connect(function(c)
+            if IsTrap(c) then TrackTrap(c) end
+        end)
+        ignore.ChildRemoved:Connect(function(c) UntrackTrap(c) end)
+        for _, c in ipairs(ignore:GetChildren()) do
+            if IsTrap(c) then TrackTrap(c) end
+        end
+    end)
+
+    task.spawn(function()
+        local maps = workspace:FindFirstChild("MAPS") or workspace:WaitForChild("MAPS", 60)
+        if not maps then return end
+        local function setupGenerators(gm)
+            local gf = gm:FindFirstChild("Generators") or gm:WaitForChild("Generators", 30)
+            if not gf then return end
+            for _, c in ipairs(gf:GetChildren()) do
+                TrackGenerator(c)
+                WireGenSignals(c)
+            end
+            gf.ChildAdded:Connect(function(c)
+                TrackGenerator(c)
+                WireGenSignals(c)
+            end)
+            gf.ChildRemoved:Connect(function(c) UntrackGenerator(c) end)
+        end
+        local gm = maps:FindFirstChild("GAME MAP") or maps:WaitForChild("GAME MAP", 60)
+        if gm then setupGenerators(gm) end
+        maps.ChildAdded:Connect(function(c)
+            if c.Name == "GAME MAP" then
+                task.wait(1)
+                FullRescan()
+                setupGenerators(c)
+            end
+        end)
+    end)
+
+    task.spawn(function()
+        local pf = workspace:FindFirstChild("PLAYERS") or workspace:WaitForChild("PLAYERS", 60)
+        if not pf then return end
+        local function watchKiller(kf)
+            for _, c in ipairs(kf:GetChildren()) do
+                if c:IsA("Model") then TrackKiller(c) end
+            end
+            kf.ChildAdded:Connect(function(c)
+                if c:IsA("Model") then TrackKiller(c) end
+            end)
+            kf.ChildRemoved:Connect(function(c) UntrackKiller(c) end)
+        end
+        local function watchSurvivor(sf)
+            for _, c in ipairs(sf:GetChildren()) do
+                if c:IsA("Model") and c.Name ~= LocalPlayer.Name then
+                    TrackSurvivor(c)
+                end
+            end
+            sf.ChildAdded:Connect(function(c)
+                if c:IsA("Model") and c.Name ~= LocalPlayer.Name then
+                    TrackSurvivor(c)
+                end
+            end)
+            sf.ChildRemoved:Connect(function(c) UntrackSurvivor(c) end)
+        end
+        local kf = pf:FindFirstChild("KILLER") or pf:WaitForChild("KILLER", 60)
+        if kf then watchKiller(kf) end
+        local sf = pf:FindFirstChild("ALIVE") or pf:WaitForChild("ALIVE", 60)
+        if sf then watchSurvivor(sf) end
+        pf.ChildAdded:Connect(function(c)
+            if c.Name == "KILLER" then
+                task.wait(0.5)
+                watchKiller(c)
+            elseif c.Name == "ALIVE" then
+                task.wait(0.5)
+                watchSurvivor(c)
+            end
+        end)
+    end)
+end
+
+local function RenderESP(tracked, enabled, getPos, cfg, useProximity)
+    local rootPos = useProximity and (function()
+        local r = GetCharRoot()
+        return r and r.Position
+    end)() or nil
+    local dead = {}
+    for obj, e in pairs(tracked) do
+        if not obj or not obj.Parent then
+            table.insert(dead, obj)
+        elseif not enabled then
+            if e.label then e.label.Visible = false end
+            if e.highlight then e.highlight.Enabled = false end
+        else
+            local pos = getPos(obj)
+            local tooClose = useProximity and rootPos and pos and (pos - rootPos).Magnitude <= (cfg.ProximityRange or 20)
+            if tooClose then
+                if e.label then e.label.Visible = false end
+                if e.highlight then e.highlight.Enabled = false end
+            elseif pos then
+                local sp, depth, onScreen = W2S(pos)
+                if onScreen and depth > 0 then
+                    e.label.Position = Vector2.new(sp.X, sp.Y - 28)
+                    e.label.Visible = true
+                else
+                    e.label.Visible = false
+                end
+                if e.highlight then e.highlight.Enabled = true end
+            else
+                if e.label then e.label.Visible = false end
+            end
+        end
+    end
+    return dead
+end
+
+local function StartRender()
+    if RenderConnection then return end
+    RenderConnection = RunService.RenderStepped:Connect(function()
+        if Unloaded then return end
+        local td = RenderESP(TrackedTraps, TrapESP.Enabled, GetTrapPos, TrapESP, false)
+        local gd = RenderESP(TrackedGenerators, GeneratorESP.Enabled, GetCenter, GeneratorESP, true)
+        local kd = RenderESP(TrackedKillers, KillerESP.Enabled, GetCenter, KillerESP, false)
+        local sd = RenderESP(TrackedSurvivors, SurvivorESP.Enabled, GetCenter, SurvivorESP, false)
+        for _, m in ipairs(td) do UntrackTrap(m) end
+        for _, o in ipairs(gd) do UntrackGenerator(o) end
+        for _, m in ipairs(kd) do UntrackKiller(m) end
+        for _, m in ipairs(sd) do UntrackSurvivor(m) end
+    end)
+end
+
+-- Feature Functions
+local function SetupStamina()
+    if InfiniteStamina.Conn then InfiniteStamina.Conn:Disconnect() end
+    if not InfiniteStamina.Enabled then return end
+    InfiniteStamina.Conn = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        if char:GetAttribute("Stamina") ~= math.huge then char:SetAttribute("Stamina", math.huge) end
+        if char:GetAttribute("Running") ~= true then char:SetAttribute("Running", true) end
+    end)
+end
+
+local function SetupNoclip(enabled)
+    if Noclip.Conn then Noclip.Conn:Disconnect(); Noclip.Conn = nil end
+    if not enabled then
+        local char = LocalPlayer.Character
+        if char then
+            for _, p in ipairs(char:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = true end
+            end
+        end
+        return
+    end
+    Noclip.Conn = RunService.Stepped:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+        end
+    end)
+end
+
+local function SetupTPWalk(enabled)
+    if TPWalk.Conn then TPWalk.Conn:Disconnect(); TPWalk.Conn = nil end
+    if not enabled then return end
+    TPWalk.Conn = RunService.RenderStepped:Connect(function()
+        local char = LocalPlayer.Character
+        local hum = GetHumanoid()
+        local hrp = GetCharRoot()
+        if not char or not hum or not hrp then return end
+        
+        if hum.MoveVector.Magnitude > 0 then
+            local moveDirection = hum.MoveVector
+            hrp.CFrame = hrp.CFrame + (moveDirection * TPWalk.Speed)
+        end
+    end)
+end
+
+local function SetupInfiniteJump(enabled)
+    if InfiniteJump.Conn then InfiniteJump.Conn:Disconnect(); InfiniteJump.Conn = nil end
+    if not enabled then return end
+    InfiniteJump.Conn = UserInputService.JumpRequest:Connect(function()
+        local hum = GetHumanoid()
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end)
+end
+
+local function SetupAllowJump(enabled)
+    if AllowJumping.Conn then AllowJumping.Conn:Disconnect(); AllowJumping.Conn = nil end
+    if not enabled then return end
+    AllowJumping.Conn = RunService.Heartbeat:Connect(function()
+        local hum = GetHumanoid()
+        if not hum then return end
+        if hum.UseJumpPower then
+            hum.JumpPower = 50
+        else
+            hum.JumpHeight = 7.2
+        end
+    end)
+end
+
+local function SetupAntiStun(enabled)
+    if AntiStun.Conn then AntiStun.Conn:Disconnect(); AntiStun.Conn = nil end
+    if not enabled then return end
+    AntiStun.Conn = RunService.Heartbeat:Connect(function()
+        local hum = GetHumanoid()
+        if not hum then return end
+        if hum.PlatformStand then hum.PlatformStand = false end
+        if hum:GetState() == Enum.HumanoidStateType.FallingDown then
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end)
+end
+
+local function SetupFullBright(enabled)
+    if FullBright.Conn then FullBright.Conn:Disconnect(); FullBright.Conn = nil end
+    if not enabled then return end
+    FullBright.Conn = RunService.Heartbeat:Connect(function()
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    end)
+end
+
+local function SetupNoFog(enabled)
+    if NoFog.Conn then NoFog.Conn:Disconnect(); NoFog.Conn = nil end
+    if NoFog.ChildConn then NoFog.ChildConn:Disconnect(); NoFog.ChildConn = nil end
+    if not enabled then
+        if NoFog.OriginalFogEnd then Lighting.FogEnd = NoFog.OriginalFogEnd end
+        return
+    end
+    if NoFog.OriginalFogEnd == nil then NoFog.OriginalFogEnd = Lighting.FogEnd end
+    for _, obj in ipairs(Lighting:GetChildren()) do
+        if obj:IsA("Atmosphere") then obj:Destroy() end
+    end
+    NoFog.Conn = RunService.Heartbeat:Connect(function()
+        Lighting.FogEnd = 100000
+    end)
+    NoFog.ChildConn = Lighting.ChildAdded:Connect(function(child)
+        if child:IsA("Atmosphere") then child:Destroy() end
+    end)
+end
+
+local function CompleteGen()
+    local pg = LocalPlayer:FindFirstChild("PlayerGui")
+    if not pg then return end
+    local gf = pg:FindFirstChild("Gen")
+    if not gf then AutoGen.Done = false return end
+    if AutoGen.Done then return end
+    local gm = gf:FindFirstChild("GeneratorMain")
+    if not gm then return end
+    local ev = gm:FindFirstChild("Event")
+    if not ev or not ev:IsA("RemoteEvent") then return end
+    
+    for _ = 1, 4 do
+        ev:FireServer({ Wires = true, Switches = true, Lever = true })
+        task.wait(0.05)
+    end
+    AutoGen.Done = true
+end
+
+local function SetupAutoGen(enabled)
+    if AutoGen.Conn then AutoGen.Conn:Disconnect(); AutoGen.Conn = nil end
+    AutoGen.Done = false
+    if not enabled then return end
+    AutoGen.Conn = RunService.Heartbeat:Connect(CompleteGen)
+end
+
+local CurrentEmote = nil
+local function PlayEmote(name)
+    if not EmoteToggle.Enabled then return end
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+    if not hum then return end
+    local mods = ReplicatedStorage:FindFirstChild("Modules")
+    local emotes = mods and mods:FindFirstChild("Emotes")
+    local emote = emotes and emotes:FindFirstChild(name)
+    local anim = emote and emote:FindFirstChild("Loop")
+    if not anim or not anim:IsA("Animation") then return end
+    if CurrentEmote and CurrentEmote.IsPlaying then CurrentEmote:Stop() end
+    CurrentEmote = hum:LoadAnimation(anim)
+    CurrentEmote:Play()
+end
+
+local function StopEmote()
+    if CurrentEmote and CurrentEmote.IsPlaying then CurrentEmote:Stop() end
+    CurrentEmote = nil
+end
+
+local function Unload()
+    if Unloaded then return end
+    Unloaded = true
+    if RenderConnection then RenderConnection:Disconnect() end
+    if InfiniteStamina.Conn then InfiniteStamina.Conn:Disconnect() end
+    if AutoGen.Conn then AutoGen.Conn:Disconnect() end
+    if Noclip.Conn then Noclip.Conn:Disconnect() end
+    if TPWalk.Conn then TPWalk.Conn:Disconnect() end
+    if InfiniteJump.Conn then InfiniteJump.Conn:Disconnect() end
+    if AllowJumping.Conn then AllowJumping.Conn:Disconnect() end
+    if AntiStun.Conn then AntiStun.Conn:Disconnect() end
+    if FullBright.Conn then FullBright.Conn:Disconnect() end
+    if NoFog.Conn then NoFog.Conn:Disconnect() end
+    if NoFog.ChildConn then NoFog.ChildConn:Disconnect() end
+    StopLockOn()
+    if LockOn.FocusLabel then pcall(function() LockOn.FocusLabel:Remove() end) end
+    StopEmote()
+    for m in pairs(TrackedTraps) do UntrackTrap(m) end
+    for o in pairs(TrackedGenerators) do UntrackGenerator(o) end
+    for m in pairs(TrackedKillers) do UntrackKiller(m) end
+    for m in pairs(TrackedSurvivors) do UntrackSurvivor(m) end
+    Library:Unload()
+end
+
+-- ========== MAIN TAB ==========
+local MainLeft = Tabs.Main:AddLeftGroupbox("Automation", "zap")
+
+MainLeft:AddToggle("AutoGen", {
+    Text = "Instant Generator Skibidi",
+    Default = false,
+    Callback = function(Value)
+        AutoGen.Enabled = Value
+        SetupAutoGen(Value)
+    end,
+})
+
+local MainRight = Tabs.Main:AddRightGroupbox("Visuals", "eye")
+
+MainRight:AddToggle("FullBright", {
+    Text = "Loop FullBright",
+    Default = false,
+    Callback = function(Value)
+        FullBright.Enabled = Value
+        SetupFullBright(Value)
+    end,
+})
+
+MainRight:AddToggle("NoFog", {
+    Text = "No Fog",
+    Default = false,
+    Callback = function(Value)
+        NoFog.Enabled = Value
+        SetupNoFog(Value)
+    end,
+})
+
+local MainESP = Tabs.Main:AddLeftGroupbox("ESP", "scan-eye")
+
+MainESP:AddToggle("TrapESP", {
+    Text = "Bear Trap ESP",
+    Default = false,
+    Callback = function(Value)
+        TrapESP.Enabled = Value
+        if not Value then ShowTable(TrackedTraps, false) end
+    end,
+})
+
+MainESP:AddToggle("GenESP", {
+    Text = "Generator ESP",
+    Default = false,
+    Callback = function(Value)
+        GeneratorESP.Enabled = Value
+        if not Value then ShowTable(TrackedGenerators, false) end
+    end,
+})
+
+MainESP:AddToggle("KillerESP", {
+    Text = "Killer ESP",
+    Default = false,
+    Callback = function(Value)
+        KillerESP.Enabled = Value
+        if not Value then ShowTable(TrackedKillers, false) end
+    end,
+})
+
+MainESP:AddToggle("SurvivorESP", {
+    Text = "Survivor ESP",
+    Default = false,
+    Callback = function(Value)
+        SurvivorESP.Enabled = Value
+        if not Value then ShowTable(TrackedSurvivors, false) end
+    end,
+})
+
+MainESP:AddSlider("TrapLabelSize", {
+    Text = "Trap Label Size",
+    Default = TrapESP.LabelSize,
+    Min = 10,
+    Max = 24,
+    Rounding = 1,
+    Callback = function(v) TrapESP.LabelSize = v end,
+})
+
+MainESP:AddSlider("GenProx", {
+    Text = "Generator Proximity Range",
+    Default = GeneratorESP.ProximityRange,
+    Min = 5,
+    Max = 60,
+    Rounding = 1,
+    Callback = function(v) GeneratorESP.ProximityRange = v end,
+})
+
+MainESP:AddButton({
+    Text = "Force Rescan",
+    Func = FullRescan,
+})
+
+-- ========== EXPLOITS TAB ==========
+local ExploitsLeft = Tabs.Exploits:AddLeftGroupbox("Emotes", "smile")
+
+local emoteList = {
+    "Yoink Sploinky", "Smile", "RAAHH", "Prince of Egypt", "Panic", "PBJ",
+    "Oh Yeah", "Mystery", "Jump for Joy", "Join us for a Bite", "Heroic Dance",
+    "Hardstyle", "Friendly Stance", "Down", "Clown", "Boat Dance", "A Dare"
+}
+
+ExploitsLeft:AddToggle("EmoteEnabled", {
+    Text = "EMOTE ON/OFF",
+    Default = false,
+    Callback = function(Value)
+        EmoteToggle.Enabled = Value
+        if not Value then
+            StopEmote()
+        end
+    end,
+})
+
+ExploitsLeft:AddDropdown("EmoteDropdown", {
+    Values = emoteList,
+    Default = 1,
+    Multi = false,
+    Text = "Select Emote",
+    Searchable = true,
+    Callback = function(Value)
+        if EmoteToggle.Enabled then
+            PlayEmote(Value)
+        end
+    end,
+})
+
+-- ========== PLAYER TAB ==========
+local PlayerLeft = Tabs.Player:AddLeftGroupbox("Movement", "move")
+
+PlayerLeft:AddToggle("Stamina", {
+    Text = "Infinite Stamina",
+    Default = false,
+    Callback = function(Value)
+        InfiniteStamina.Enabled = Value
+        SetupStamina()
+    end,
+})
+
+PlayerLeft:AddToggle("Noclip", {
+    Text = "Noclip",
+    Default = false,
+    Callback = function(Value)
+        Noclip.Enabled = Value
+        SetupNoclip(Value)
+    end,
+})
+
+PlayerLeft:AddToggle("TPWalkToggle", {
+    Text = "TPWALK",
+    Default = false,
+    Callback = function(Value)
+        TPWalk.Enabled = Value
+        SetupTPWalk(Value)
+    end,
+})
+
+PlayerLeft:AddSlider("TPWalkSpeed", {
+    Text = "TPWALK Speed",
+    Default = 1,
+    Min = 0.1,
+    Max = 5,
+    Rounding = 1,
+    Callback = function(Value)
+        TPWalk.Speed = Value
+    end,
+})
+
+PlayerLeft:AddToggle("InfJump", {
+    Text = "Infinite Jump",
+    Default = false,
+    Callback = function(Value)
+        InfiniteJump.Enabled = Value
+        SetupInfiniteJump(Value)
+    end,
+})
+
+PlayerLeft:AddToggle("AllowJump", {
+    Text = "Enable Jumping",
+    Default = false,
+    Callback = function(Value)
+        AllowJumping.Enabled = Value
+        SetupAllowJump(Value)
+    end,
+})
+
+PlayerLeft:AddToggle("AntiStun", {
+    Text = "Anti Stun",
+    Default = false,
+    Callback = function(Value)
+        AntiStun.Enabled = Value
+        SetupAntiStun(Value)
+    end,
+})
+
+local PlayerHelp = Tabs.Player:AddRightGroupbox("Help", "crosshair")
+
+PlayerHelp:AddToggle("LockOn", {
+    Text = "Lock On",
+    Default = false,
+    Callback = function(Value)
+        LockOn.Enabled = Value
+        if Value then
+            StartLockOn()
+        else
+            StopLockOn()
+        end
+    end,
+}):AddKeyPicker("LockOnKeybind", {
+    Default = "T",
+    SyncToggleState = true,
+    Mode = "Toggle",
+    Text = "Lock On",
+    NoUI = false,
+})
+
+PlayerHelp:AddLabel("Focus Player"):AddKeyPicker("FocusPlayerKeybind", {
+    Default = "Y",
+    Mode = "Toggle",
+    Text = "Focus Player",
+    NoUI = false,
+    Callback = function(Value)
+        if Value then
+            ToggleFocusPlayer()
+        end
+    end,
+})
+
+PlayerHelp:AddSlider("LockOnDistance", {
+    Text = "Lock On Distance",
+    Default = 20,
+    Min = 5,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(Value)
+        LockOn.Distance = Value
+    end,
+})
+
+-- ========== SCRIPTS TAB ==========
+local ScriptsLeft = Tabs.Scripts:AddLeftGroupbox("External", "external-link")
+
+ScriptsLeft:AddButton({
+    Text = "Infinite Yield",
+    Func = function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Infinite-Yield-43437"))()
+    end,
+})
+
+-- ========== SETTINGS TAB ==========
+local SettingsLeft = Tabs.Settings:AddLeftGroupbox("Menu", "wrench")
+
+SettingsLeft:AddToggle("KeybindMenuOpen", {
+    Default = Library.KeybindFrame.Visible,
+    Text = "Open Keybind Menu",
+    Callback = function(value)
+        Library.KeybindFrame.Visible = value
+    end,
+})
+
+SettingsLeft:AddToggle("ShowCustomCursor", {
+    Text = "Custom Cursor",
+    Default = true,
+    Callback = function(Value)
+        Library.ShowCustomCursor = Value
+    end,
+})
+
+SettingsLeft:AddDropdown("NotificationSide", {
+    Values = { "Left", "Right" },
+    Default = "Right",
+    Text = "Notification Side",
+    Callback = function(Value)
+        Library:SetNotifySide(Value)
+    end,
+})
+
+SettingsLeft:AddDropdown("DPIDropdown", {
+    Values = { "50%", "75%", "100%", "125%", "150%", "175%", "200%" },
+    Default = "100%",
+    Text = "DPI Scale",
+    Callback = function(Value)
+        Value = Value:gsub("%%", "")
+        local DPI = tonumber(Value)
+        Library:SetDPIScale(DPI)
+    end,
+})
+
+SettingsLeft:AddSlider("UICornerSlider", {
+    Text = "UI Corner Radius",
+    Default = Library.CornerRadius or 4,
+    Min = 0,
+    Max = 20,
+    Rounding = 0,
+    Callback = function(value)
+        Window:SetCornerRadius(value)
+    end,
+})
+
+SettingsLeft:AddDivider()
+
+SettingsLeft:AddLabel("Menu Keybind"):AddKeyPicker("MenuKeybind", { 
+    Default = "RightShift", 
+    NoUI = true, 
+    Text = "Menu keybind" 
+})
+
+SettingsLeft:AddButton({
+    Text = "Unload",
+    Func = Unload,
+})
+
+-- Save Manager & Theme Manager
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+
+ThemeManager:SetFolder("XXMZ")
+SaveManager:SetFolder("XXMZ/BiteByNight")
+
+SaveManager:BuildConfigSection(Tabs.Settings)
+ThemeManager:ApplyToTab(Tabs.Settings)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+-- Initialize
+SetupWatchers()
+StartRender()

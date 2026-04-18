@@ -1,131 +1,343 @@
--- what u are doing here?????????????????????????????????????????!
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- VOIDZX Hub
+-- Made by 29
 
-local Window = Rayfield:CreateWindow({
-    Name = "XXMZ | Possessor",
-    LoadingTitle = "XXMZ",
-    LoadingSubtitle = "by 29",
-    ConfigurationSaving = { Enabled = false }
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local Window = Library:CreateWindow({
+    Title = "VOIDZX",
+    Footer = "VOIDZX  •  Possessor  •  Made by 29",
+    ShowCustomCursor = true,
+    NotifySide = "Right",
 })
 
--- Ícones corretos da Rayfield (Lucide)
-local PossessorTab = Window:CreateTab("Possessor ESP", "sword")
-local PlayerTab    = Window:CreateTab("Player", "user")
-local CelestialTab = Window:CreateTab("Celestial Helper", "moon")
+-- Notificação de boas-vindas via RemoteEvent do jogo
+task.spawn(function()
+    local ok, remote = pcall(function()
+        return game:GetService("ReplicatedStorage")
+            :WaitForChild("_InLib", 5)
+            :WaitForChild("Networking", 5)
+            :WaitForChild("Communication", 5)
+    end)
+    if ok and remote then
+        firesignal(remote.OnClientEvent, "GameNotifyv2", {
+            table = {
+                Image     = "rbxassetid://116050248377028",
+                Title     = "WELCOME TO VOIDZX HUB",
+                Color     = Color3.new(0.050980, 0.360784, 0.388235),
+                ImageColor = true,
+                Timer     = 20,
+                Desc      = "join dc to help me :D discord.gg/d2MQ98N47u"
+            }
+        })
+    end
+end)
 
-local highlights = {}
-local espEnabled = false
-local allowJump = false  -- DESATIVADO POR PADRÃO (seguro)
+local Tabs = {
+    Possessor = Window:AddTab("Possessor ESP", "sword"),
+    Player    = Window:AddTab("Player",        "user"),
+    Celestial = Window:AddTab("Celestial",     "moon"),
+    UI        = Window:AddTab("UI Settings",   "settings"),
+}
 
--- POSSESSOR ESP
-local function addHighlight(model, text)
+-- ══════════════════════════════════════════
+--  POSSESSOR ESP
+-- ══════════════════════════════════════════
+local EspGroup = Tabs.Possessor:AddLeftGroupbox("ESP", "eye")
+
+local highlights  = {}
+local espEnabled  = false
+
+local function addHighlight(model, playerName)
     if highlights[model] then return end
+
+    -- Highlight fino (outline only, sem fill pesado)
     local hl = Instance.new("Highlight")
-    hl.FillColor = Color3.fromRGB(255,0,0)
-    hl.OutlineColor = Color3.fromRGB(255,0,0)
-    hl.FillTransparency = 0.5
+    hl.FillColor           = Color3.fromRGB(20, 20, 20)
+    hl.OutlineColor        = Color3.fromRGB(255, 60, 60)
+    hl.FillTransparency    = 0.85
     hl.OutlineTransparency = 0
-    hl.Adornee = model
-    hl.Parent = model
+    hl.Adornee             = model
+    hl.Parent              = model
+
+    -- BillboardGui com fonte monoespacada
+    local hrp = model:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
     local bill = Instance.new("BillboardGui")
-    bill.Adornee = model:FindFirstChild("HumanoidRootPart")
-    bill.Parent = model:FindFirstChild("HumanoidRootPart")
-    bill.Size = UDim2.new(0,200,0,50)
-    bill.StudsOffset = Vector3.new(0,3.5,0)
+    bill.Adornee    = hrp
+    bill.Parent     = hrp
+    bill.Size       = UDim2.new(0, 180, 0, 44)
+    bill.StudsOffset = Vector3.new(0, 3.2, 0)
     bill.AlwaysOnTop = true
 
-    local label = Instance.new("TextLabel", bill)
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1,0,1,0)
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(255,0,0)
-    label.TextStrokeTransparency = 0
-    label.TextStrokeColor3 = Color3.new(0,0,0)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 18
+    -- Frame de fundo semitransparente
+    local bg = Instance.new("Frame", bill)
+    bg.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    bg.BackgroundTransparency = 0.45
+    bg.BorderSizePixel = 0
+    bg.Size = UDim2.new(1, 0, 1, 0)
 
-    highlights[model] = {hl = hl, bill = bill}
+    local corner = Instance.new("UICorner", bg)
+    corner.CornerRadius = UDim.new(0, 4)
+
+    local stroke = Instance.new("UIStroke", bg)
+    stroke.Color = Color3.fromRGB(255, 60, 60)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.3
+
+    -- Tag "POSSESSOR"
+    local tag = Instance.new("TextLabel", bg)
+    tag.BackgroundTransparency = 1
+    tag.Size    = UDim2.new(1, 0, 0.5, 0)
+    tag.Position = UDim2.new(0, 0, 0, 0)
+    tag.Text    = "[ POSSESSOR ]"
+    tag.TextColor3 = Color3.fromRGB(255, 70, 70)
+    tag.TextStrokeTransparency = 0.5
+    tag.TextStrokeColor3 = Color3.new(0, 0, 0)
+    tag.Font    = Enum.Font.RobotoMono
+    tag.TextSize = 13
+    tag.TextXAlignment = Enum.TextXAlignment.Center
+
+    -- Nome do jogador
+    local nameLabel = Instance.new("TextLabel", bg)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size    = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    nameLabel.Text    = playerName
+    nameLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    nameLabel.TextStrokeTransparency = 0.6
+    nameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+    nameLabel.Font    = Enum.Font.RobotoMono
+    nameLabel.TextSize = 12
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+    highlights[model] = { hl = hl, bill = bill }
 end
 
 local function removeHighlight(model)
-    if highlights[model] then
-        highlights[model].hl:Destroy()
-        highlights[model].bill:Destroy()
-        highlights[model] = nil
-    end
+    if not highlights[model] then return end
+    highlights[model].hl:Destroy()
+    highlights[model].bill:Destroy()
+    highlights[model] = nil
 end
 
-PossessorTab:CreateToggle({
-    Name = "Possessor ESP",
-    CurrentValue = false,
+EspGroup:AddToggle("PossessorESP", {
+    Text    = "Possessor ESP",
+    Default = false,
     Callback = function(v)
         espEnabled = v
         if not v then
-            for m,_ in pairs(highlights) do removeHighlight(m) end
+            for m in pairs(highlights) do removeHighlight(m) end
         end
-    end
+    end,
 })
 
 task.spawn(function()
     while task.wait(0.5) do
         if not espEnabled then continue end
-        for m,_ in pairs(highlights) do removeHighlight(m) end
+
+        -- Limpa highlights antigos
+        for m in pairs(highlights) do removeHighlight(m) end
 
         for _, plr in pairs(game.Players:GetPlayers()) do
             local real = plr.Character
-            if real then
-                for _, obj in pairs(workspace:GetChildren()) do
-                    if obj:IsA("Model") and obj.Name == plr.Name and obj ~= real and obj:FindFirstChild("HumanoidRootPart") then
-                        addHighlight(obj, "POSSESSOR\n"..plr.Name)
-                    end
+            if not real then continue end
+            for _, obj in pairs(workspace:GetChildren()) do
+                if  obj:IsA("Model")
+                and obj.Name == plr.Name
+                and obj ~= real
+                and obj:FindFirstChild("HumanoidRootPart")
+                then
+                    addHighlight(obj, plr.Name)
                 end
             end
         end
     end
 end)
 
--- PLAYER TAB - ATUALIZA SEMPRE
-local targetSpeed = 16
+-- ══════════════════════════════════════════
+--  PLAYER
+-- ══════════════════════════════════════════
+local PlayerGroup = Tabs.Player:AddLeftGroupbox("Movement", "zap")
 
-PlayerTab:CreateToggle({
-    Name = "Allow Jump",
-    CurrentValue = false,  -- DESATIVADO POR PADRÃO
+local wsEnabled   = false
+local targetSpeed = 16
+local allowJump   = false
+
+PlayerGroup:AddToggle("WalkSpeedToggle", {
+    Text    = "WalkSpeed",
+    Default = false,
     Callback = function(v)
-        allowJump = v
-    end
+        wsEnabled = v
+        -- Ao desativar, restaura velocidade padrão
+        if not v then
+            local char = game.Players.LocalPlayer.Character
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.WalkSpeed = 16 end
+        end
+    end,
 })
 
-PlayerTab:CreateSlider({
-    Name = "WalkSpeed",
-    Range = {16, 80},
-    Increment = 1,
-    CurrentValue = 16,
+PlayerGroup:AddSlider("WalkSpeedSlider", {
+    Text    = "Speed value",
+    Default = 16,
+    Min     = 16,
+    Max     = 80,
+    Rounding = 1,
     Callback = function(v)
         targetSpeed = v
-    end
+    end,
 })
 
--- LOOP QUE MANTÉM SEMPRE ATUALIZADO (nunca perde o valor)
+PlayerGroup:AddToggle("AllowJump", {
+    Text    = "Allow Jump",
+    Default = false,
+    Callback = function(v)
+        allowJump = v
+        if not v then
+            local char = game.Players.LocalPlayer.Character
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.JumpPower = 0 end
+        end
+    end,
+})
+
+-- Loop de manutenção — só aplica se o toggle estiver ativo
 game:GetService("RunService").Heartbeat:Connect(function()
     local char = game.Players.LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
 
-    hum.WalkSpeed = targetSpeed
+    if wsEnabled then
+        hum.WalkSpeed = targetSpeed
+    end
+
     hum.JumpPower = allowJump and 50 or 0
 end)
 
--- CELESTIAL
-CelestialTab:CreateButton({
-    Name = "120 Minutes Bypass",
-    Callback = function()
-        Rayfield:Notify({Title="Celestial", Content="Enviando 120 minutos...", Duration=3})
-        local remote = game:GetService("ReplicatedStorage"):WaitForChild("_InLib"):WaitForChild("Networking"):WaitForChild("Communication")
-        for i = 1, 120 do
+-- FullBright
+local VisualGroup = Tabs.Player:AddRightGroupbox("Visuals", "sun")
+
+local originalAmbient    = game:GetService("Lighting").Ambient
+local originalBrightness = game:GetService("Lighting").Brightness
+local originalFogEnd     = game:GetService("Lighting").FogEnd
+
+VisualGroup:AddToggle("FullBright", {
+    Text    = "FullBright",
+    Default = false,
+    Callback = function(v)
+        local L = game:GetService("Lighting")
+        if v then
+            L.Brightness = 2
+            L.Ambient    = Color3.fromRGB(178, 178, 178)
+        else
+            L.Brightness = originalBrightness
+            L.Ambient    = originalAmbient
+        end
+    end,
+})
+
+VisualGroup:AddToggle("NoFog", {
+    Text    = "No Fog",
+    Default = false,
+    Callback = function(v)
+        game:GetService("Lighting").FogEnd = v and 1e9 or originalFogEnd
+    end,
+})
+
+VisualGroup:AddSlider("FOVSlider", {
+    Text     = "Field of View",
+    Default  = 70,
+    Min      = 70,
+    Max      = 120,
+    Rounding = 0,
+    Callback = function(v)
+        workspace.CurrentCamera.FieldOfView = v
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  CELESTIAL
+-- ══════════════════════════════════════════
+local CelestialGroup = Tabs.Celestial:AddLeftGroupbox("Celestial Helper", "moon")
+
+CelestialGroup:AddButton({
+    Text = "120 Minutes Bypass",
+    Func = function()
+        Library:Notify({
+            Title       = "Celestial",
+            Description = "Enviando 120 minutos...",
+            Time        = 3,
+        })
+        local ok, remote = pcall(function()
+            return game:GetService("ReplicatedStorage")
+                :WaitForChild("_InLib")
+                :WaitForChild("Networking")
+                :WaitForChild("Communication")
+        end)
+        if not ok then
+            Library:Notify({ Title = "Celestial", Description = "Remote não encontrado!", Time = 4 })
+            return
+        end
+        for _ = 1, 120 do
             remote:FireServer("UpdateMinute")
         end
-        Rayfield:Notify({Title="Celestial", Content="120 minutos enviados!", Duration=4})
-    end
+        Library:Notify({
+            Title       = "Celestial",
+            Description = "120 minutos enviados!",
+            Time        = 4,
+        })
+    end,
 })
+
+-- ══════════════════════════════════════════
+--  UI SETTINGS
+-- ══════════════════════════════════════════
+local MenuGroup = Tabs.UI:AddLeftGroupbox("Menu", "wrench")
+
+MenuGroup:AddToggle("KeybindMenuOpen", {
+    Default = Library.KeybindFrame.Visible,
+    Text    = "Open Keybind Menu",
+    Callback = function(v)
+        Library.KeybindFrame.Visible = v
+    end,
+})
+
+MenuGroup:AddToggle("ShowCustomCursor", {
+    Text    = "Custom Cursor",
+    Default = true,
+    Callback = function(v)
+        Library.ShowCustomCursor = v
+    end,
+})
+
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu keybind")
+    :AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+
+MenuGroup:AddButton("Unload", function()
+    Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+
+ThemeManager:SetFolder("VOIDZX")
+SaveManager:SetFolder("VOIDZX/celestial-roleplay")
+
+SaveManager:BuildConfigSection(Tabs.UI)
+ThemeManager:ApplyToTab(Tabs.UI)
+
+SaveManager:LoadAutoloadConfig()

@@ -1,0 +1,417 @@
+-- VOIDZX HUB (Completo - TPWalk Suave estilo Infinite Yield)
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+-- Serviços
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Variáveis de controle
+local TPWalkEnabled = false
+local TPWalkSpeed = 1.0
+local KillAuraEnabled = false
+local KillAuraRange = 20
+local NoFallDamageEnabled = false
+local ESPItemsEnabled = false
+local ESPPlayersEnabled = false
+local ESPCratesEnabled = false
+
+-- Referências do personagem
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local Humanoid = Character:WaitForChild("Humanoid")
+
+-- Tabelas para ESP
+local ItemESPs = {}
+local PlayerESPs = {}
+local CrateESPs = {}
+
+-- Criar janela
+local Window = Library:CreateWindow({
+    Title = "VOIDZX HUB",
+    Footer = "Made by 29, SkyRivals",
+    Icon = 0,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+})
+
+-- Tabs
+local Tabs = {
+    Combat = Window:AddTab("Combat", "sword"),
+    Movement = Window:AddTab("Movement", "move"),
+    ESP = Window:AddTab("ESP", "eye"),
+    Discord = Window:AddTab("Discord", "message-circle"),
+    ["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+-- Funções auxiliares
+local function GetEquippedTool()
+    for _, item in pairs(Character:GetChildren()) do
+        if item:IsA("Tool") then
+            return item
+        end
+    end
+    return nil
+end
+
+local function GetEquippedToolName()
+    local tool = GetEquippedTool()
+    return tool and tool.Name or nil
+end
+
+local function CreateESP(object, color, text)
+    local oldESP = object:FindFirstChild("BlockGameESP")
+    if oldESP then oldESP:Destroy() end
+    
+    local Highlight = Instance.new("Highlight")
+    Highlight.Name = "BlockGameESP"
+    Highlight.Parent = object
+    Highlight.FillColor = color
+    Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    Highlight.FillTransparency = 0.5
+    Highlight.OutlineTransparency = 0
+    Highlight.Adornee = object
+    
+    local BillboardGui = Instance.new("BillboardGui")
+    BillboardGui.Name = "BlockGameESPText"
+    BillboardGui.Parent = object
+    BillboardGui.AlwaysOnTop = true
+    BillboardGui.Size = UDim2.new(0, 200, 0, 50)
+    BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
+    
+    local TextLabel = Instance.new("TextLabel")
+    TextLabel.Parent = BillboardGui
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Size = UDim2.new(1, 0, 1, 0)
+    TextLabel.Text = text
+    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TextLabel.TextStrokeTransparency = 0.5
+    TextLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    TextLabel.Font = Enum.Font.Code
+    TextLabel.TextSize = 14
+    
+    return Highlight
+end
+
+local function RemoveAllESP(espTable)
+    for obj, esp in pairs(espTable) do
+        if esp and esp.Parent then esp:Destroy() end
+        if obj then
+            local textESP = obj:FindFirstChild("BlockGameESPText")
+            if textESP then textESP:Destroy() end
+        end
+    end
+    table.clear(espTable)
+end
+
+-- ========================
+-- COMBAT TAB
+-- ========================
+local CombatGroup = Tabs.Combat:AddLeftGroupbox("Combat Features", "sword")
+
+CombatGroup:AddToggle("KillAura", {
+    Text = "Kill Aura",
+    Default = false,
+    Tooltip = "Ataca jogadores próximos automaticamente",
+    Callback = function(Value)
+        KillAuraEnabled = Value
+        Library:Notify({ Title = "Kill Aura", Description = Value and "Ativado" or "Desativado", Time = 2 })
+    end,
+})
+
+CombatGroup:AddSlider("KillAuraRange", {
+    Text = "Kill Aura Range",
+    Default = 20,
+    Min = 5,
+    Max = 50,
+    Rounding = 0,
+    Callback = function(Value) KillAuraRange = Value end,
+})
+
+-- ========================
+-- MOVEMENT TAB - TPWalk Suave
+-- ========================
+local MovementGroup = Tabs.Movement:AddLeftGroupbox("Movement Features", "move")
+
+MovementGroup:AddToggle("TPWalk", {
+    Text = "Walkspeed Bypass - TPWALK (Suave)",
+    Default = false,
+    Tooltip = "Método estilo Infinite Yield - bem mais controlável",
+    Callback = function(Value)
+        TPWalkEnabled = Value
+        Library:Notify({ Title = "TP Walk", Description = Value and "Ativado (suave)" or "Desativado", Time = 2 })
+    end,
+})
+
+MovementGroup:AddSlider("TPWalkSpeed", {
+    Text = "TP Walk Speed (0.1 lento → 2.0 rápido)",
+    Default = 1.0,
+    Min = 0.1,
+    Max = 3.0,
+    Rounding = 1,
+    Callback = function(Value)
+        TPWalkSpeed = Value
+    end,
+})
+
+MovementGroup:AddDivider()
+
+MovementGroup:AddToggle("NoFallDamage", {
+    Text = "No Fall Damage",
+    Default = false,
+    Callback = function(Value)
+        NoFallDamageEnabled = Value
+        if Value then
+            local Remote = ReplicatedStorage:FindFirstChild("Remotes")
+            if Remote then
+                local FallDamage = Remote:FindFirstChild("DealMeFallDamage")
+                if FallDamage then
+                    FallDamage:Destroy()
+                end
+            end
+        end
+    end,
+})
+
+-- ========================
+-- ESP TAB
+-- ========================
+local ESPGroup = Tabs.ESP:AddLeftGroupbox("ESP Features", "eye")
+
+ESPGroup:AddToggle("ESPItems", {
+    Text = "ESP Items Dropados",
+    Default = false,
+    Callback = function(Value)
+        ESPItemsEnabled = Value
+        if not Value then RemoveAllESP(ItemESPs) end
+    end,
+})
+
+ESPGroup:AddToggle("ESPPlayers", {
+    Text = "ESP Players + Inventário",
+    Default = false,
+    Callback = function(Value)
+        ESPPlayersEnabled = Value
+        if not Value then RemoveAllESP(PlayerESPs) end
+    end,
+})
+
+ESPGroup:AddToggle("ESPCrates", {
+    Text = "ESP Caixas",
+    Default = false,
+    Callback = function(Value)
+        ESPCratesEnabled = Value
+        if not Value then RemoveAllESP(CrateESPs) end
+    end,
+})
+
+-- ========================
+-- DISCORD TAB
+-- ========================
+local DiscordGroup = Tabs.Discord:AddLeftGroupbox("Discord Server", "message-circle")
+DiscordGroup:AddLabel("Junte-se ao nosso Discord!", true)
+DiscordGroup:AddLabel("Link do servidor:", true)
+DiscordGroup:AddInput("DiscordLink", { Default = "https://discord.com/invite/d2MQ98N47u", Text = "Discord Invite" })
+DiscordGroup:AddButton({
+    Text = "Copiar Link do Discord",
+    Func = function()
+        setclipboard("https://discord.com/invite/d2MQ98N47u")
+        Library:Notify({ Title = "Discord", Description = "Link copiado!", Time = 3 })
+    end,
+})
+
+-- ========================
+-- LOOP PRINCIPAL
+-- ========================
+RunService.Heartbeat:Connect(function(deltaTime)
+    -- Atualiza referências do personagem
+    if not Character or not Character.Parent then
+        Character = LocalPlayer.Character
+    end
+    if Character then
+        HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+        Humanoid = Character:FindFirstChild("Humanoid")
+    end
+
+    -- TP Walk Suave (estilo Infinite Yield)
+    if TPWalkEnabled and Humanoid and HumanoidRootPart and Humanoid.MoveDirection.Magnitude > 0 then
+        local moveDir = Humanoid.MoveDirection.Unit
+        local speed = TPWalkSpeed * 18 * deltaTime   -- 18 é um valor bom para ficar natural
+        HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + (moveDir * speed)
+    end
+
+    -- Kill Aura
+    if KillAuraEnabled and Character and HumanoidRootPart then
+        local toolName = GetEquippedToolName()
+        local tool = GetEquippedTool()
+        
+        if tool and toolName then
+            local isWeapon = not string.find(string.lower(toolName), "pickaxe") and not string.find(string.lower(toolName), "axe")
+            
+            if isWeapon then
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
+                        local targetHumanoid = player.Character:FindFirstChild("Humanoid")
+                        
+                        if targetHRP and targetHumanoid and targetHumanoid.Health > 0 then
+                            local distance = (HumanoidRootPart.Position - targetHRP.Position).Magnitude
+                            
+                            if distance <= KillAuraRange then
+                                local parts = {"Left Arm", "Right Arm", "Left Leg", "Right Leg", "Torso", "Head"}
+                                local randomPart = parts[math.random(1, #parts)]
+                                local targetPart = player.Character:FindFirstChild(randomPart) or player.Character:FindFirstChild("Torso")
+                                
+                                local hitSound = tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("Hit")
+                                
+                                local args = {
+                                    HumanoidRootPart.Position,
+                                    targetPart,
+                                    targetHRP.Position,
+                                    toolName,
+                                    {
+                                        Type = "Melee",
+                                        FireAdd = 0,
+                                        Damage = 17,
+                                        LastYVel = 0.059,
+                                        KnockbackTime = 0.15,
+                                        Knockback = 12,
+                                        MeleeOrigin = HumanoidRootPart.Position,
+                                        NewYVel = 0.0001,
+                                        HitEffectsForMe = true,
+                                        Sound = hitSound,
+                                        BloodData = { Enabled = true, Blood1 = true }
+                                    }
+                                }
+                                
+                                pcall(function()
+                                    ReplicatedStorage.Remotes.ValidateHit:FireServer(unpack(args))
+                                end)
+                                
+                                task.wait(0.25)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- ESP Items
+    if ESPItemsEnabled and Workspace:FindFirstChild("DroppedItems") then
+        for _, item in pairs(Workspace.DroppedItems:GetChildren()) do
+            if (item:IsA("BasePart") or item:IsA("Model")) and not ItemESPs[item] then
+                ItemESPs[item] = CreateESP(item, Color3.fromRGB(255, 215, 0), "📦 " .. item.Name)
+            end
+        end
+        for item, esp in pairs(ItemESPs) do
+            if not item or not item.Parent then
+                if esp then esp:Destroy() end
+                if item then local t = item:FindFirstChild("BlockGameESPText") if t then t:Destroy() end end
+                ItemESPs[item] = nil
+            end
+        end
+    end
+
+    -- ESP Players
+    if ESPPlayersEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    if not PlayerESPs[player] or not PlayerESPs[player].Parent then
+                        local inventory = "🎒 Vazio"
+                        if player:FindFirstChild("Backpack") then
+                            local items = {}
+                            for _, tool in pairs(player.Backpack:GetChildren()) do
+                                if tool:IsA("Tool") then table.insert(items, tool.Name) end
+                            end
+                            if #items > 0 then inventory = "🎒 " .. table.concat(items, ", ") end
+                        end
+                        local distance = math.floor((HumanoidRootPart.Position - hrp.Position).Magnitude)
+                        PlayerESPs[player] = CreateESP(hrp, Color3.fromRGB(255, 255, 255), player.Name .. "\n" .. inventory .. "\n" .. distance .. "m")
+                    else
+                        local textESP = hrp:FindFirstChild("BlockGameESPText")
+                        if textESP and textESP:FindFirstChild("TextLabel") then
+                            local inventory = "🎒 Vazio"
+                            if player:FindFirstChild("Backpack") then
+                                local items = {}
+                                for _, tool in pairs(player.Backpack:GetChildren()) do
+                                    if tool:IsA("Tool") then table.insert(items, tool.Name) end
+                                end
+                                if #items > 0 then inventory = "🎒 " .. table.concat(items, ", ") end
+                            end
+                            local distance = math.floor((HumanoidRootPart.Position - hrp.Position).Magnitude)
+                            textESP.TextLabel.Text = player.Name .. "\n" .. inventory .. "\n" .. distance .. "m"
+                        end
+                    end
+                end
+            end
+        end
+        
+        for player, esp in pairs(PlayerESPs) do
+            if not player or not player.Parent or not player.Character then
+                if esp then esp:Destroy() end
+                PlayerESPs[player] = nil
+            end
+        end
+    end
+
+    -- ESP Crates
+    if ESPCratesEnabled and Workspace:FindFirstChild("Blocks") then
+        local crates = Workspace.Blocks:FindFirstChild("Crates")
+        if crates then
+            for _, crate in pairs(crates:GetChildren()) do
+                if not CrateESPs[crate] then
+                    CrateESPs[crate] = CreateESP(crate, Color3.fromRGB(0, 255, 127), "📦 Crate")
+                end
+            end
+            for crate, esp in pairs(CrateESPs) do
+                if not crate or not crate.Parent then
+                    if esp then esp:Destroy() end
+                    if crate then local t = crate:FindFirstChild("BlockGameESPText") if t then t:Destroy() end end
+                    CrateESPs[crate] = nil
+                end
+            end
+        end
+    end
+end)
+
+-- ========================
+-- UI SETTINGS
+-- ========================
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
+MenuGroup:AddToggle("KeybindMenuOpen", { Default = Library.KeybindFrame.Visible, Text = "Open Keybind Menu", Callback = function(v) Library.KeybindFrame.Visible = v end })
+MenuGroup:AddToggle("ShowCustomCursor", { Text = "Custom Cursor", Default = true, Callback = function(v) Library.ShowCustomCursor = v end })
+MenuGroup:AddDropdown("NotificationSide", { Values = { "Left", "Right" }, Default = 2, Text = "Notification Side", Callback = function(v) Library:SetNotifySide(v) end })
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true })
+MenuGroup:AddButton({ Text = "Unload", Func = function() Library:Unload() end })
+
+Library.ToggleKeybind = Options.MenuKeybind  -- precisa definir Options se não existir, mas como o original usava, mantive
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+ThemeManager:SetFolder("VOIDZX")
+SaveManager:SetFolder("VOIDZX/BlockGame")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+
+Library:OnUnload(function()
+    RemoveAllESP(ItemESPs)
+    RemoveAllESP(PlayerESPs)
+    RemoveAllESP(CrateESPs)
+    print("VOIDZX HUB Unloaded!")
+end)
+
+SaveManager:LoadAutoloadConfig()
+
+print("VOIDZX HUB carregado - TPWalk agora está suave como no Infinite Yield!")

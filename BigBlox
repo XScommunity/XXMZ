@@ -1,0 +1,390 @@
+-- XXMZ HUB | Obsidian UI | Made by 29, Big Blox
+local repo         = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library      = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager  = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local Players     = game:GetService("Players")
+local RunService  = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local Config = {
+    AutoProva       = false,
+    AutoButton      = false,
+    AutoClick       = false,
+    InstantInteract = false,
+    ShowChat        = false,
+    ButtonESP       = false,
+    GroqApiKey      = "",
+}
+
+-- ╔══════════════════════════════════╗
+-- ║          FUNÇÕES UTEIS           ║
+-- ╚══════════════════════════════════╝
+local function getRoot()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function teleport(pos)
+    local root = getRoot()
+    if root then root.CFrame = CFrame.new(pos) end
+end
+
+local function httpRequest(options)
+    if http_request then
+        return http_request(options)
+    elseif request then
+        return request(options)
+    elseif syn and syn.request then
+        return syn.request(options)
+    elseif http and http.request then
+        return http.request(options)
+    end
+    error("Nenhuma função de HTTP disponível")
+end
+
+-- ╔══════════════════════════════════╗
+-- ║        PLATAFORMA SEGURA         ║
+-- ╚══════════════════════════════════╝
+local safePlatform
+local function createSafePlatform(pos)
+    if safePlatform then safePlatform:Destroy() end
+    local p = Instance.new("Part")
+    p.Name         = "SafePlatform"
+    p.Anchored     = true
+    p.CanCollide   = true
+    p.Transparency = 1
+    p.Size         = Vector3.new(20, 1, 20)
+    p.CFrame       = CFrame.new(pos - Vector3.new(0, 2.5, 0))
+    p.Parent       = workspace
+    safePlatform   = p
+end
+
+local function removeSafePlatform()
+    if safePlatform then safePlatform:Destroy() safePlatform = nil end
+end
+
+-- ╔══════════════════════════════════╗
+-- ║           AUTO MAPA              ║
+-- ╚══════════════════════════════════╝
+local provaCoords = {
+    ProvaDosHexagonos = Vector3.new(-965, 100, 713),
+    ProvaDosSocos     = Vector3.new(-965, 100, 713),
+    ProvaFabrica      = Vector3.new(-965, 100, 713),
+}
+
+local function equipFirstItem()
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if not backpack then return nil end
+    local tool, elapsed = nil, 0
+    repeat
+        tool = backpack:FindFirstChildOfClass("Tool")
+        if not tool then task.wait(0.2) end
+        elapsed = elapsed + 0.2
+    until tool or elapsed > 30
+    if not tool then return nil end
+    task.wait(5)
+    tool = backpack:FindFirstChildOfClass("Tool")
+    if not tool then return nil end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum:EquipTool(tool) end
+    return tool
+end
+
+local function clickOnPart(part)
+    local cam = workspace.CurrentCamera
+    if not cam or not part then return end
+    local screenPos, onScreen = cam:WorldToScreenPoint(part.Position)
+    if not onScreen then return end
+    pcall(function()
+        mousemoveabs(screenPos.X, screenPos.Y)
+        mouse1click()
+    end)
+end
+
+local cozinhaConnections = {}
+local function connectCozinha(cozinha)
+    for _, c in ipairs(cozinhaConnections) do c:Disconnect() end
+    cozinhaConnections = {}
+
+    local spawns = cozinha:FindFirstChild("Spawns")
+    if not spawns then return end
+
+    local function watchPart(part)
+        if part.Name ~= "Part" then return end
+        local conn = part.ChildAdded:Connect(function(child)
+            if not Config.AutoProva then return end
+            if not child:IsA("Model") or child.Name == "Bomb" then return end
+
+            local char = LocalPlayer.Character
+            if not (char and char:FindFirstChildOfClass("Tool")) then
+                task.spawn(equipFirstItem)
+                local waited = 0
+                repeat
+                    task.wait(0.1)
+                    waited = waited + 0.1
+                    char = LocalPlayer.Character
+                until (char and char:FindFirstChildOfClass("Tool")) or waited > 10
+            end
+
+            task.spawn(function()
+                while Config.AutoProva and child and child.Parent == part do
+                    clickOnPart(part)
+                    task.wait(0.1)
+                end
+            end)
+        end)
+        table.insert(cozinhaConnections, conn)
+    end
+
+    for _, child in ipairs(spawns:GetChildren()) do watchPart(child) end
+    table.insert(cozinhaConnections, spawns.ChildAdded:Connect(watchPart))
+end
+
+local autoProvaRunning = false
+local function autoProvaLoop()
+    if autoProvaRunning then return end
+    autoProvaRunning = true
+    task.spawn(function()
+        while Config.AutoProva do
+            local prova = workspace:FindFirstChild("Prova")
+            if prova then
+                local cozinha = prova:FindFirstChild("Prova_Cozinha")
+                if cozinha then
+                    connectCozinha(cozinha)
+                    while Config.AutoProva and prova:FindFirstChild("Prova_Cozinha") do
+                        task.wait(0.5)
+                    end
+                    for _, c in ipairs(cozinhaConnections) do c:Disconnect() end
+                    cozinhaConnections = {}
+                else
+                    removeSafePlatform()
+                    for _, modelo in ipairs(prova:GetChildren()) do
+                        if modelo:IsA("Model") and provaCoords[modelo.Name] then
+                            local pos = provaCoords[modelo.Name]
+                            createSafePlatform(pos)
+                            teleport(pos)
+                            break
+                        end
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+        removeSafePlatform()
+        autoProvaRunning = false
+    end)
+end
+
+-- ╔══════════════════════════════════╗
+-- ║        BUTTON SURPRISE           ║
+-- ╚══════════════════════════════════╝
+local buttonESPHighlights = {}
+
+local function addButtonESP(obj)
+    if buttonESPHighlights[obj] then return end
+    local h = Instance.new("SelectionBox")
+    h.Adornee             = obj
+    h.Color3              = Color3.fromRGB(255, 200, 0)
+    h.LineThickness       = 0.05
+    h.SurfaceTransparency = 0.6
+    h.SurfaceColor3       = Color3.fromRGB(255, 200, 0)
+    h.Parent              = workspace
+    buttonESPHighlights[obj] = h
+    obj.AncestryChanged:Connect(function()
+        if not obj:IsDescendantOf(workspace) then
+            h:Destroy()
+            buttonESPHighlights[obj] = nil
+        end
+    end)
+end
+
+local function clearAllESP()
+    for obj, h in pairs(buttonESPHighlights) do
+        h:Destroy()
+        buttonESPHighlights[obj] = nil
+    end
+end
+
+workspace.DescendantAdded:Connect(function(desc)
+    if desc.Name ~= "ButtonSurprise" then return end
+    local pos
+    if desc:IsA("BasePart") then
+        pos = desc.Position
+    elseif desc:IsA("Model") then
+        local p = desc.PrimaryPart or desc:FindFirstChildOfClass("BasePart")
+        if p then pos = p.Position end
+    end
+    if Config.AutoButton and pos then
+        task.wait(0.1)
+        teleport(pos + Vector3.new(0, 3, 0))
+    end
+    if Config.ButtonESP then addButtonESP(desc) end
+end)
+
+-- ╔══════════════════════════════════╗
+-- ║     AUTO CLICK (MOUSE PURO)      ║
+-- ╚══════════════════════════════════╝
+local lastClick = 0
+RunService.Heartbeat:Connect(function()
+    if not Config.AutoClick then return end
+    local now = tick()
+    if now - lastClick < 0.05 then return end
+    lastClick = now
+    pcall(mouse1click)
+end)
+
+-- ╔══════════════════════════════════╗
+-- ║    INSTANT INTERACT PROMPT       ║
+-- ╚══════════════════════════════════╝
+local instantConn
+local function applyInstantInteract(enabled)
+    if enabled then
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("ProximityPrompt") then v.HoldDuration = 0 end
+        end
+        instantConn = workspace.DescendantAdded:Connect(function(v)
+            if Config.InstantInteract and v:IsA("ProximityPrompt") then
+                v.HoldDuration = 0
+            end
+        end)
+    else
+        if instantConn then instantConn:Disconnect() instantConn = nil end
+    end
+end
+
+-- ╔══════════════════════════════════╗
+-- ║           SHOW CHAT              ║
+-- ╚══════════════════════════════════╝
+local function applyShowChat(value)
+    _G.showChat = value
+    if value then
+        task.spawn(function()
+            while _G.showChat and task.wait() do
+                pcall(function()
+                    local tcs = game:GetService("TextChatService")
+                    local cfg  = tcs:FindFirstChildOfClass("ChatWindowConfiguration")
+                    if cfg then cfg.Enabled = true end
+                end)
+            end
+        end)
+    else
+        _G.showChat = false
+        pcall(function()
+            if workspace:FindFirstChild("Players")
+            and workspace.Players:FindFirstChild("Spectating")
+            and not workspace.Players.Spectating:FindFirstChild(LocalPlayer.Name) then
+                local tcs = game:GetService("TextChatService")
+                local cfg  = tcs:FindFirstChildOfClass("ChatWindowConfiguration")
+                if cfg then cfg.Enabled = false end
+            end
+        end)
+    end
+end
+
+
+-- ╔══════════════════════════════════╗
+-- ║             OBSIDIAN UI          ║
+-- ╚══════════════════════════════════╝
+local Window = Library:CreateWindow({
+    Title            = "XXMZ HUB",
+    Footer           = "Made by 29, Big Blox",
+    ShowCustomCursor = true,
+    NotifySide       = "Right",
+})
+
+local Tabs = {
+    Main     = Window:AddTab("Main", "home"),
+    Settings = Window:AddTab("Settings", "settings"),
+}
+
+local MainLeft = Tabs.Main:AddLeftGroupbox("Automação", "zap")
+
+MainLeft:AddToggle("AutoProva", {
+    Text    = "Auto Mapa",
+    Default = false,
+    Callback = function(v)
+        Config.AutoProva = v
+        if v then autoProvaLoop() end
+    end,
+})
+
+MainLeft:AddLabel("Cozinha, Fábrica (beta), Hexágonos, Socos", true)
+
+MainLeft:AddDivider()
+
+MainLeft:AddToggle("AutoClick", {
+    Text    = "Auto Click",
+    Default = false,
+    Callback = function(v) Config.AutoClick = v end,
+})
+
+MainLeft:AddToggle("InstantInteract", {
+    Text    = "Instant Interact (Fazenda)",
+    Default = false,
+    Callback = function(v)
+        Config.InstantInteract = v
+        applyInstantInteract(v)
+    end,
+})
+
+local MainRight = Tabs.Main:AddRightGroupbox("Botão Surpresa", "star")
+
+MainRight:AddToggle("AutoButton", {
+    Text    = "Auto Botão Surpresa",
+    Default = false,
+    Callback = function(v) Config.AutoButton = v end,
+})
+
+MainRight:AddToggle("ButtonESP", {
+    Text    = "ESP Botão Surpresa",
+    Default = false,
+    Callback = function(v)
+        Config.ButtonESP = v
+        if not v then clearAllESP() end
+    end,
+})
+
+MainRight:AddDivider()
+
+MainRight:AddToggle("ShowChat", {
+    Text    = "Show Chat",
+    Tooltip = "Mantém o chat sempre visível",
+    Default = false,
+    Callback = function(v) applyShowChat(v) end,
+})
+
+-- SaveManager & ThemeManager
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({
+    "AutoProva", "AutoClick", "InstantInteract",
+    "AutoButton", "ButtonESP", "ShowChat", "MenuKeybind"
+})
+ThemeManager:SetFolder("XXMZHub")
+SaveManager:SetFolder("XXMZHub/configs")
+SaveManager:BuildConfigSection(Tabs.Settings)
+ThemeManager:ApplyToTab(Tabs.Settings)
+
+local SettingsMiscBox = Tabs.Settings:AddLeftGroupbox("Geral", "tool")
+
+SettingsMiscBox:AddButton({
+    Text = "Unload",
+    Func = function()
+        Library:Unload()
+    end,
+})
+
+Library:Notify({
+    Title       = "XXMZ HUB",
+    Description = "Carregado com sucesso!",
+    Time        = 4,
+})
+
+SaveManager:LoadAutoloadConfig()

@@ -75,7 +75,7 @@ end
 local provaCoords = {
     ProvaDosHexagonos = Vector3.new(-965, 100, 713),
     ProvaDosSocos     = Vector3.new(-965, 100, 713),
-    ProvaFabrica      = Vector3.new(-965, 100, 713),
+    ProvaFabrica      = Vector3.new(140, 21, 526),
 }
 
 local function equipFirstItem()

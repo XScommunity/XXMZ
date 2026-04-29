@@ -33,7 +33,7 @@ local Camera = Workspace.CurrentCamera
 
 -- ==================== WINDOW CREATION ====================
 local Window = Fluent:CreateWindow({
-    Title = "XXMZ HUB - Notoriety v2.2",
+    Title = "XXMZ HUB - UPDATE TODAY!!! 29/04 COMING KILL AURA AND KILL ALL!!!!!!",
     SubTitle = "by 29 :) - Versão ADMIN",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),

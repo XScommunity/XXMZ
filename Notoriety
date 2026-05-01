@@ -1,6 +1,6 @@
 --[[
     XXMZ HUB - Notoriety
-    Keyless, open source
+    Obsidian Library Port v2.2
     By 29 :)
 ]]
 
@@ -86,9 +86,6 @@ local codeTableHighlights = {}
 
 local bigLootESPEnabled  = false
 local bigLootHighlights  = {}
-
-local autoShadowEnabled  = false
-local shadowTwoBags      = false
 
 -- ==================== UTILITIES ====================
 local function getRS()
@@ -543,19 +540,22 @@ KillBox:AddToggle("KillAll", {
                             if not tool then break end
 
                             anyFound = true
+                            -- teleporta até o guard
                             hrp.CFrame = nhrp.CFrame * CFrame.new(0, 0, -2)
 
+                            -- spama até morrer (max 20 hits pra não travar)
                             local hits = 0
                             while hum.Health > 0 and hits < 20 and Toggles.KillAll.Value do
                                 tool = char:FindFirstChildOfClass("Tool") or tool
                                 remote:FireServer(npc, tool, 50)
                                 hits += 1
-                                task.wait()
+                                task.wait() -- mínimo possível (1 frame)
                             end
                         end
                     end
 
                     hrp.CFrame = originalCF
+                    -- se não achou ninguém, espera um pouco antes de varrer de novo
                     if not anyFound then task.wait(1) end
                 end
             end)
@@ -609,6 +609,7 @@ ESPBox:AddToggle("PoliceESP", {
                         local f = Workspace:FindFirstChild(fn)
                         if f then
                             for _, c in pairs(f:GetChildren()) do
+                                -- pula guards com KeyCard (cobertos pelo KeyGuard ESP)
                                 local hasKeyCard = false
                                 for _, d in pairs(c:GetDescendants()) do
                                     if d.Name == "KeyCard" and d:IsA("BasePart") then
@@ -644,6 +645,7 @@ ESPBox:AddToggle("KeyGuardESP", {
                         local f = Workspace:FindFirstChild(fn)
                         if f then
                             for _, c in pairs(f:GetChildren()) do
+                                -- verifica se algum descendente se chama KeyCard e é BasePart
                                 for _, d in pairs(c:GetDescendants()) do
                                     if d.Name == "KeyCard" and d:IsA("BasePart") then
                                         local h = createHighlight(c, Color3.fromRGB(255, 200, 0))
@@ -833,31 +835,22 @@ OzelaBox:AddToggle("CodeTableESP", {
 
 OzelaBox:AddDivider()
 
-local codeLabel = OzelaBox:AddLabel("Clique em Detectar para escanear.", true, "CodeLabel")
-local usbLabel  = OzelaBox:AddLabel("Clique em Check USB para ver o código.", true, "USBLabel")
-
 OzelaBox:AddButton({
     Text = "Detectar Color Box Code",
     Func = function()
         local info = detectColorBoxCode()
-        local txt = ""
-        if #info.codes > 0 then
-            for _, c in ipairs(info.codes) do
-                local m = c.isCorrect and "✅" or "❌"
-                txt ..= m .. " Code #" .. c.number .. ": " .. c.title .. "\n"
-            end
-        else
-            txt = "❌ Nenhum código detectado\n"
+        if #info.codes == 0 and info.correctCode == "" then
+            notify("Color Box", "❌ Nenhum código detectado", 4)
+            return
         end
-        if info.correctCode ~= ""   then txt ..= "✅ Correto: " .. info.correctCode .. "\n" end
-        if info.colorSequence ~= "" then txt ..= "🎨 Cores: " .. info.colorSequence .. "\n" end
-        if info.colorBoxName ~= ""  then txt ..= "📦 Box: " .. info.colorBoxName end
-        Options.CodeLabel:SetText(txt ~= "" and txt or "Nada detectado")
-
         if info.correctCode ~= "" then
-            notify("Color Box ✅", "Código: " .. info.correctCode .. " | Box: " .. info.colorBoxName .. " | Cores: " .. info.colorSequence, 6)
-        else
-            notify("Color Box ❌", "Nenhum código detectado ainda!", 4)
+            notify("Color Box ✅", "Correto: " .. info.correctCode, 6)
+        end
+        if info.colorSequence ~= "" then
+            notify("Color Box 🎨", "Cores: " .. info.colorSequence, 6)
+        end
+        if info.colorBoxName ~= "" then
+            notify("Color Box 📦", "Box: " .. info.colorBoxName, 6)
         end
     end
 })
@@ -866,8 +859,7 @@ OzelaBox:AddButton({
     Text = "Check USB Code",
     Func = function()
         local s = getUSBStatus()
-        Options.USBLabel:SetText("💻 USB: " .. s)
-        notify("USB Code 💻", s, 5)
+        notify("USB 💻", s, 5)
     end
 })
 
@@ -1003,6 +995,7 @@ OzelaBox:AddButton({
 })
 
 -- ==================== TAB: SETTINGS ====================
+
 local MenuGroup = Tabs.Settings:AddLeftGroupbox("Menu", "wrench")
 
 MenuGroup:AddToggle("KeybindMenuOpen", {
@@ -1052,12 +1045,10 @@ local function cleanup()
     end
     visualKillAllActive = false
     killAuraEnabled     = false
-    autoShadowEnabled   = false
-    bigLootESPEnabled   = false
     Workspace.Gravity   = 196.2
 end
 
 Players.LocalPlayer.OnTeleport:Connect(cleanup)
 Library:OnUnload(cleanup)
 
-notify("XXMZ HUB v2.2", "Recently updated, doing BUG FIXES [reporte bugs in disco server]", 5)
+notify("XXMZ HUB v2.2", "Carregado com sucesso! ✅", 5)

@@ -1,0 +1,1593 @@
+-- infectious smile (obsidian library)
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local Window = Library:CreateWindow({
+    Title = "XXMZ HUB",
+    Footer = "INFECTIOUS SMILE",
+    ShowCustomCursor = true,
+    NotifySide = "Right",
+})
+
+local Tabs = {
+    Main    = Window:AddTab("Main", "user"),
+    Exploits = Window:AddTab("Exploits", "zap"),
+    Player  = Window:AddTab("Player", "activity"),
+    Visual  = Window:AddTab("Visual", "eye"),
+    ["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+local plr = game.Players.LocalPlayer
+
+-- quick cleanup on load
+pcall(function()
+    if workspace.Map:FindFirstChild("AntiHack") then
+        workspace.Map.AntiHack:Destroy()
+    end
+end)
+
+-- helper
+local function getAllTools()
+    local tools = {}
+    if plr.Character then
+        for _, item in plr.Character:GetChildren() do
+            if item:IsA("Tool") then table.insert(tools, item) end
+        end
+    end
+    for _, item in plr.Backpack:GetChildren() do
+        if item:IsA("Tool") then table.insert(tools, item) end
+    end
+    return tools
+end
+
+-- ══════════════════════════════════════════
+--  TAB MAIN — groupbox HUMAN
+-- ══════════════════════════════════════════
+
+local HumanBox = Tabs.Main:AddLeftGroupbox("Human", "sword")
+
+-- Dropdown: 0 Cooldown
+HumanBox:AddDropdown("CooldownDropdown", {
+    Values = { "Bat", "Bottle", "Katana", "Branch", "Spare", "Chain" },
+    Default = 1,
+    Multi = false,
+    Text = "0 Cooldown - Pick Weapon",
+    Tooltip = "Zera o cooldown da arma escolhida",
+    Callback = function(Value)
+        for _, tool in getAllTools() do
+            if tool.Name == Value and tool:FindFirstChild("Cooldown") then
+                tool.Cooldown.Value = 0
+            end
+        end
+    end,
+})
+
+-- Auto Hitbox Expander (toggle)
+local autoHitbox = false
+local savedHitboxSize = 15
+
+HumanBox:AddToggle("AutoHitboxExpander", {
+    Text = "Auto Hitbox Expander",
+    Default = false,
+    Tooltip = "Expande automaticamente o hitbox das armas equipadas",
+    Callback = function(v)
+        autoHitbox = v
+        task.spawn(function()
+            while autoHitbox do
+                task.wait(0.1)
+                if plr.Character then
+                    local tool = plr.Character:FindFirstChildOfClass("Tool")
+                    if tool then
+                        for _, part in tool:GetDescendants() do
+                            if part:IsA("BasePart") and part:FindFirstChild("TouchInterest") then
+                                part.Size = Vector3.new(savedHitboxSize, savedHitboxSize, savedHitboxSize)
+                                part.Transparency = 0.7
+                                part.Massless = true
+                                if not part:FindFirstChildOfClass("SelectionBox") then
+                                    local box = Instance.new("SelectionBox", part)
+                                    box.Adornee = part
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+-- Slider: Hitbox Expander Size
+HumanBox:AddSlider("HitboxSizeSlider", {
+    Text = "Hitbox Expander Size",
+    Default = 15,
+    Min = 0,
+    Max = 60,
+    Rounding = 0,
+    Tooltip = "Tamanho do hitbox expandido",
+    Callback = function(v)
+        savedHitboxSize = v
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  EQUIP UR WEAPON — Melhorado
+-- ══════════════════════════════════════════
+
+local function getMainWeaponName()
+    local ok, wName = pcall(function()
+        local val = plr.Marketplace["Main Weapon"].Equipped.Value
+        return val ~= "Default" and val or "Bat"
+    end)
+    return ok and wName or "Bat"
+end
+
+HumanBox:AddButton({
+    Text = "Equip ur weapon",
+    Tooltip = "Pega a arma principal automaticamente (teleporte inteligente)",
+    Func = function()
+        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local wName = getMainWeaponName()
+        local backpack = plr.Backpack
+        local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+
+        if backpack:FindFirstChild(wName) then
+            if humanoid then
+                humanoid:EquipTool(backpack[wName])
+            end
+            Library:Notify({
+                Title = "Equip Weapon",
+                Description = "Equipped " .. wName .. " from backpack!",
+                Time = 3,
+            })
+            return
+        end
+
+        if plr.Character:FindFirstChild(wName) then
+            Library:Notify({
+                Title = "Equip Weapon",
+                Description = "You already have " .. wName .. " equipped!",
+                Time = 3,
+            })
+            return
+        end
+
+        local vendorHitbox = workspace.Map.HumanBase.Vendor.BatCollection.HitBox
+        local detector = workspace.Map.HumanBase.Vendor.BatCollection.ClickDetector
+
+        local oldPos = hrp.CFrame
+        local startTime = tick()
+
+        Library:Notify({
+            Title = "Equip Weapon",
+            Description = "Teleporting to vendor...",
+            Time = 2,
+        })
+
+        repeat
+            task.wait()
+            if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                Library:Notify({
+                    Title = "Equip Weapon",
+                    Description = "Character lost, aborting!",
+                    Time = 3,
+                })
+                return
+            end
+            hrp = plr.Character.HumanoidRootPart
+            hrp.CFrame = vendorHitbox.CFrame + Vector3.new(0, 3, 0)
+            detector.MaxActivationDistance = 9e9
+            fireclickdetector(detector)
+        until backpack:FindFirstChild(wName) or tick() - startTime > 5
+
+        if backpack:FindFirstChild(wName) then
+            humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:EquipTool(backpack[wName])
+            end
+            Library:Notify({
+                Title = "Equip Weapon",
+                Description = "Got " .. wName .. "! Teleporting back...",
+                Time = 2,
+            })
+        else
+            Library:Notify({
+                Title = "Equip Weapon",
+                Description = "Failed to get weapon (timeout)!",
+                Time = 3,
+            })
+        end
+
+        task.wait(0.4)
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            repeat
+                task.wait()
+                plr.Character.HumanoidRootPart.CFrame = oldPos
+            until (plr.Character.HumanoidRootPart.Position - oldPos.Position).Magnitude < 3
+        end
+    end,
+})
+
+-- Swing Aura
+HumanBox:AddToggle("SwingAura", {
+    Text = "Swing Aura",
+    Default = false,
+    Tooltip = "Fica disparando o SwingEvent da ferramenta na mão automaticamente",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.SwingAura.Value do
+                task.wait(0.05)
+                pcall(function()
+                    local char = plr.Character
+                    if not char then return end
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if not tool then return end
+                    local swingEvent = tool:FindFirstChild("SwingEvent")
+                    if swingEvent then
+                        swingEvent:FireServer()
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  KILL PLAYER — Human groupbox
+-- ══════════════════════════════════════════
+
+local function getPlayerList()
+    local list = {}
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= plr then
+            table.insert(list, p.Name)
+        end
+    end
+    return list
+end
+
+local function getPlayerByName(name)
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p.Name == name then return p end
+    end
+    return nil
+end
+
+local function sameTeam(p1, p2)
+    local ok, result = pcall(function()
+        return p1.Team == p2.Team
+    end)
+    return ok and result
+end
+
+local function grabWeapon()
+    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+
+    local wName = getMainWeaponName()
+    local backpack = plr.Backpack
+
+    if backpack:FindFirstChild(wName) then
+        local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:EquipTool(backpack[wName])
+        end
+        return true
+    end
+
+    local vendorHitbox = workspace.Map.HumanBase.Vendor.BatCollection.HitBox
+    local detector = workspace.Map.HumanBase.Vendor.BatCollection.ClickDetector
+
+    local startTime = tick()
+
+    repeat
+        task.wait()
+        if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return false end
+        hrp = plr.Character.HumanoidRootPart
+        hrp.CFrame = vendorHitbox.CFrame + Vector3.new(0, 3, 0)
+        detector.MaxActivationDistance = 9e9
+        fireclickdetector(detector)
+    until backpack:FindFirstChild(wName) or tick() - startTime > 5
+
+    if backpack:FindFirstChild(wName) then
+        local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:EquipTool(backpack[wName])
+        end
+        return true
+    end
+    return false
+end
+
+HumanBox:AddDivider()
+
+local killPlayerDropdown = HumanBox:AddDropdown("KillPlayerTarget", {
+    Values = getPlayerList(),
+    Default = 1,
+    Multi = false,
+    Text = "Kill Player — Target",
+    Tooltip = "Selecione o jogador alvo para matar",
+    Callback = function() end,
+})
+
+HumanBox:AddButton({
+    Text = "Refresh Player List",
+    Tooltip = "Atualiza a lista de jogadores no dropdown",
+    Func = function()
+        killPlayerDropdown:SetValues(getPlayerList())
+        Library:Notify({
+            Title = "Kill Player",
+            Description = "Player list refreshed!",
+            Time = 3,
+        })
+    end,
+})
+
+local killPlayerRunning = false
+
+HumanBox:AddToggle("KillPlayerToggle", {
+    Text = "Kill Player",
+    Default = false,
+    Tooltip = "Teleporta no jogador alvo e ataca com a arma",
+    Callback = function(v)
+        killPlayerRunning = v
+        if not v then return end
+
+        task.spawn(function()
+            while killPlayerRunning and Toggles.KillPlayerToggle.Value do
+                local targetName = Options.KillPlayerTarget.Value
+                if not targetName or targetName == "" then
+                    task.wait(0.5)
+                    continue
+                end
+
+                local target = getPlayerByName(targetName)
+                if not target then
+                    Library:Notify({
+                        Title = "Kill Player",
+                        Description = "Target left the game!",
+                        Time = 3,
+                    })
+                    Toggles.KillPlayerToggle:SetValue(false)
+                    break
+                end
+
+                if sameTeam(plr, target) then
+                    Library:Notify({
+                        Title = "Kill Player",
+                        Description = "He is human too",
+                        Time = 4,
+                    })
+                    Toggles.KillPlayerToggle:SetValue(false)
+                    break
+                end
+
+                if target.Character then
+                    local targetHumanoid = target.Character:FindFirstChildOfClass("Humanoid")
+                    if targetHumanoid and targetHumanoid.Health <= 0 then
+                        local char = plr.Character
+                        if char then
+                            local hum = char:FindFirstChildOfClass("Humanoid")
+                            if hum then
+                                hum.Health = 0
+                            end
+                        end
+                        Toggles.KillPlayerToggle:SetValue(false)
+                        break
+                    end
+                end
+
+                local myChar = plr.Character
+                if not myChar then
+                    task.wait(1)
+                    continue
+                end
+                local myHumanoid = myChar:FindFirstChildOfClass("Humanoid")
+                if not myHumanoid or myHumanoid.Health <= 0 then
+                    task.wait(3)
+                    continue
+                end
+
+                local currentTool = myChar:FindFirstChildOfClass("Tool")
+                if not currentTool then
+                    local success = grabWeapon()
+                    if not success then
+                        task.wait(0.5)
+                        continue
+                    end
+                    task.wait(0.3)
+                    currentTool = myChar:FindFirstChildOfClass("Tool")
+                end
+
+                if not currentTool then
+                    if myHumanoid then
+                        myHumanoid.Health = 0
+                    end
+                    task.wait(3)
+                    continue
+                end
+
+                for _, part in currentTool:GetDescendants() do
+                    if part:IsA("BasePart") and part:FindFirstChild("TouchInterest") then
+                        part.Size = Vector3.new(savedHitboxSize, savedHitboxSize, savedHitboxSize)
+                        part.Transparency = 0.7
+                        part.Massless = true
+                    end
+                end
+
+                if target.Character then
+                    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+                    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                    if targetHRP and myHRP then
+                        local offset = targetHRP.CFrame.LookVector * -3
+                        myHRP.CFrame = CFrame.new(targetHRP.Position + offset, targetHRP.Position)
+                    end
+                end
+
+                pcall(function()
+                    local swingEvent = currentTool:FindFirstChild("SwingEvent")
+                    if swingEvent then
+                        swingEvent:FireServer()
+                    end
+                end)
+
+                task.wait(0.05)
+            end
+        end)
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  KILL ALL — Mata todos que não são do time
+-- ══════════════════════════════════════════
+
+HumanBox:AddDivider()
+
+local killAllRunning = false
+local killAllCurrentTarget = nil
+
+HumanBox:AddToggle("KillAllToggle", {
+    Text = "Kill All (Enemy Team)",
+    Default = false,
+    Tooltip = "Mata todos os jogadores que não são do seu time, um por um",
+    Callback = function(v)
+        killAllRunning = v
+        if not v then
+            killAllCurrentTarget = nil
+            return
+        end
+
+        task.spawn(function()
+            while killAllRunning and Toggles.KillAllToggle.Value do
+                local enemies = {}
+                for _, p in ipairs(game.Players:GetPlayers()) do
+                    if p ~= plr and p.Character then
+                        local targetHumanoid = p.Character:FindFirstChildOfClass("Humanoid")
+                        if targetHumanoid and targetHumanoid.Health > 0 then
+                            local isEnemy = true
+                            pcall(function()
+                                if plr.Team and p.Team and plr.Team == p.Team then
+                                    isEnemy = false
+                                end
+                            end)
+                            if isEnemy then
+                                table.insert(enemies, p)
+                            end
+                        end
+                    end
+                end
+
+                if #enemies == 0 then
+                    Library:Notify({
+                        Title = "Kill All",
+                        Description = "No enemies found! Waiting...",
+                        Time = 3,
+                    })
+                    task.wait(2)
+                    continue
+                end
+
+                killAllCurrentTarget = enemies[1]
+                local target = killAllCurrentTarget
+                local targetName = target.Name
+
+                Library:Notify({
+                    Title = "Kill All",
+                    Description = "Targeting: " .. targetName,
+                    Time = 2,
+                })
+
+                while killAllRunning and Toggles.KillAllToggle.Value do
+                    if not target or not target.Parent then
+                        Library:Notify({
+                            Title = "Kill All",
+                            Description = targetName .. " left, switching target...",
+                            Time = 2,
+                        })
+                        break
+                    end
+
+                    if target.Character then
+                        local targetHumanoid = target.Character:FindFirstChildOfClass("Humanoid")
+                        if not targetHumanoid or targetHumanoid.Health <= 0 then
+                            Library:Notify({
+                                Title = "Kill All",
+                                Description = targetName .. " killed! Next target...",
+                                Time = 2,
+                            })
+                            break
+                        end
+                    end
+
+                    local myChar = plr.Character
+                    if not myChar then
+                        task.wait(1)
+                        continue
+                    end
+                    local myHumanoid = myChar:FindFirstChildOfClass("Humanoid")
+                    if not myHumanoid or myHumanoid.Health <= 0 then
+                        task.wait(3)
+                        continue
+                    end
+
+                    local currentTool = myChar:FindFirstChildOfClass("Tool")
+                    if not currentTool then
+                        local success = grabWeapon()
+                        if not success then
+                            task.wait(0.5)
+                            continue
+                        end
+                        task.wait(0.3)
+                        currentTool = myChar:FindFirstChildOfClass("Tool")
+                    end
+
+                    if not currentTool then
+                        if myHumanoid then
+                            myHumanoid.Health = 0
+                        end
+                        task.wait(3)
+                        continue
+                    end
+
+                    for _, part in currentTool:GetDescendants() do
+                        if part:IsA("BasePart") and part:FindFirstChild("TouchInterest") then
+                            part.Size = Vector3.new(savedHitboxSize, savedHitboxSize, savedHitboxSize)
+                            part.Transparency = 0.7
+                            part.Massless = true
+                        end
+                    end
+
+                    if target.Character then
+                        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+                        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                        if targetHRP and myHRP then
+                            local offset = targetHRP.CFrame.LookVector * -3
+                            myHRP.CFrame = CFrame.new(targetHRP.Position + offset, targetHRP.Position)
+                        end
+                    end
+
+                    pcall(function()
+                        local swingEvent = currentTool:FindFirstChild("SwingEvent")
+                        if swingEvent then
+                            swingEvent:FireServer()
+                        end
+                    end)
+
+                    task.wait(0.05)
+                end
+
+                killAllCurrentTarget = nil
+                task.wait(0.5)
+            end
+        end)
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  KILL ALL V2 — Embaixo do alvo + plataforma (MAIS DISTANTE)
+-- ══════════════════════════════════════════
+
+HumanBox:AddDivider()
+
+local killAllV2Running = false
+local killAllV2CurrentTarget = nil
+local killAllV2Platform = nil
+
+local function createUnderPlatform()
+    pcall(function()
+        if killAllV2Platform then
+            killAllV2Platform:Destroy()
+            killAllV2Platform = nil
+        end
+    end)
+
+    local myChar = plr.Character
+    if not myChar then return nil end
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return nil end
+
+    local platform = Instance.new("Part")
+    platform.Name = "KillAllV2_Platform"
+    platform.Size = Vector3.new(8, 1, 8)
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 1
+    platform.CanQuery = false
+    platform.CanTouch = false
+    platform.Parent = workspace
+
+    killAllV2Platform = platform
+    return platform
+end
+
+local function updatePlatformUnderTarget(targetHRP)
+    if not killAllV2Platform or not killAllV2Platform.Parent then return end
+    if not targetHRP or not targetHRP.Parent then return end
+
+    local feetPos = targetHRP.Position - Vector3.new(0, 3, 0)
+    killAllV2Platform.CFrame = CFrame.new(feetPos.X, feetPos.Y - 4.5, feetPos.Z)
+end
+
+local function destroyV2Platform()
+    pcall(function()
+        if killAllV2Platform then
+            killAllV2Platform:Destroy()
+            killAllV2Platform = nil
+        end
+    end)
+end
+
+HumanBox:AddToggle("KillAllV2Toggle", {
+    Text = "Kill All V2 (Under Target)",
+    Default = false,
+    Tooltip = "Mata todos os inimigos ficando EMBAIXO deles (invisível) com plataforma",
+    Callback = function(v)
+        killAllV2Running = v
+        if not v then
+            killAllV2CurrentTarget = nil
+            destroyV2Platform()
+            return
+        end
+
+        task.spawn(function()
+            while killAllV2Running and Toggles.KillAllV2Toggle.Value do
+                local enemies = {}
+                for _, p in ipairs(game.Players:GetPlayers()) do
+                    if p ~= plr and p.Character then
+                        local targetHumanoid = p.Character:FindFirstChildOfClass("Humanoid")
+                        if targetHumanoid and targetHumanoid.Health > 0 then
+                            local isEnemy = true
+                            pcall(function()
+                                if plr.Team and p.Team and plr.Team == p.Team then
+                                    isEnemy = false
+                                end
+                            end)
+                            if isEnemy then
+                                table.insert(enemies, p)
+                            end
+                        end
+                    end
+                end
+
+                if #enemies == 0 then
+                    Library:Notify({
+                        Title = "Kill All V2",
+                        Description = "No enemies found! Waiting...",
+                        Time = 3,
+                    })
+                    destroyV2Platform()
+                    task.wait(2)
+                    continue
+                end
+
+                killAllV2CurrentTarget = enemies[1]
+                local target = killAllV2CurrentTarget
+                local targetName = target.Name
+
+                Library:Notify({
+                    Title = "Kill All V2",
+                    Description = "Targeting: " .. targetName,
+                    Time = 2,
+                })
+
+                createUnderPlatform()
+
+                while killAllV2Running and Toggles.KillAllV2Toggle.Value do
+                    if not target or not target.Parent then
+                        Library:Notify({
+                            Title = "Kill All V2",
+                            Description = targetName .. " left, switching target...",
+                            Time = 2,
+                        })
+                        destroyV2Platform()
+                        break
+                    end
+
+                    if target.Character then
+                        local targetHumanoid = target.Character:FindFirstChildOfClass("Humanoid")
+                        if not targetHumanoid or targetHumanoid.Health <= 0 then
+                            Library:Notify({
+                                Title = "Kill All V2",
+                                Description = targetName .. " killed! Next target...",
+                                Time = 2,
+                            })
+                            destroyV2Platform()
+                            break
+                        end
+                    end
+
+                    local myChar = plr.Character
+                    if not myChar then
+                        task.wait(1)
+                        continue
+                    end
+                    local myHumanoid = myChar:FindFirstChildOfClass("Humanoid")
+                    if not myHumanoid or myHumanoid.Health <= 0 then
+                        destroyV2Platform()
+                        task.wait(3)
+                        continue
+                    end
+
+                    local currentTool = myChar:FindFirstChildOfClass("Tool")
+                    if not currentTool then
+                        local success = grabWeapon()
+                        if not success then
+                            task.wait(0.5)
+                            continue
+                        end
+                        task.wait(0.3)
+                        currentTool = myChar:FindFirstChildOfClass("Tool")
+                    end
+
+                    if not currentTool then
+                        if myHumanoid then
+                            myHumanoid.Health = 0
+                        end
+                        destroyV2Platform()
+                        task.wait(3)
+                        continue
+                    end
+
+                    for _, part in currentTool:GetDescendants() do
+                        if part:IsA("BasePart") and part:FindFirstChild("TouchInterest") then
+                            part.Size = Vector3.new(savedHitboxSize, savedHitboxSize, savedHitboxSize)
+                            part.Transparency = 0.7
+                            part.Massless = true
+                        end
+                    end
+
+                    if target.Character then
+                        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+                        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                        if targetHRP and myHRP then
+                            -- MAIS DISTANTE: -6.5 embaixo em vez de -4.5
+                            local underPos = targetHRP.Position - Vector3.new(0, 6.5, 0)
+                            myHRP.CFrame = CFrame.new(underPos, targetHRP.Position)
+
+                            updatePlatformUnderTarget(targetHRP)
+                        end
+                    end
+
+                    pcall(function()
+                        local swingEvent = currentTool:FindFirstChild("SwingEvent")
+                        if swingEvent then
+                            swingEvent:FireServer()
+                        end
+                    end)
+
+                    task.wait(0.05)
+                end
+
+                killAllV2CurrentTarget = nil
+                destroyV2Platform()
+                task.wait(0.5)
+            end
+            destroyV2Platform()
+        end)
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  KILL ALL V3 — Por CIMA do alvo + plataforma
+-- ══════════════════════════════════════════
+
+HumanBox:AddDivider()
+
+local killAllV3Running = false
+local killAllV3CurrentTarget = nil
+local killAllV3Platform = nil
+
+local function createOverPlatform()
+    pcall(function()
+        if killAllV3Platform then
+            killAllV3Platform:Destroy()
+            killAllV3Platform = nil
+        end
+    end)
+
+    local myChar = plr.Character
+    if not myChar then return nil end
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return nil end
+
+    local platform = Instance.new("Part")
+    platform.Name = "KillAllV3_Platform"
+    platform.Size = Vector3.new(8, 1, 8)
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 1
+    platform.CanQuery = false
+    platform.CanTouch = false
+    platform.Parent = workspace
+
+    killAllV3Platform = platform
+    return platform
+end
+
+local function updatePlatformOverTarget(targetHRP)
+    if not killAllV3Platform or not killAllV3Platform.Parent then return end
+    if not targetHRP or not targetHRP.Parent then return end
+
+    -- Platform stays above the target (head level + a bit)
+    local headPos = targetHRP.Position + Vector3.new(0, 3, 0)
+    killAllV3Platform.CFrame = CFrame.new(headPos.X, headPos.Y + 5, headPos.Z)
+end
+
+local function destroyV3Platform()
+    pcall(function()
+        if killAllV3Platform then
+            killAllV3Platform:Destroy()
+            killAllV3Platform = nil
+        end
+    end)
+end
+
+HumanBox:AddToggle("KillAllV3Toggle", {
+    Text = "Kill All V3 (Over Target)",
+    Default = false,
+    Tooltip = "Mata todos os inimigos ficando POR CIMA deles (mais seguro, menos risco de morrer)",
+    Callback = function(v)
+        killAllV3Running = v
+        if not v then
+            killAllV3CurrentTarget = nil
+            destroyV3Platform()
+            return
+        end
+
+        task.spawn(function()
+            while killAllV3Running and Toggles.KillAllV3Toggle.Value do
+                local enemies = {}
+                for _, p in ipairs(game.Players:GetPlayers()) do
+                    if p ~= plr and p.Character then
+                        local targetHumanoid = p.Character:FindFirstChildOfClass("Humanoid")
+                        if targetHumanoid and targetHumanoid.Health > 0 then
+                            local isEnemy = true
+                            pcall(function()
+                                if plr.Team and p.Team and plr.Team == p.Team then
+                                    isEnemy = false
+                                end
+                            end)
+                            if isEnemy then
+                                table.insert(enemies, p)
+                            end
+                        end
+                    end
+                end
+
+                if #enemies == 0 then
+                    Library:Notify({
+                        Title = "Kill All V3",
+                        Description = "No enemies found! Waiting...",
+                        Time = 3,
+                    })
+                    destroyV3Platform()
+                    task.wait(2)
+                    continue
+                end
+
+                killAllV3CurrentTarget = enemies[1]
+                local target = killAllV3CurrentTarget
+                local targetName = target.Name
+
+                Library:Notify({
+                    Title = "Kill All V3",
+                    Description = "Targeting: " .. targetName,
+                    Time = 2,
+                })
+
+                createOverPlatform()
+
+                while killAllV3Running and Toggles.KillAllV3Toggle.Value do
+                    if not target or not target.Parent then
+                        Library:Notify({
+                            Title = "Kill All V3",
+                            Description = targetName .. " left, switching target...",
+                            Time = 2,
+                        })
+                        destroyV3Platform()
+                        break
+                    end
+
+                    if target.Character then
+                        local targetHumanoid = target.Character:FindFirstChildOfClass("Humanoid")
+                        if not targetHumanoid or targetHumanoid.Health <= 0 then
+                            Library:Notify({
+                                Title = "Kill All V3",
+                                Description = targetName .. " killed! Next target...",
+                                Time = 2,
+                            })
+                            destroyV3Platform()
+                            break
+                        end
+                    end
+
+                    local myChar = plr.Character
+                    if not myChar then
+                        task.wait(1)
+                        continue
+                    end
+                    local myHumanoid = myChar:FindFirstChildOfClass("Humanoid")
+                    if not myHumanoid or myHumanoid.Health <= 0 then
+                        destroyV3Platform()
+                        task.wait(3)
+                        continue
+                    end
+
+                    local currentTool = myChar:FindFirstChildOfClass("Tool")
+                    if not currentTool then
+                        local success = grabWeapon()
+                        if not success then
+                            task.wait(0.5)
+                            continue
+                        end
+                        task.wait(0.3)
+                        currentTool = myChar:FindFirstChildOfClass("Tool")
+                    end
+
+                    if not currentTool then
+                        if myHumanoid then
+                            myHumanoid.Health = 0
+                        end
+                        destroyV3Platform()
+                        task.wait(3)
+                        continue
+                    end
+
+                    for _, part in currentTool:GetDescendants() do
+                        if part:IsA("BasePart") and part:FindFirstChild("TouchInterest") then
+                            part.Size = Vector3.new(savedHitboxSize, savedHitboxSize, savedHitboxSize)
+                            part.Transparency = 0.7
+                            part.Massless = true
+                        end
+                    end
+
+                    if target.Character then
+                        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+                        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                        if targetHRP and myHRP then
+                            -- POR CIMA: +6.5 acima do HRP (cabeça do alvo)
+                            local overPos = targetHRP.Position + Vector3.new(0, 6.5, 0)
+                            -- Olha pra baixo no alvo
+                            myHRP.CFrame = CFrame.new(overPos, targetHRP.Position)
+
+                            updatePlatformOverTarget(targetHRP)
+                        end
+                    end
+
+                    pcall(function()
+                        local swingEvent = currentTool:FindFirstChild("SwingEvent")
+                        if swingEvent then
+                            swingEvent:FireServer()
+                        end
+                    end)
+
+                    task.wait(0.05)
+                end
+
+                killAllV3CurrentTarget = nil
+                destroyV3Platform()
+                task.wait(0.5)
+            end
+            destroyV3Platform()
+        end)
+    end,
+})
+
+-- Update player list when players join/leave
+game.Players.PlayerAdded:Connect(function()
+    task.wait(0.5)
+    killPlayerDropdown:SetValues(getPlayerList())
+end)
+
+game.Players.PlayerRemoving:Connect(function()
+    task.wait(0.5)
+    killPlayerDropdown:SetValues(getPlayerList())
+end)
+
+-- ══════════════════════════════════════════
+--  TAB MAIN — groupbox SMILER
+-- ══════════════════════════════════════════
+
+local SmilerBox = Tabs.Main:AddRightGroupbox("Smiler", "smile")
+
+-- Be Smiler (botão)
+SmilerBox:AddButton({
+    Text = "Be Smiler",
+    Tooltip = "Infecta você mesmo",
+    Func = function()
+        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and workspace.Map.Infectors.Infector and workspace.Map.Infectors.Infector:FindFirstChild("Part") then
+            firetouchinterest(hrp, workspace.Map.Infectors.Infector.Part, 0)
+            task.delay(0.1, function() firetouchinterest(hrp, workspace.Map.Infectors.Infector.Part, 1) end)
+        end
+    end,
+})
+
+-- Im Crazy toggle (muda max do slider pra 100)
+SmilerBox:AddToggle("ImCrazy", {
+    Text = "I'm Crazy (more hitbox expander)",
+    Default = false,
+    Tooltip = "Aumenta o limite do slider de infecção para 100",
+    Callback = function(v)
+        Options.InfectReachSlider:SetMax(v and 100 or 50)
+        if not v and Options.InfectReachSlider.Value > 50 then
+            Options.InfectReachSlider:SetValue(50)
+        end
+    end,
+})
+
+-- Hitbox Expander Infection (slider 0–50, vira 0–100 com Im Crazy)
+SmilerBox:AddSlider("InfectReachSlider", {
+    Text = "Hitbox Expander Infection",
+    Default = 0,
+    Min = 0,
+    Max = 50,
+    Rounding = 0,
+    Tooltip = "Tamanho do hitbox de infecção (Z)",
+    Callback = function(n)
+        if n == 0 then return end
+        local torso = plr.Character and plr.Character:FindFirstChild("Torso")
+        if torso and torso:FindFirstChild("Part") then
+            local p = torso.Part
+            p.Size = Vector3.new(7, 2, n)
+            p.Massless = true
+            p.Transparency = 0.6
+            if not p:FindFirstChild("SelectionBox") then
+                Instance.new("SelectionBox", p).Adornee = p
+            end
+        end
+    end,
+})
+
+-- Auto Hitbox Expander (loop contínuo, reativa ao morrer/renascer)
+SmilerBox:AddToggle("AutoInfectHitbox", {
+    Text = "Auto Hitbox Expander",
+    Default = false,
+    Tooltip = "Mantém o hitbox de infecção ativo, inclusive ao morrer e renascer",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.AutoInfectHitbox.Value do
+                task.wait(0.1)
+                local char = plr.Character
+                if char then
+                    local torso = char:FindFirstChild("Torso")
+                    if torso then
+                        local p = torso:FindFirstChild("Part")
+                        if p then
+                            local val = Options.InfectReachSlider.Value
+                            if val and val > 0 then
+                                p.Size = Vector3.new(7, 2, val)
+                                p.Massless = true
+                                p.Transparency = 0.6
+                                if not p:FindFirstChildOfClass("SelectionBox") then
+                                    Instance.new("SelectionBox", p).Adornee = p
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+-- Anti Infect Blocks (toggle contínuo)
+local antiInfectRunning = false
+SmilerBox:AddToggle("AntiInfectBlocks", {
+    Text = "Anti Infect Blocks",
+    Default = false,
+    Tooltip = "Desativa colisão de blocos brancos de infecção continuamente",
+    Callback = function(v)
+        antiInfectRunning = v
+        task.spawn(function()
+            while antiInfectRunning do
+                task.wait(0.3)
+                for _, p in workspace:GetDescendants() do
+                    if p:IsA("BasePart") and p.BrickColor.Name == "Institutional white" then
+                        p.CanTouch = false
+                        p.CanQuery = false
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+-- Anti Kill Blocks (toggle contínuo)
+local antiKillRunning = false
+SmilerBox:AddToggle("AntiKillBlocks", {
+    Text = "Anti Kill Blocks",
+    Default = false,
+    Tooltip = "Desativa killbricks do mapa continuamente",
+    Callback = function(v)
+        antiKillRunning = v
+        task.spawn(function()
+            while antiKillRunning do
+                task.wait(0.3)
+                for _, part in workspace.Map:GetDescendants() do
+                    if part:IsA("BasePart") and part.Name:lower():find("kill") then
+                        part.CanTouch = false
+                        part.CanQuery = false
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+-- Anti Spearer (toggle contínuo, deleta workspace.Map.Misc.Spearer)
+SmilerBox:AddToggle("AntiSpearer", {
+    Text = "Anti Spearer",
+    Default = false,
+    Tooltip = "Deleta o Spearer do mapa continuamente",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.AntiSpearer.Value do
+                task.wait(0.3)
+                pcall(function()
+                    local s = workspace.Map.Misc:FindFirstChild("Spearer")
+                    if s then s:Destroy() end
+                end)
+            end
+        end)
+    end,
+})
+
+-- Anti Gate Castle (toggle contínuo, deleta KillGateSwitcher.Gate)
+SmilerBox:AddToggle("AntiGateCastle", {
+    Text = "Anti Gate Castle",
+    Default = false,
+    Tooltip = "Deleta a gate do castelo continuamente",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.AntiGateCastle.Value do
+                task.wait(0.3)
+                pcall(function()
+                    local gate = workspace.Map.ConstantTerrain.KillGateSwitcher:FindFirstChild("Gate")
+                    if gate then gate:Destroy() end
+                end)
+            end
+        end)
+    end,
+})
+
+-- No Cooldown (botão)
+SmilerBox:AddButton({
+    Text = "No Cooldown",
+    Tooltip = "Zera o cooldown de infecção imediatamente",
+    Func = function()
+        local inf = plr.Character and plr.Character:FindFirstChild("Infected")
+        if inf and inf:FindFirstChild("Infect") and inf.Infect:FindFirstChild("Cooldown") then
+            inf.Infect.Cooldown.Value = 0
+        end
+    end,
+})
+
+-- Auto No Cooldown (toggle loop)
+SmilerBox:AddToggle("AutoNoCooldown", {
+    Text = "Auto No Cooldown",
+    Default = false,
+    Tooltip = "Mantém o cooldown de infecção zerado continuamente",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.AutoNoCooldown.Value do
+                task.wait(0.05)
+                pcall(function()
+                    local inf = plr.Character and plr.Character:FindFirstChild("Infected")
+                    if inf and inf:FindFirstChild("Infect") and inf.Infect:FindFirstChild("Cooldown") then
+                        inf.Infect.Cooldown.Value = 0
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+-- Infect Aura (toggle — dispara InfectEvent em todos os jogadores próximos)
+SmilerBox:AddToggle("InfectAura", {
+    Text = "Infect Aura",
+    Default = false,
+    Tooltip = "Infecta jogadores próximos automaticamente via evento do servidor",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.InfectAura.Value do
+                task.wait(0.1)
+                pcall(function()
+                    local infected = plr.Character and plr.Character:FindFirstChild("Infected")
+                    local event = infected and infected:FindFirstChild("InfectEvent")
+                    if not event then return end
+                    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if not hrp then return end
+                    for _, p in game.Players:GetPlayers() do
+                        if p ~= plr and p.Character then
+                            local otherHrp = p.Character:FindFirstChild("HumanoidRootPart")
+                            if otherHrp and (hrp.Position - otherHrp.Position).Magnitude <= 20 then
+                                event:FireServer("orient_upd", -131.01300048828125)
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  TAB EXPLOITS
+-- ══════════════════════════════════════════
+
+local AutoBox = Tabs.Exploits:AddLeftGroupbox("Auto's", "refresh-cw")
+
+-- Auto Grab Keys
+AutoBox:AddToggle("AutoGrabKeys", {
+    Text = "Auto Grab Keys",
+    Default = false,
+    Tooltip = "Pega chaves automaticamente",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.AutoGrabKeys.Value do
+                task.wait(0.5)
+                pcall(function()
+                    for _, k in workspace.Particles:GetChildren() do
+                        if k:IsA("BasePart") and k.Name:lower():find("key") then
+                            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                firetouchinterest(hrp, k, 0)
+                                task.delay(0.1, function() firetouchinterest(hrp, k, 1) end)
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+-- Auto Grab Coins
+AutoBox:AddToggle("AutoGrabCoins", {
+    Text = "Auto Grab SmileCoins",
+    Default = false,
+    Tooltip = "Pega SmileCoins automaticamente",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.AutoGrabCoins.Value do
+                task.wait(0.4)
+                pcall(function()
+                    for _, c in workspace.Map.System:GetDescendants() do
+                        if c.Name == "SmileCoin" and c:FindFirstChild("TouchInterest") then
+                            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                firetouchinterest(hrp, c, 0)
+                                task.delay(0.1, function() firetouchinterest(hrp, c, 1) end)
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end,
+})
+
+-- Others groupbox
+local OthersBox = Tabs.Exploits:AddRightGroupbox("Others", "shield")
+
+-- Anti Black Hole
+OthersBox:AddToggle("AntiBlackHole", {
+    Text = "Anti Black Hole",
+    Default = false,
+    Tooltip = "Remove BodyMovers do personagem continuamente",
+    Callback = function(v)
+        task.spawn(function()
+            while Toggles.AntiBlackHole.Value do
+                task.wait(0.3)
+                if plr.Character then
+                    for _, b in plr.Character:GetDescendants() do
+                        if b:IsA("BodyMover") then b:Destroy() end
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  TAB PLAYER
+-- ══════════════════════════════════════════
+
+local PlayerBox = Tabs.Player:AddLeftGroupbox("Movement", "activity")
+
+local speedVal = 16
+local speedOn = false
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if speedOn and plr.Character and plr.Character:FindFirstChildOfClass("Humanoid") then
+            plr.Character.Humanoid.WalkSpeed = speedVal
+        end
+    end
+end)
+
+-- WalkSpeed
+PlayerBox:AddSlider("WalkSpeed", {
+    Text = "Walk Speed",
+    Default = 16,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Suffix = " stud/s",
+    Tooltip = "Velocidade de caminhada",
+    Callback = function(v)
+        speedVal = v
+        speedOn = (v ~= 16)
+    end,
+})
+
+-- Infinite Jump
+local infJump = false
+PlayerBox:AddToggle("InfiniteJump", {
+    Text = "Infinite Jump",
+    Default = false,
+    Tooltip = "Permite pular infinitamente",
+    Callback = function(v) infJump = v end,
+})
+
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if infJump and plr.Character and plr.Character:FindFirstChildOfClass("Humanoid") then
+        plr.Character.Humanoid:ChangeState("Jumping")
+    end
+end)
+
+-- Noclip
+local noclipOn = false
+PlayerBox:AddToggle("Noclip", {
+    Text = "Noclip",
+    Default = false,
+    Tooltip = "Atravessa paredes",
+    Callback = function(v) noclipOn = v end,
+})
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if noclipOn and plr.Character then
+            for _, p in plr.Character:GetDescendants() do
+                if p:IsA("BasePart") then p.CanCollide = false end
+            end
+        end
+    end
+end)
+
+-- ══════════════════════════════════════════
+--  TAB VISUAL
+-- ══════════════════════════════════════════
+
+local ESPBox    = Tabs.Visual:AddLeftGroupbox("Players", "eye")
+local VisualBox = Tabs.Visual:AddRightGroupbox("Visuals", "sun")
+
+-- ── ESP sistema ──
+local espObjects = {} -- [player] = { box, billboard }
+
+local function getTeamColor(p)
+    local ok, color = pcall(function()
+        return p.Team and p.Team.TeamColor.Color or Color3.fromRGB(255,255,255)
+    end)
+    return ok and color or Color3.fromRGB(255,255,255)
+end
+
+local function removeESP(p)
+    if espObjects[p] then
+        pcall(function()
+            if espObjects[p].box       then espObjects[p].box:Destroy()       end
+            if espObjects[p].billboard then espObjects[p].billboard:Destroy()  end
+        end)
+        espObjects[p] = nil
+    end
+end
+
+local function applyESP(p)
+    if p == plr then return end
+    removeESP(p)
+
+    local char = p.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local color = getTeamColor(p)
+
+    local hl = Instance.new("Highlight")
+    hl.Adornee        = char
+    hl.FillColor      = color
+    hl.OutlineColor   = color
+    hl.FillTransparency    = 0.6
+    hl.OutlineTransparency = 0
+    hl.DepthMode      = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Parent         = game.CoreGui
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Adornee      = hrp
+    billboard.Size         = UDim2.new(0, 140, 0, 36)
+    billboard.StudsOffset  = Vector3.new(0, 3.2, 0)
+    billboard.AlwaysOnTop  = true
+    billboard.Parent       = game.CoreGui
+
+    local lbl = Instance.new("TextLabel", billboard)
+    lbl.Size                  = UDim2.new(1, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3            = color
+    lbl.TextStrokeTransparency = 0
+    lbl.TextStrokeColor3      = Color3.new(0,0,0)
+    lbl.TextScaled            = true
+    lbl.Font                  = Enum.Font.GothamBold
+    lbl.Text                  = p.Name
+
+    espObjects[p] = { box = hl, billboard = billboard }
+
+    task.spawn(function()
+        while espObjects[p] and Toggles.PlayerESP.Value do
+            task.wait(0.15)
+            pcall(function()
+                local c = getTeamColor(p)
+                local teamName = p.Team and p.Team.Name or "No Team"
+                local myHrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                local dist  = myHrp and math.floor((myHrp.Position - hrp.Position).Magnitude) or 0
+
+                lbl.Text         = p.Name .. "\n" .. teamName .. " [" .. dist .. "]"
+                lbl.TextColor3   = c
+                hl.FillColor     = c
+                hl.OutlineColor  = c
+            end)
+        end
+    end)
+end
+
+local function refreshAllESP()
+    for _, p in game.Players:GetPlayers() do
+        if p ~= plr then
+            if Toggles.PlayerESP.Value and p.Character then
+                applyESP(p)
+            else
+                removeESP(p)
+            end
+        end
+    end
+end
+
+ESPBox:AddToggle("PlayerESP", {
+    Text    = "Player ESP",
+    Default = false,
+    Tooltip = "Mostra highlight e info nos jogadores com a cor do time",
+    Callback = function(v)
+        if v then
+            refreshAllESP()
+            for _, p in game.Players:GetPlayers() do
+                p.CharacterAdded:Connect(function()
+                    task.wait(0.5)
+                    if Toggles.PlayerESP.Value then applyESP(p) end
+                end)
+            end
+        else
+            for p in pairs(espObjects) do removeESP(p) end
+        end
+    end,
+})
+
+game.Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        task.wait(0.5)
+        if Toggles.PlayerESP.Value then applyESP(p) end
+    end)
+end)
+
+game.Players.PlayerRemoving:Connect(function(p)
+    removeESP(p)
+end)
+
+-- ── Visuals ──
+
+VisualBox:AddSlider("FOVSlider", {
+    Text    = "Field of View",
+    Default = 70,
+    Min     = 70,
+    Max     = 120,
+    Rounding = 0,
+    Suffix  = "°",
+    Tooltip = "Muda o FOV da câmera",
+    Callback = function(v)
+        workspace.CurrentCamera.FieldOfView = v
+    end,
+})
+
+VisualBox:AddButton({
+    Text    = "No Fog",
+    Tooltip = "Remove a névoa do mapa",
+    Func    = function()
+        local l = game.Lighting
+        l.FogStart = math.huge
+        l.FogEnd   = math.huge
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  UI SETTINGS
+-- ══════════════════════════════════════════
+
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "settings")
+
+MenuGroup:AddToggle("KeybindMenuOpen", {
+    Default = Library.KeybindFrame.Visible,
+    Text = "Open Keybind Menu",
+    Callback = function(value)
+        Library.KeybindFrame.Visible = value
+    end,
+})
+
+MenuGroup:AddToggle("ShowCustomCursor", {
+    Text = "Custom Cursor",
+    Default = true,
+    Callback = function(Value)
+        Library.ShowCustomCursor = Value
+    end,
+})
+
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu keybind"):AddKeyPicker("MenuKeybind", {
+    Default = "RightShift",
+    NoUI = true,
+    Text = "Menu keybind"
+})
+
+MenuGroup:AddButton("Unload", function()
+    Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+-- Addons
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+
+ThemeManager:SetFolder("InfectiousSmile")
+SaveManager:SetFolder("InfectiousSmile/game")
+
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+
+SaveManager:LoadAutoloadConfig()
+
+Library:Notify({
+    Title = "XXMZ HUB",
+    Description = "Made by 29!",
+    Time = 5,
+})

@@ -1,5 +1,4 @@
--- Plane Hub - Obsidian Library
--- Converted from Rayfield to Obsidian
+-- w speed
 
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
@@ -12,7 +11,7 @@ local Toggles = Library.Toggles
 local Window = Library:CreateWindow({
     Title = "XXMZ",
     Footer = "by 29",
-    Icon = 88981337549158,
+    Icon = 95816097006870,
     NotifySide = "Right",
     ShowCustomCursor = true,
 })

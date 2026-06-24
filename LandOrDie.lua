@@ -1,20 +1,93 @@
 -- w speed
 
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
-local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local WindUI = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+))()
 
-local Options = Library.Options
-local Toggles = Library.Toggles
+local Window = WindUI:CreateWindow({
+    Title = "XXMZ HUB | Land Or Die",
+    Author = "by 29",
+    Folder = "XXMZ",
+    Size = UDim2.fromOffset(580, 460),
+    MinSize = Vector2.new(560, 350),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    BackgroundImageTransparency = 0.5,
+    Background = "rbxassetid://100169693594473",
 
-local Window = Library:CreateWindow({
-    Title = "XXMZ",
-    Footer = "by 29",
-    Icon = 95816097006870,
-    NotifySide = "Right",
-    ShowCustomCursor = true,
+    OpenButton = {
+    Title = "XXMZ HUB",
+    CornerRadius = UDim.new(1, 0),
+    StrokeThickness = 3,
+    Enabled = true,
+    Draggable = true,
+    OnlyMobile = false,
+    Scale = 1,
+    Color = ColorSequence.new(
+        Color3.fromHex("#30FF6A"),
+        Color3.fromHex("#e7ff2f")
+    ),
+},
 })
+
+-- ==================== BACKGROUND FIX ====================
+-- WindUI creates the background image as a child of the Squircle Background frame.
+-- The Squircle is an ImageLabel with a white rounded-corner image that covers everything.
+-- We make the Squircle transparent and create the background as a sibling instead.
+
+task.spawn(function()
+    task.wait(0.3)
+
+    pcall(function()
+        local Main = Window.UIElements.Main
+        if not Main then return end
+
+        local MainContent = Main:WaitForChild("Main", 2)
+        if not MainContent then return end
+
+        local Background = MainContent:WaitForChild("Background", 2)
+        if not Background then return end
+
+        -- Create background image as a SIBLING of Background (same parent level)
+        -- This puts it BEHIND the Squircle in render order
+        local bgImage = Instance.new("ImageLabel")
+        bgImage.Name = "WindowBgImage"
+        bgImage.Size = UDim2.new(1, 0, 1, 0)
+        bgImage.Position = UDim2.new(0, 0, 0, 0)
+        bgImage.BackgroundTransparency = 1
+        bgImage.Image = "rbxassetid://71142928093016"
+        bgImage.ImageTransparency = 0
+        bgImage.ScaleType = Enum.ScaleType.Crop
+        bgImage.ZIndex = 0
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 16)
+        corner.Parent = bgImage
+
+        bgImage.Parent = MainContent
+
+        -- Ensure Background renders on top
+        Background.LayoutOrder = 1
+        bgImage.LayoutOrder = 0
+
+        -- Make the Squircle semi-transparent so the image shows through
+        Background.ImageTransparency = 0.25
+
+        -- Also make MainBar background semi-transparent
+        local mainBar = MainContent:WaitForChild("MainBar", 1)
+        if mainBar then
+            local mainBarBg = mainBar:WaitForChild("Background", 1)
+            if mainBarBg then
+                mainBarBg.ImageTransparency = 0.5
+            end
+        end
+    end)
+end)
 
 -- ==================== VARIAVEIS GLOBAIS ====================
 local AutoTalkEnabled = false
@@ -28,24 +101,20 @@ local AutoWindowEnabled = false
 local ESPObjects = {}
 
 -- ==================== TABS ====================
-local Tabs = {
-    Main = Window:AddTab("Main", "user"),
-    Tasks = Window:AddTab("Auto Tasks", "list-checks"),
-    Exploits = Window:AddTab("Exploits", "sword"),
-    Shop = Window:AddTab("Shop", "shopping-cart"),
-    Crate = Window:AddTab("Auto Crate", "package"),
-    ESP = Window:AddTab("ESP", "eye"),
-    Troll = Window:AddTab("Troll", "zap"),
-    ["UI Settings"] = Window:AddTab("UI Settings", "settings"),
-}
+local MainTab = Window:Tab({ Title = "Main", Icon = "user" })
+local TasksTab = Window:Tab({ Title = "Auto Tasks", Icon = "list-checks" })
+local ExploitsTab = Window:Tab({ Title = "Exploits", Icon = "sword" })
+local ShopTab = Window:Tab({ Title = "Shop", Icon = "shopping-cart" })
+local CrateTab = Window:Tab({ Title = "Auto Crate", Icon = "package" })
+local ESPTab = Window:Tab({ Title = "ESP", Icon = "eye" })
+local TrollTab = Window:Tab({ Title = "Troll", Icon = "zap" })
 
 -- ==================== TAB: MAIN ====================
-local MainLeft = Tabs.Main:AddLeftGroupbox("Main Features")
 
 -- Auto Walk with Passengers
-MainLeft:AddToggle("AutoTalkPassengers", {
-    Text = "Auto Walk with passengers [+/- $4.000/9min]",
-    Default = false,
+MainTab:Toggle({
+    Title = "Auto Talk with passengers [+/- $4.000/9min]",
+    Value = false,
     Callback = function(Value)
         AutoTalkEnabled = Value
         if Value then
@@ -68,9 +137,9 @@ MainLeft:AddToggle("AutoTalkPassengers", {
 })
 
 -- Auto Talk to Radio
-MainLeft:AddToggle("AutoRadio", {
-    Text = "Auto Talk to Radio",
-    Default = false,
+MainTab:Toggle({
+    Title = "Auto Talk to Radio",
+    Value = false,
     Callback = function(Value)
         AutoRadioEnabled = Value
         if Value then
@@ -88,13 +157,14 @@ MainLeft:AddToggle("AutoRadio", {
 })
 
 -- Auto Extinguisher Spray
-MainLeft:AddToggle("AutoExtinguisher", {
-    Text = "Auto Extinguisher Spray",
-    Default = false,
+local AutoExtinguisherToggle
+AutoExtinguisherToggle = MainTab:Toggle({
+    Title = "Auto Extinguisher Spray",
+    Value = false,
     Callback = function(Value)
         if Value then
             task.spawn(function()
-                while Toggles.AutoExtinguisher.Value do
+                while AutoExtinguisherToggle:Get() do
                     pcall(function()
                         local char = game:GetService("Players").LocalPlayer.Character
                         local extinguisher = char:FindFirstChild("Fire Extinguisher")
@@ -117,12 +187,11 @@ MainLeft:AddToggle("AutoExtinguisher", {
 })
 
 -- ==================== TAB: AUTO TASKS ====================
-local TasksLeft = Tabs.Tasks:AddLeftGroupbox("Tasks")
 
 -- Auto Unclog Toilet
-TasksLeft:AddToggle("AutoToilet", {
-    Text = "Auto Unclog Toilet",
-    Default = false,
+TasksTab:Toggle({
+    Title = "Auto Unclog Toilet",
+    Value = false,
     Callback = function(Value)
         AutoToiletEnabled = Value
         if Value then
@@ -140,9 +209,9 @@ TasksLeft:AddToggle("AutoToilet", {
 })
 
 -- Auto Fix Windows
-TasksLeft:AddToggle("AutoWindow", {
-    Text = "Auto Fix Windows",
-    Default = false,
+TasksTab:Toggle({
+    Title = "Auto Fix Windows",
+    Value = false,
     Callback = function(Value)
         AutoWindowEnabled = Value
         if Value then
@@ -167,9 +236,10 @@ TasksLeft:AddToggle("AutoWindow", {
 })
 
 -- Auto Fuel
-TasksLeft:AddToggle("AutoFuel", {
-    Text = "Auto Fuel",
-    Default = false,
+local AutoFuelToggle
+AutoFuelToggle = TasksTab:Toggle({
+    Title = "Auto Fuel",
+    Value = false,
     Callback = function(Value)
         AutoFuelEnabled = Value
         if Value then
@@ -197,27 +267,25 @@ TasksLeft:AddToggle("AutoFuel", {
 })
 
 -- ==================== TAB: EXPLOITS ====================
-local ExploitsLeft = Tabs.Exploits:AddLeftGroupbox("Exploits")
 
 -- Best plane for free
-ExploitsLeft:AddButton({
-    Text = "Best plane for free (OP)",
-    Func = function()
+ExploitsTab:Button({
+    Title = "Best plane for free (OP)",
+    Callback = function()
         pcall(function()
             local Event = game:GetService("ReplicatedStorage").Remotes.PlaneRemote
             Event:FireServer("equip_plane", "tungtung")
         end)
-        Library:Notify({
+        WindUI:Notify({
             Title = "Exploit",
-            Description = "Best plane equipped!",
-            Time = 3,
+            Content = "Best plane equipped!",
+            Icon = "zap",
+            Duration = 3,
         })
     end,
-    DoubleClick = false,
 })
 
 -- ==================== TAB: SHOP ====================
-local ShopLeft = Tabs.Shop:AddLeftGroupbox("Shop")
 
 local function GetAvailableTools()
     local AvailableTools = {}
@@ -237,45 +305,45 @@ local function GetAvailableTools()
     return AvailableTools
 end
 
-ShopLeft:AddDropdown("BuyItemDropdown", {
+local BuyDropdown
+BuyDropdown = ShopTab:Dropdown({
+    Title = "Buy Items",
     Values = GetAvailableTools(),
-    Default = 1,
-    Multi = false,
-    Text = "Buy Items",
+    Value = 1,
     Callback = function(Value)
         if Value and Value ~= "No tools found" then
             pcall(function()
                 local Event = game:GetService("ReplicatedStorage").Remotes.TabletShopPurchase
                 Event:FireServer(Value, "miles")
             end)
-            Library:Notify({
+            WindUI:Notify({
                 Title = "Purchase",
-                Description = "Attempted to buy: " .. tostring(Value),
-                Time = 3,
+                Content = "Attempted to buy: " .. tostring(Value),
+                Icon = "shopping-cart",
+                Duration = 3,
             })
         end
     end,
 })
 
-ShopLeft:AddButton({
-    Text = "Refresh Tool List",
-    Func = function()
-        Options.BuyItemDropdown:SetValues(GetAvailableTools())
-        Library:Notify({
+ShopTab:Button({
+    Title = "Refresh Tool List",
+    Callback = function()
+        BuyDropdown:Refresh(GetAvailableTools())
+        WindUI:Notify({
             Title = "Refreshed",
-            Description = "Tool list updated!",
-            Time = 2,
+            Content = "Tool list updated!",
+            Icon = "refresh-cw",
+            Duration = 2,
         })
     end,
-    DoubleClick = false,
 })
 
 -- ==================== TAB: AUTO CRATE ====================
-local CrateLeft = Tabs.Crate:AddLeftGroupbox("Auto Crate")
 
-CrateLeft:AddToggle("AutoCrate", {
-    Text = "Auto Pickup Crates",
-    Default = false,
+CrateTab:Toggle({
+    Title = "Auto Pickup Crates",
+    Value = false,
     Callback = function(Value)
         AutoCrateEnabled = Value
         if Value then
@@ -297,7 +365,6 @@ CrateLeft:AddToggle("AutoCrate", {
 })
 
 -- ==================== TAB: ESP ====================
-local ESPLeft = Tabs.ESP:AddLeftGroupbox("ESP")
 
 local function CreateESP(Model)
     if ESPObjects[Model] then return end
@@ -339,9 +406,10 @@ local function UpdateESP()
     end
 end
 
-ESPLeft:AddToggle("ESPCollision", {
-    Text = "ESP Collision Planes (Red)",
-    Default = false,
+local ESPToggle
+ESPToggle = ESPTab:Toggle({
+    Title = "ESP Collision Planes (Red)",
+    Value = false,
     Callback = function(Value)
         ESPCollisionEnabled = Value
 
@@ -373,33 +441,31 @@ ESPLeft:AddToggle("ESPCollision", {
 })
 
 -- ==================== TAB: TROLL ====================
-local TrollLeft = Tabs.Troll:AddLeftGroupbox("Troll")
 
-TrollLeft:AddButton({
-    Text = "Turn OFF Engine 1",
-    Func = function()
+TrollTab:Button({
+    Title = "Turn OFF Engine 1",
+    Callback = function()
         pcall(function()
             local Event = game:GetService("ReplicatedStorage").Remotes.TooltipAction
             Event:FireServer("Engine 1", workspace.Plane.Cockpit["Engine 1"])
         end)
     end,
-    DoubleClick = false,
 })
 
-TrollLeft:AddButton({
-    Text = "Turn OFF Engine 2",
-    Func = function()
+TrollTab:Button({
+    Title = "Turn OFF Engine 2",
+    Callback = function()
         pcall(function()
             local Event = game:GetService("ReplicatedStorage").Remotes.TooltipAction
             Event:FireServer("Engine 2", workspace.Plane.Cockpit["Engine 2"])
         end)
     end,
-    DoubleClick = false,
 })
 
-TrollLeft:AddToggle("SpamAutopilot", {
-    Text = "Spam Autopilot",
-    Default = false,
+local SpamAutopilotToggle
+SpamAutopilotToggle = TrollTab:Toggle({
+    Title = "Spam Autopilot",
+    Value = false,
     Callback = function(Value)
         SpamAutopilotEnabled = Value
         if Value then
@@ -416,54 +482,11 @@ TrollLeft:AddToggle("SpamAutopilot", {
     end,
 })
 
--- ==================== UI SETTINGS ====================
-local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu")
+-- ==================== NOTIFICAÇÃO DE CARREGAMENTO ====================
 
-MenuGroup:AddToggle("KeybindMenuOpen", {
-    Default = Library.KeybindFrame.Visible,
-    Text = "Open Keybind Menu",
-    Callback = function(value)
-        Library.KeybindFrame.Visible = value
-    end,
-})
-
-MenuGroup:AddToggle("ShowCustomCursor", {
-    Text = "Custom Cursor",
-    Default = true,
-    Callback = function(Value)
-        Library.ShowCustomCursor = Value
-    end,
-})
-
-MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
-    Default = "RightShift",
-    NoUI = true,
-    Text = "Menu keybind",
-})
-
-MenuGroup:AddButton({
-    Text = "Unload",
-    Func = function()
-        Library:Unload()
-    end,
-    DoubleClick = false,
-})
-
-Library.ToggleKeybind = Options.MenuKeybind
-
--- ThemeManager & SaveManager
-ThemeManager:SetLibrary(Library)
-SaveManager:SetLibrary(Library)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
-ThemeManager:SetFolder("XXMZ")
-SaveManager:SetFolder("XXMZ/plane-hub")
-SaveManager:BuildConfigSection(Tabs["UI Settings"])
-ThemeManager:ApplyToTab(Tabs["UI Settings"])
-SaveManager:LoadAutoloadConfig()
-
-Library:Notify({
+WindUI:Notify({
     Title = "XXMZ Loaded",
-    Description = "Script loaded successfully!",
-    Time = 5,
+    Content = "Script loaded successfully!",
+    Icon = "check-circle",
+    Duration = 5,
 })

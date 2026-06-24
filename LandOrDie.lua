@@ -4,6 +4,8 @@ local WindUI = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
 ))()
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
+
 local Window = WindUI:CreateWindow({
     Title = "XXMZ HUB | Land Or Die",
     Author = "by 29",

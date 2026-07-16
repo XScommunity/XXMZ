@@ -1389,6 +1389,212 @@ local function GetPlayerList()
     return list
 end
 
+local function TeleportToRandomBalloon()
+    local effects = workspace:FindFirstChild("Effects")
+    if not effects then
+        Fluent:Notify({ Title = "Balloon", Content = "Effects folder not found!", Duration = 3 })
+        return
+    end
+    local balloons = {}
+    for _, obj in pairs(effects:GetDescendants()) do
+        if obj:IsA("Model") and obj.Name == "Balloon" then
+            table.insert(balloons, obj)
+        end
+    end
+    if #balloons == 0 then
+        Fluent:Notify({ Title = "Balloon", Content = "No balloons found!", Duration = 3 })
+        return
+    end
+    local randomBalloon = balloons[math.random(1, #balloons)]
+    local part = randomBalloon:FindFirstChildWhichIsA("BasePart") or randomBalloon.PrimaryPart
+    if part then
+        local character = LocalPlayer.Character
+        if not character then return end
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+        Fluent:Notify({ Title = "Balloon", Content = "Teleported to a random balloon!", Duration = 3 })
+    end
+end
+
+local function HasTakedown()
+    local character = LocalPlayer.Character
+    if character then
+        if character:FindFirstChild("Takedown") then return true end
+    end
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        if backpack:FindFirstChild("Takedown") then return true end
+    end
+    return false
+end
+
+local function EquipTakedown()
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        local takedown = backpack:FindFirstChild("Takedown")
+        if takedown then
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid:EquipTool(takedown)
+                return true
+            end
+        end
+    end
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Takedown") then
+        return true
+    end
+    return false
+end
+
+local function UseTakedown()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local takedown = character:FindFirstChild("Takedown")
+    if not takedown then return end
+
+    -- Try multiple activation methods
+    pcall(function()
+        if takedown:FindFirstChild("RemoteEvent") then
+            takedown.RemoteEvent:FireServer()
+        end
+    end)
+
+    pcall(function()
+        takedown:Activate()
+    end)
+
+    pcall(function()
+        if takedown:FindFirstChild("Activate") then
+            takedown.Activate:FireServer()
+        end
+    end)
+end
+
+local BringLoop = {
+    Connection = nil,
+    OriginalCFrame = nil,
+    TargetPlayer = nil,
+    Equipped = false,
+    Used = false
+}
+
+local function StartBringLoop(targetPlayer)
+    if BringLoop.Connection then
+        BringLoop.Connection:Disconnect()
+        BringLoop.Connection = nil
+    end
+
+    local character = LocalPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    BringLoop.OriginalCFrame = hrp.CFrame
+    BringLoop.TargetPlayer = targetPlayer
+    BringLoop.Equipped = false
+    BringLoop.Used = false
+
+    BringLoop.Connection = RunService.Heartbeat:Connect(function()
+        if not BringLoop.TargetPlayer or not BringLoop.TargetPlayer.Parent then
+            StopBringLoop()
+            return
+        end
+
+        local targetChar = BringLoop.TargetPlayer.Character
+        if not targetChar or not targetChar:FindFirstChild("HumanoidRootPart") then
+            StopBringLoop()
+            return
+        end
+
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+            StopBringLoop()
+            return
+        end
+
+        local myHRP = myChar.HumanoidRootPart
+        local targetHRP = targetChar.HumanoidRootPart
+
+        -- FACE the target (look at them)
+        local lookVector = (targetHRP.Position - myHRP.Position).Unit
+        myHRP.CFrame = CFrame.new(myHRP.Position, myHRP.Position + Vector3.new(lookVector.X, 0, lookVector.Z))
+
+        -- Orbit close to target (right behind them)
+        local offset = CFrame.new(0, 0, -2)
+        myHRP.CFrame = targetHRP.CFrame * offset
+
+        -- Re-face after moving
+        lookVector = (targetHRP.Position - myHRP.Position).Unit
+        myHRP.CFrame = CFrame.new(myHRP.Position, myHRP.Position + Vector3.new(lookVector.X, 0, lookVector.Z))
+
+        -- Equip Takedown
+        if not BringLoop.Equipped then
+            EquipTakedown()
+            BringLoop.Equipped = true
+            task.wait(0.1)
+        end
+
+        -- USE Takedown on target
+        if BringLoop.Equipped and not BringLoop.Used then
+            UseTakedown()
+            BringLoop.Used = true
+        end
+    end)
+end
+
+local function StopBringLoop()
+    if BringLoop.Connection then
+        BringLoop.Connection:Disconnect()
+        BringLoop.Connection = nil
+    end
+
+    if BringLoop.OriginalCFrame then
+        local character = LocalPlayer.Character
+        if character then
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = BringLoop.OriginalCFrame
+            end
+        end
+    end
+
+    BringLoop.OriginalCFrame = nil
+    BringLoop.TargetPlayer = nil
+    BringLoop.Equipped = false
+    BringLoop.Used = false
+end
+
+local function BringPlayer(playerIdentifier)
+    if not HasTakedown() then
+        Fluent:Notify({ Title = "Bring", Content = "You don't have Takedown item!", Duration = 3 })
+        return
+    end
+
+    local targetName = playerIdentifier
+    local extracted = playerIdentifier:match("%(@(.+)%)")
+    if extracted then
+        targetName = extracted
+    end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.Name == targetName then
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                Fluent:Notify({ Title = "Bring", Content = "Targeting " .. player.DisplayName .. "...", Duration = 3 })
+                StartBringLoop(player)
+
+                task.delay(3, function()
+                    StopBringLoop()
+                    Fluent:Notify({ Title = "Bring", Content = "Finished! Returned to original position.", Duration = 3 })
+                end)
+                return
+            end
+        end
+    end
+    Fluent:Notify({ Title = "Bring", Content = "Player not found!", Duration = 3 })
+end
+
 -- ============================================
 -- UI - TELEPORT TAB
 -- ============================================
@@ -1418,25 +1624,37 @@ Tabs.Teleport:AddButton({
     end,
 })
 
-Tabs.Teleport:AddDropdown("PlayerTeleportDropdown", {
-    Title                 = "Teleport to Players",
+Tabs.Teleport:AddButton({
+    Title    = "Teleport to Balloon",
+    Icon     = "solar/air-balloon-bold",
+    Callback = function()
+        TeleportToRandomBalloon()
+    end,
+})
+
+Tabs.Teleport:AddParagraph({
+    Title   = "Player Actions",
+    Content = "Select a player and choose an action",
+})
+
+Tabs.Teleport:AddDropdown("PlayerActionDropdown", {
+    Title                 = "Select Player",
     Icon                  = "solar/users-group-rounded-bold",
     Values                = GetPlayerList(),
     Default               = 1,
     Multi                 = false,
     DropdownOutsideWindow = false,
     Callback              = function(value)
-        -- Dropdown selection only stores value, button triggers teleport
+        -- Stores selected player
     end,
 })
 
 Tabs.Teleport:AddButton({
-    Title    = "Teleport to Selected Player",
+    Title    = "Teleport to Player",
     Icon     = "solar/user-arrow-right-bold",
     Callback = function()
-        local selected = Options.PlayerTeleportDropdown.Value
+        local selected = Options.PlayerActionDropdown.Value
         if selected and selected ~= "" then
-            -- Extract username from "DisplayName (@Name)"
             local username = selected:match("%(@(.+)%)")
             if username then
                 TeleportToPlayer(username)
@@ -1445,6 +1663,24 @@ Tabs.Teleport:AddButton({
             end
         else
             Fluent:Notify({ Title = "Teleport", Content = "No player selected!", Duration = 3 })
+        end
+    end,
+})
+
+Tabs.Teleport:AddButton({
+    Title    = "Bring Player (PLAYER 120, DONT ABUSE)",
+    Icon     = "solar/user-hand-up-bold",
+    Callback = function()
+        local selected = Options.PlayerActionDropdown.Value
+        if selected and selected ~= "" then
+            local username = selected:match("%(@(.+)%)")
+            if username then
+                BringPlayer(username)
+            else
+                Fluent:Notify({ Title = "Bring", Content = "Invalid selection!", Duration = 3 })
+            end
+        else
+            Fluent:Notify({ Title = "Bring", Content = "No player selected!", Duration = 3 })
         end
     end,
 })
@@ -1517,19 +1753,18 @@ Tabs.JumpRope:AddButton({
     end,
 })
 
-
 -- Update player dropdown when players join/leave
 Players.PlayerAdded:Connect(function()
     task.wait(0.5)
-    if Options.PlayerTeleportDropdown then
-        Options.PlayerTeleportDropdown:SetValues(GetPlayerList())
+    if Options.PlayerActionDropdown then
+        Options.PlayerActionDropdown:SetValues(GetPlayerList())
     end
 end)
 
 Players.PlayerRemoving:Connect(function()
     task.wait(0.5)
-    if Options.PlayerTeleportDropdown then
-        Options.PlayerTeleportDropdown:SetValues(GetPlayerList())
+    if Options.PlayerActionDropdown then
+        Options.PlayerActionDropdown:SetValues(GetPlayerList())
     end
 end)
 

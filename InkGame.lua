@@ -2,6 +2,8 @@ local Fluent = loadstring(game:HttpGet(
     "https://github.com/StyearX/Fluent-Modded/releases/download/Fluent/FluentPro"
 ))()
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/tinc"))()
+
 -- ============================================
 -- SERVICES & VARIABLES
 -- ============================================

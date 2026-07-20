@@ -9,7 +9,15 @@ if qt then
 end
 
 makefolder("autoexec")
-writefile("autoexec/autofarm_loaderao.lua", 'loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/testing"))()')
+writefile("autoexec/autofarm_loader.lua", 'loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/testing"))()')
+
+-- ============================================
+-- VERIFICAÇÃO DE STOP (não executa se foi parado)
+-- ============================================
+if isfile("autoexec/autofarm_stopped.flag") then
+    delfile("autoexec/autofarm_stopped.flag")
+    return
+end
 
 -- ============================================
 -- PARTE 2: AUTOFARM
@@ -25,7 +33,7 @@ local LocalPlayer = Players.LocalPlayer
 -- REGISTRA queue_on_teleport SEMPRE (pra próximo teleporte)
 -- ============================================
 if qt then
-    qt('loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/bringer/autofarm-landordie"))()')
+    qt('loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/testing"))()')
 end
 
 -- ============================================
@@ -145,10 +153,13 @@ local function stopAll()
     if ScreenGui then
         pcall(function() ScreenGui:Destroy() end)
     end
+    -- Cria flag de parada
+    pcall(function() writefile("autoexec/autofarm_stopped.flag", "stopped") end)
     -- Deleta o arquivo do autoexec
     pcall(function() delfile("autoexec/autofarm_loader.lua") end)
     pcall(function() delfile("autoexec/XXMZ_AF_v13.lua") end)
     pcall(function() delfile("autoexec/autofarmXXMZ.lua") end)
+    print("[AUTOFARM] PARADO! Arquivo do autoexec deletado.")
 end
 
 StopButton.MouseButton1Click:Connect(stopAll)

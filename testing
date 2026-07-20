@@ -9,7 +9,7 @@ if qt then
 end
 
 makefolder("autoexec")
-writefile("autoexec/autofarm_loader.lua", 'loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/testing"))()')
+writefile("autoexec/autofarm_loaderao.lua", 'loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/testing"))()')
 
 -- ============================================
 -- PARTE 2: AUTOFARM

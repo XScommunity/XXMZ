@@ -1,6 +1,19 @@
--- XXMZ AUTOFARM — Land Or Die
--- CORRIGIDO: queue_on_teleport agora é chamado SEMPRE, não só no início
+-- XXMZ AF v13 — Installer + Autofarm em um arquivo só
 
+-- ============================================
+-- PARTE 1: INSTALLER (autoexec + queue_on_teleport)
+-- ============================================
+local qt = queue_on_teleport or (syn and syn.queue_on_teleport)
+if qt then
+    qt('loadstring(game:HttpGet("https://raw.githubusercontent.com/XSc0ommunity/XXMZ/refs/heads/main/testing"))()')
+end
+
+makefolder("autoexec")
+writefile("autoexec/autofarm_loaderaaa.lua", 'loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/testing"))()')
+
+-- ============================================
+-- PARTE 2: AUTOFARM
+-- ============================================
 local Players     = game:GetService("Players")
 local RunService  = game:GetService("RunService")
 local RepStorage  = game:GetService("ReplicatedStorage")
@@ -11,9 +24,8 @@ local LocalPlayer = Players.LocalPlayer
 -- ============================================
 -- REGISTRA queue_on_teleport SEMPRE (pra próximo teleporte)
 -- ============================================
-local qt = queue_on_teleport or (syn and syn.queue_on_teleport)
 if qt then
-    qt('loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/testing"))()')
+    qt('loadstring(game:HttpGet("https://raw.githubusercontent.com/XScommunity/XXMZ/refs/heads/main/bringer/autofarm-landordie"))()')
 end
 
 -- ============================================
@@ -225,25 +237,27 @@ PilotState.Conn = RunService.RenderStepped:Connect(onStep)
 -- ============================================
 -- 4. AUTO TALK TO PASSENGERS
 -- ============================================
-task.spawn(function()
-    while true do
+table.insert(ActiveLoops, task.spawn(function()
+    while Running do
         local ok, passengers = pcall(function()
             return Workspace.Plane.Passengers:GetChildren()
         end)
-        
+
         if ok and passengers then
             for _, passenger in ipairs(passengers) do
                 if passenger:IsA("Model") then
                     task.spawn(function()
-                        safeFire(TooltipAction, "Talk to Passenger", passenger)
+                        if Running then
+                            safeFire(TooltipAction, "Talk to Passenger", passenger)
+                        end
                     end)
                 end
             end
         end
-        
+
         task.wait(CONFIG.TalkInterval)
     end
-end)
+end))
 
 -- ============================================
 -- INIT

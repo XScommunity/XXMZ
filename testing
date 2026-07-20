@@ -128,16 +128,20 @@ local CONFIG = {
 }
 
 local Running = true
-local ActiveLoops = {}
+local ActiveConnections = {}
 
 local function stopAll()
     Running = false
-    for _, conn in ipairs(ActiveLoops) do
+    -- Desconecta todas as conexões
+    for _, conn in ipairs(ActiveConnections) do
         pcall(function() conn:Disconnect() end)
     end
-    if PilotState.Conn then
+    -- Desconecta o AI Pilot
+    if PilotState and PilotState.Conn then
         pcall(function() PilotState.Conn:Disconnect() end)
+        PilotState.Conn = nil
     end
+    -- Destroi o GUI
     if ScreenGui then
         pcall(function() ScreenGui:Destroy() end)
     end
@@ -145,7 +149,6 @@ local function stopAll()
     pcall(function() delfile("autoexec/autofarm_loader.lua") end)
     pcall(function() delfile("autoexec/XXMZ_AF_v13.lua") end)
     pcall(function() delfile("autoexec/autofarmXXMZ.lua") end)
-    print("[AUTOFARM] PARADO! Arquivo do autoexec deletado.")
 end
 
 StopButton.MouseButton1Click:Connect(stopAll)
@@ -186,14 +189,14 @@ end
 -- ============================================
 -- 1. AUTO REPLAY VOTE
 -- ============================================
-table.insert(ActiveLoops, task.spawn(function()
+task.spawn(function()
     while Running do
         if ReplayVote and ReplayVote:IsA("RemoteEvent") then
             safeFire(ReplayVote)
         end
         task.wait(CONFIG.ReplayInterval)
     end
-end))
+end)
 
 -- ============================================
 -- 2. AUTO SEAT (PilotSeat)
@@ -205,7 +208,7 @@ local function trySeat()
     end)
 end
 
-table.insert(ActiveLoops, task.spawn(function()
+task.spawn(function()
     trySeat()
     while Running do
         if not (Humanoid.SeatPart and Humanoid.SeatPart.Name:lower():find("pilot")) then
@@ -213,7 +216,7 @@ table.insert(ActiveLoops, task.spawn(function()
         end
         task.wait(CONFIG.RetrySeatDelay)
     end
-end))
+end)
 
 LocalPlayer.CharacterAdded:Connect(function(newChar)
     Character = newChar
@@ -241,11 +244,12 @@ end
 
 PilotState.CurrentAlt = getAltitude()
 PilotState.Conn = RunService.RenderStepped:Connect(onStep)
+table.insert(ActiveConnections, PilotState.Conn)
 
 -- ============================================
 -- 4. AUTO TALK TO PASSENGERS
 -- ============================================
-table.insert(ActiveLoops, task.spawn(function()
+task.spawn(function()
     while Running do
         local ok, passengers = pcall(function()
             return Workspace.Plane.Passengers:GetChildren()
@@ -265,7 +269,7 @@ table.insert(ActiveLoops, task.spawn(function()
 
         task.wait(CONFIG.TalkInterval)
     end
-end))
+end)
 
 -- ============================================
 -- INIT

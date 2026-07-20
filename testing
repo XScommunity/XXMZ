@@ -111,6 +111,14 @@ StopButton.MouseLeave:Connect(function()
 end)
 
 -- ============================================
+-- PILOT STATE (declarado antes de stopAll)
+-- ============================================
+local PilotState = {
+    CurrentAlt = 0,
+    Conn       = nil,
+}
+
+-- ============================================
 -- CONFIGS
 -- ============================================
 local CONFIG = {
@@ -217,10 +225,6 @@ end)
 -- ============================================
 -- 3. AI PILOT (SEM EVADE — só estabiliza altitude)
 -- ============================================
-local PilotState = {
-    CurrentAlt = 0,
-    Conn       = nil,
-}
 
 local function onStep()
     if not Running then return end

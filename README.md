@@ -1,5 +1,5 @@
 # XXMZ SCRIPTS
-XXMZ HUB, aqui estão todos jogos suportados, etc. Não cobre por atualizações, XXMZ HUB foi descontinuado 100%, mas ainda trabalho com Cheats e planejo fazer um hub pequeno para alguns jogos tipo
+XXMZ HUB, aqui estão todos jogos suportados, etc. Não cobre por atualizações, XXMZ HUB foi descontinuado 100%, mas ainda trabalho com hubs de roblox e planejo fazer um hub pequeno para alguns jogos tipo
 BABFT, Forsaken, jogos que eu gosto, sabe?
 
 Pergunta frequente que fazem é: porque o XXMZ HUB tem vários projetos open-source
